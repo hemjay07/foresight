@@ -28,6 +28,92 @@ router.get(
 );
 
 /**
+ * POST /api/auth/verify
+ * Verify SIWE message and create session (alias for login)
+ */
+router.post(
+  '/verify',
+  authLimiter,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { message, signature } = req.body;
+
+    if (!message || !signature) {
+      throw new AppError('Message and signature are required', 400);
+    }
+
+    // Verify SIWE message
+    const verification = await verifySiweMessage(message, signature);
+
+    if (!verification.success || !verification.address) {
+      throw new AppError(verification.error || 'Invalid signature', 401);
+    }
+
+    const walletAddress = verification.address.toLowerCase();
+
+    // Find or create user
+    let user = await db('users').where({ wallet_address: walletAddress }).first();
+
+    if (!user) {
+      // Create new user
+      const [newUser] = await db('users')
+        .insert({
+          id: uuidv4(),
+          wallet_address: walletAddress,
+          created_at: db.fn.now(),
+          last_seen_at: db.fn.now(),
+        })
+        .returning('*');
+
+      user = newUser;
+    } else {
+      // Update last seen
+      await db('users').where({ id: user.id }).update({
+        last_seen_at: db.fn.now(),
+      });
+    }
+
+    // Create JWT tokens
+    const accessToken = createAccessToken({
+      userId: user.id,
+      walletAddress: user.wallet_address,
+    });
+
+    const refreshToken = createRefreshToken({
+      userId: user.id,
+      walletAddress: user.wallet_address,
+    });
+
+    // Store session
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    await db('sessions').insert({
+      id: uuidv4(),
+      user_id: user.id,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: expiresAt,
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      created_at: db.fn.now(),
+    });
+
+    res.json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        walletAddress: user.wallet_address,
+        username: user.username,
+        avatarUrl: user.avatar_url,
+        ctMasteryScore: user.ct_mastery_score,
+        ctMasteryLevel: user.ct_mastery_level,
+      },
+    });
+  })
+);
+
+/**
  * POST /api/auth/login
  * Verify SIWE message and create session
  */

@@ -1,21 +1,13 @@
 import { type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { NotificationSystem } from './NotificationSystem';
-import { ToastNotifications } from './ToastNotifications';
-import { OnboardingFlow } from './OnboardingFlow';
-import { AmbientEarnings } from './AmbientEarnings';
 import { useRealtime } from '../contexts/RealtimeContext';
 import { useAccount } from 'wagmi';
 import {
   House,
-  ChartLine,
   Users,
-  Brain,
-  Sword,
   Target,
-  CurrencyDollar,
-  Trophy
+  Trophy,
 } from '@phosphor-icons/react';
 
 interface LayoutProps {
@@ -29,27 +21,13 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems: Array<{ path: string; label: string; icon: any; highlight?: boolean }> = [
     { path: '/', label: 'Home', icon: House },
-    { path: '/terminal', label: 'Terminal', icon: ChartLine },
-    { path: '/draft', label: 'CT Draft', icon: Users },
-    { path: '/whisperer', label: 'CT Whisperer', icon: Brain },
-    { path: '/arena', label: 'Arena', icon: Sword },
-    { path: '/gauntlet', label: 'Gauntlet', icon: Target },
-    { path: '/earn', label: 'Earn', icon: CurrencyDollar, highlight: true },
-    { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+    { path: '/draft', label: 'CT Draft', icon: Trophy, highlight: true },
+    { path: '/vote', label: 'Vote', icon: Target },
+    { path: '/profile', label: 'Profile', icon: Users },
   ];
 
   return (
     <div className="miniapp-container min-h-screen py-6">
-      {/* Onboarding Flow */}
-      <OnboardingFlow />
-
-      {/* Notification System */}
-      <NotificationSystem />
-      <ToastNotifications />
-
-      {/* Ambient Earnings Counter */}
-      <AmbientEarnings />
-
       {/* Header */}
       <header className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -71,6 +49,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         <div className="flex items-center gap-3">
+
           {/* Profile Icon */}
           {address && (
             <Link

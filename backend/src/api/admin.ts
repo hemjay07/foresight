@@ -1,58 +1,55 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
-import { runDraftScoringCycle } from '../services/draftScoring';
-import { scrapeAllInfluencers } from '../services/twitterScraper';
-import { emitDraftScoresUpdated, emitLeaderboardUpdated } from '../services/websocket';
+import db from '../utils/db';
+import { triggerFantasyScoring, getCronJobsStatus } from '../services/cronJobs';
 
 const router = Router();
 
 /**
- * @route POST /api/admin/trigger-draft-scoring
- * @desc Manually trigger draft scoring cycle (for testing)
+ * @route GET /api/admin/stats
+ * @desc Get system statistics
  */
-router.post('/trigger-draft-scoring', authenticate, async (req: Request, res: Response) => {
+router.get('/stats', authenticate, async (req: Request, res: Response) => {
   try {
-    console.log('🎯 Manual draft scoring triggered by:', req.user?.address);
-
-    await runDraftScoringCycle();
-    emitDraftScoresUpdated();
-    emitLeaderboardUpdated('draft');
+    const [users, teams, leagues, influencers] = await Promise.all([
+      db('users').count('* as count').first(),
+      db('user_teams').count('* as count').first(),
+      db('private_leagues').count('* as count').first(),
+      db('influencers').where({ is_active: true }).count('* as count').first(),
+    ]);
 
     res.json({
       success: true,
-      message: 'Draft scoring cycle completed',
-      timestamp: new Date().toISOString(),
+      stats: {
+        users: users?.count || 0,
+        teams: teams?.count || 0,
+        leagues: leagues?.count || 0,
+        influencers: influencers?.count || 0,
+      },
     });
   } catch (error: any) {
-    console.error('Failed to run draft scoring:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to run draft scoring',
-      details: error.message,
+      error: 'Failed to get stats',
     });
   }
 });
 
 /**
- * @route POST /api/admin/trigger-twitter-scrape
- * @desc Manually trigger Twitter scraping (for testing)
+ * @route POST /api/admin/trigger-scoring
+ * @desc Manually trigger fantasy league scoring
  */
-router.post('/trigger-twitter-scrape', authenticate, async (req: Request, res: Response) => {
+router.post('/trigger-scoring', async (req: Request, res: Response) => {
   try {
-    console.log('🎯 Manual Twitter scrape triggered by:', req.user?.address);
-
-    await scrapeAllInfluencers();
-
+    await triggerFantasyScoring();
     res.json({
       success: true,
-      message: 'Twitter scraping completed',
-      timestamp: new Date().toISOString(),
+      message: 'Fantasy scoring cycle triggered successfully',
     });
   } catch (error: any) {
-    console.error('Failed to scrape Twitter:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to scrape Twitter',
+      error: 'Failed to trigger scoring',
       details: error.message,
     });
   }
@@ -60,23 +57,15 @@ router.post('/trigger-twitter-scrape', authenticate, async (req: Request, res: R
 
 /**
  * @route GET /api/admin/cron-status
- * @desc Get status of all cron jobs
+ * @desc Get cron job status
  */
-router.get('/cron-status', authenticate, async (req: Request, res: Response) => {
+router.get('/cron-status', async (req: Request, res: Response) => {
   try {
-    const status = {
-      draftScoring: {
-        schedule: 'Every 3 minutes (TESTING)',
-        production: 'Daily at 00:00 UTC',
-        lastRun: null, // TODO: Track last run time
-      },
-      twitterScraper: {
-        schedule: 'Every 15 minutes',
-        lastRun: null,
-      },
-    };
-
-    res.json({ success: true, status });
+    const jobs = getCronJobsStatus();
+    res.json({
+      success: true,
+      jobs,
+    });
   } catch (error: any) {
     res.status(500).json({
       success: false,

@@ -48,7 +48,7 @@ export async function up(knex: Knex): Promise<void> {
   // User quest progress/completions
   await knex.schema.createTable('user_quest_completions', (table) => {
     table.increments('id').primary();
-    table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+    table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
     table.integer('quest_id').notNullable().references('id').inTable('quests').onDelete('CASCADE');
 
     table.timestamp('completed_at').notNullable();
@@ -77,7 +77,7 @@ export async function up(knex: Knex): Promise<void> {
   // User quest progress (for multi-step quests)
   await knex.schema.createTable('user_quest_progress', (table) => {
     table.increments('id').primary();
-    table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+    table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
     table.integer('quest_id').notNullable().references('id').inTable('quests').onDelete('CASCADE');
 
     table.integer('current_progress').defaultTo(0); // e.g., 3/5 games won
@@ -112,8 +112,8 @@ export async function up(knex: Knex): Promise<void> {
   // Referral tracking (separate from quests for security)
   await knex.schema.createTable('referrals', (table) => {
     table.increments('id').primary();
-    table.integer('referrer_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
-    table.integer('referee_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+    table.uuid('referrer_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+    table.uuid('referee_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
 
     table.string('referral_code').notNullable();
     table.timestamp('referred_at').notNullable();
@@ -146,7 +146,7 @@ export async function up(knex: Knex): Promise<void> {
   // Daily activity tracking (for streak quests)
   await knex.schema.createTable('daily_activity', (table) => {
     table.increments('id').primary();
-    table.integer('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+    table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
     table.date('activity_date').notNullable();
 
     table.integer('games_played').defaultTo(0);

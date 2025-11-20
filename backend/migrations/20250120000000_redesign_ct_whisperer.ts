@@ -10,6 +10,17 @@ import type { Knex } from 'knex';
  */
 
 export async function up(knex: Knex): Promise<void> {
+  // Drop old whisperer tables if they exist (from previous migration)
+  // Must drop dependent tables first due to foreign key constraints
+  await knex.schema.dropTableIfExists('whisperer_attempts');
+  await knex.schema.dropTableIfExists('whisperer_leaderboard');
+  await knex.schema.dropTableIfExists('whisperer_tweets');
+  await knex.schema.dropTableIfExists('whisperer_guesses');
+  await knex.schema.dropTableIfExists('whisperer_daily_challenges');
+  await knex.schema.dropTableIfExists('whisperer_user_stats');
+  await knex.schema.dropTableIfExists('whisperer_user_answers');
+  await knex.schema.dropTableIfExists('whisperer_questions');
+
   // 1. Whisperer Questions
   await knex.schema.createTable('whisperer_questions', (table) => {
     table.increments('id').primary();

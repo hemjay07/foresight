@@ -6,18 +6,14 @@ import morgan from 'morgan';
 import { testConnection } from './utils/db';
 import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { initializeWebSocket, getConnectedClientsCount } from './services/websocket';
-import { initializeCronJobs, getCronJobsStatus } from './services/cronJobs';
+import { initializeCronJobs } from './services/cronJobs';
 
 // Import routes
 import authRoutes from './api/auth';
 import userRoutes from './api/users';
-import draftRoutes from './api/draft';
-import arenaRoutes from './api/arena';
-import gauntletRoutes from './api/gauntlet';
-import whispererRoutes from './api/whisperer';
-import questRoutes from './api/quests';
 import adminRoutes from './api/admin';
+import leagueRoutes from './api/league';
+import privateLeaguesRoutes from './api/privateLeagues';
 
 // Create Express app and HTTP server
 const app: Application = express();
@@ -67,18 +63,16 @@ app.use(apiLimiter);
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    name: 'Timecaster API',
+    name: 'CT Fantasy League API',
     version: '1.0.0',
     status: 'running',
     endpoints: {
       health: '/health',
       auth: '/api/auth',
       users: '/api/users',
-      draft: '/api/draft',
-      arena: '/api/arena',
-      gauntlet: '/api/gauntlet',
-      whisperer: '/api/whisperer',
-      quests: '/api/quests',
+      league: '/api/league',
+      privateLeagues: '/api/private-leagues',
+      admin: '/api/admin',
     },
   });
 });
@@ -89,45 +83,15 @@ app.get('/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    websocket: {
-      connected: getConnectedClientsCount(),
-    },
   });
-});
-
-// Cron jobs status endpoint
-app.get('/api/admin/cron-status', (req, res) => {
-  res.json({
-    jobs: getCronJobsStatus(),
-  });
-});
-
-// Manual scoring trigger (for testing)
-app.post('/api/admin/run-scoring', async (req, res) => {
-  try {
-    const { runDraftScoringCycle } = await import('./services/draftScoring');
-    await runDraftScoringCycle();
-    res.json({
-      success: true,
-      message: 'Scoring cycle completed successfully',
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
 });
 
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/draft', draftRoutes);
-app.use('/api/arena', arenaRoutes);
-app.use('/api/gauntlet', gauntletRoutes);
-app.use('/api/whisperer', whispererRoutes);
-app.use('/api/quests', questRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/league', leagueRoutes);
+app.use('/api/private-leagues', privateLeaguesRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -146,10 +110,7 @@ export async function startServer() {
       throw new Error('Database connection failed');
     }
 
-    // Initialize WebSocket
-    initializeWebSocket(httpServer);
-
-    // Initialize cron jobs
+    // Initialize Cron Jobs for automated scoring
     initializeCronJobs();
 
     // Start listening

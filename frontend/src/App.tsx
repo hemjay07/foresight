@@ -11,19 +11,27 @@ import Layout from './components/Layout';
 
 // Pages
 import Home from './pages/Home';
-import Draft from './pages/Draft';
-import Whisperer from './pages/Whisperer';
-import Arena from './pages/Arena';
-import Gauntlet from './pages/Gauntlet';
 import Profile from './pages/Profile';
-import Leaderboard from './pages/Leaderboard';
-import TerminalDashboard from './pages/TerminalDashboard';
-import Earn from './pages/Earn';
-import IconShowcase from './components/IconShowcase';
-import AllIconLibraries from './components/AllIconLibraries';
-// import PhosphorShowcase from './components/PhosphorShowcase';
+import League from './pages/League';
+import Vote from './pages/Vote';
 
 const queryClient = new QueryClient();
+
+function AppContent() {
+  return (
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/draft" element={<League />} />
+          <Route path="/league" element={<League />} />
+          <Route path="/vote" element={<Vote />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+      </Layout>
+    </Router>
+  );
+}
 
 function App() {
   console.log('App component rendering');
@@ -39,24 +47,7 @@ function App() {
         >
           <RealtimeProvider>
             <NotificationProvider>
-              <Router>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/terminal" element={<TerminalDashboard />} />
-                    <Route path="/draft" element={<Draft />} />
-                    <Route path="/whisperer" element={<Whisperer />} />
-                    <Route path="/arena" element={<Arena />} />
-                    <Route path="/gauntlet" element={<Gauntlet />} />
-                    <Route path="/earn" element={<Earn />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/leaderboard" element={<Leaderboard />} />
-                    <Route path="/icons" element={<IconShowcase />} />
-                    <Route path="/all-icons" element={<AllIconLibraries />} />
-                    {/* <Route path="/phosphor" element={<PhosphorShowcase />} /> */}
-                  </Routes>
-                </Layout>
-              </Router>
+              <AppContent />
             </NotificationProvider>
           </RealtimeProvider>
         </RainbowKitProvider>
