@@ -216,14 +216,26 @@ export default function LeagueUltra() {
         chainId: chainId || 1, // Default to mainnet if undefined
         nonce: nonceResponse.data.nonce,
       };
-      console.log('SIWE config:', siweConfig);
+      console.log('SIWE config:', JSON.stringify(siweConfig, null, 2));
 
-      const message = new SiweMessage(siweConfig);
-      console.log('SIWE message created');
+      let message: SiweMessage;
+      try {
+        message = new SiweMessage(siweConfig);
+        console.log('SIWE message created successfully');
+      } catch (siweError) {
+        console.error('Failed to create SiweMessage:', siweError);
+        console.error('Error details:', {
+          name: (siweError as any)?.name,
+          message: (siweError as any)?.message,
+          stack: (siweError as any)?.stack,
+        });
+        throw new Error(`Failed to create SIWE message: ${siweError instanceof Error ? siweError.message : String(siweError)}`);
+      }
 
       let messageToSign: string;
       try {
         messageToSign = message.prepareMessage();
+        console.log('Message prepared successfully');
         console.log('Message to sign:', messageToSign);
       } catch (siweError) {
         console.error('SIWE prepareMessage error:', siweError);
