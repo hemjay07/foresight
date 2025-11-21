@@ -264,7 +264,13 @@ export default function LeagueUltra() {
       await fetchTeam();
       alert('Successfully signed in!');
     } catch (error: any) {
-      console.error('Error signing in:', error);
+      console.error('=== SIGN-IN ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error name:', error?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error response:', error?.response?.data);
+      console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
       // Better error messages
       let errorMessage = 'Error signing in';
