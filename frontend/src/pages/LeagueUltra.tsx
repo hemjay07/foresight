@@ -13,6 +13,7 @@ import {
   CaretDown, X
 } from '@phosphor-icons/react';
 import WelcomeModal from '../components/WelcomeModal';
+import { formatFollowerCount } from '../utils/formatFollowers';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -595,7 +596,7 @@ export default function LeagueUltra() {
                       <div className="bg-gray-900/60 backdrop-blur rounded-lg p-2 text-center">
                         <p className="text-xs text-gray-400 mb-1">Followers</p>
                         <p className="font-bold text-cyan-400 text-sm">
-                          {(influencer.follower_count / 1000000).toFixed(1)}M
+                          {formatFollowerCount(influencer.follower_count)}
                         </p>
                       </div>
                     )}
