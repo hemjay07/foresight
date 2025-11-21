@@ -207,7 +207,7 @@ export default function LeagueUltra() {
       console.log('Got nonce:', nonceResponse.data.nonce);
 
       // Step 2: Create SIWE message
-      const message = new SiweMessage({
+      const siweConfig = {
         domain: window.location.host,
         address,
         statement: 'Sign in to Foresight Fantasy League',
@@ -215,10 +215,20 @@ export default function LeagueUltra() {
         version: '1',
         chainId: chainId || 1, // Default to mainnet if undefined
         nonce: nonceResponse.data.nonce,
-      });
+      };
+      console.log('SIWE config:', siweConfig);
 
-      const messageToSign = message.prepareMessage();
-      console.log('Message to sign:', messageToSign);
+      const message = new SiweMessage(siweConfig);
+      console.log('SIWE message created');
+
+      let messageToSign: string;
+      try {
+        messageToSign = message.prepareMessage();
+        console.log('Message to sign:', messageToSign);
+      } catch (siweError) {
+        console.error('SIWE prepareMessage error:', siweError);
+        throw new Error(`Failed to prepare SIWE message: ${siweError instanceof Error ? siweError.message : String(siweError)}`);
+      }
 
       // Step 3: Sign message with wallet
       console.log('Requesting signature from wallet...');
