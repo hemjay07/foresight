@@ -193,34 +193,68 @@ export default function LeagueUltra() {
   };
 
   const handleManualSignIn = async () => {
-    if (!address || !chainId) return;
+    if (!address) {
+      alert('Please connect your wallet first');
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('Starting sign-in...', { address, chainId });
+
+      // Step 1: Get nonce
       const nonceResponse = await axios.get(`${API_URL}/api/auth/nonce?address=${address}`);
+      console.log('Got nonce:', nonceResponse.data.nonce);
+
+      // Step 2: Create SIWE message
       const message = new SiweMessage({
         domain: window.location.host,
         address,
         statement: 'Sign in to Foresight Fantasy League',
         uri: window.location.origin,
         version: '1',
-        chainId,
+        chainId: chainId || 1, // Default to mainnet if undefined
         nonce: nonceResponse.data.nonce,
       });
 
-      const signature = await signMessageAsync({ message: message.prepareMessage() });
+      const messageToSign = message.prepareMessage();
+      console.log('Message to sign:', messageToSign);
+
+      // Step 3: Sign message with wallet
+      console.log('Requesting signature from wallet...');
+      const signature = await signMessageAsync({ message: messageToSign });
+      console.log('Signature received:', signature);
+
+      // Step 4: Verify signature with backend
+      console.log('Verifying signature with backend...');
       const verifyResponse = await axios.post(`${API_URL}/api/auth/verify`, {
-        message: message.prepareMessage(),
+        message: messageToSign,
         signature,
       });
+      console.log('Verification successful!');
 
+      // Step 5: Store tokens
       localStorage.setItem('authToken', verifyResponse.data.accessToken);
       localStorage.setItem('refreshToken', verifyResponse.data.refreshToken);
       setIsAuthenticated(true);
+
+      // Step 6: Fetch team data
       await fetchTeam();
+      alert('Successfully signed in!');
     } catch (error: any) {
       console.error('Error signing in:', error);
-      alert(error.response?.data?.error || 'Error signing in');
+
+      // Better error messages
+      let errorMessage = 'Error signing in';
+      if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        errorMessage = 'You rejected the signature request';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
