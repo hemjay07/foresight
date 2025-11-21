@@ -214,7 +214,8 @@ export default function LeagueUltra() {
         signature,
       });
 
-      localStorage.setItem('authToken', verifyResponse.data.token);
+      localStorage.setItem('authToken', verifyResponse.data.accessToken);
+      localStorage.setItem('refreshToken', verifyResponse.data.refreshToken);
       setIsAuthenticated(true);
       await fetchTeam();
     } catch (error: any) {
