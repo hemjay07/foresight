@@ -545,14 +545,41 @@ router.post('/vote', authenticateToken, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Influencer not found' });
     }
 
-    // Calculate vote weight based on user XP level (1x to 2x multiplier)
+    // Get user data (XP, streak)
     const user = await db('users')
-      .where({ id: userId })
-      .select('xp')
+      .where({ 'users.id': userId })
+      .leftJoin('user_xp_totals', 'users.id', 'user_xp_totals.user_id')
+      .select('users.vote_streak', 'users.last_vote_date', 'user_xp_totals.total_xp as xp')
       .first();
 
     const userXP = user?.xp || 0;
     const voteWeight = getVoteWeight(userXP); // Returns 1.0 to 2.0 based on level
+
+    // Calculate streak
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const lastVoteDate = user?.last_vote_date;
+    let currentStreak = user?.vote_streak || 0;
+    let streakBroken = false;
+
+    if (lastVoteDate) {
+      const lastDate = new Date(lastVoteDate);
+      const todayDate = new Date(today);
+      const daysDiff = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysDiff === 0) {
+        // Already voted today - keep existing streak
+      } else if (daysDiff === 1) {
+        // Voted yesterday - increment streak
+        currentStreak += 1;
+      } else {
+        // Missed a day - reset streak
+        currentStreak = 1;
+        streakBroken = true;
+      }
+    } else {
+      // First vote ever
+      currentStreak = 1;
+    }
 
     // Check if user already voted this week
     const existingVote = await db('weekly_spotlight_votes')
@@ -634,11 +661,42 @@ router.post('/vote', authenticateToken, async (req: Request, res: Response) => {
       });
     }
 
+    // Update user's streak and award bonus XP
+    const totalBonusXP = !isUpdate ? (currentStreak >= 7 ? 25 : currentStreak >= 3 ? 10 : 5) : 0;
+    const baseVoteXP = !isUpdate ? 10 : 0; // 10 XP for voting
+    const totalXP = baseVoteXP + totalBonusXP;
+
+    if (currentStreak !== user?.vote_streak) {
+      await db('users')
+        .where({ id: userId })
+        .update({
+          vote_streak: currentStreak,
+          last_vote_date: today,
+        });
+    }
+
+    if (totalXP > 0) {
+      // Award XP in the XP totals table
+      await db('user_xp_totals')
+        .where({ user_id: userId })
+        .update({
+          total_xp: db.raw('total_xp + ?', [totalXP]),
+          lifetime_xp: db.raw('lifetime_xp + ?', [totalXP]),
+          engagement_xp: db.raw('engagement_xp + ?', [totalXP]),
+          last_xp_at: db.fn.now(),
+          updated_at: db.fn.now(),
+        });
+    }
+
     res.json({
       success: true,
       message: isUpdate ? 'Vote updated successfully' : 'Vote submitted successfully',
       vote_weight: voteWeight,
       is_update: isUpdate,
+      streak: currentStreak,
+      streak_broken: streakBroken,
+      xp_earned: totalXP,
+      bonus_xp: totalBonusXP,
     });
   } catch (error: any) {
     console.error('Error submitting vote:', error);

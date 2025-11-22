@@ -51,6 +51,7 @@ export default function Profile() {
   const [myTeam, setMyTeam] = useState<Team | null>(null);
   const [myLeagues, setMyLeagues] = useState<League[]>([]);
   const [userXP, setUserXP] = useState<number>(0);
+  const [userStreak, setUserStreak] = useState<number>(0);
 
   // Rarity mapping (same as LeagueUltra)
   const getRarityInfo = (tier: string) => {
@@ -98,13 +99,14 @@ export default function Profile() {
         return;
       }
 
-      // Fetch user profile (XP, username, etc.)
+      // Fetch user profile (XP, username, streak, etc.)
       try {
         const profileResponse = await axios.get(`${API_URL}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (profileResponse.data) {
           setUserXP(profileResponse.data.xp || 0);
+          setUserStreak(profileResponse.data.voteStreak || 0);
         }
       } catch (error: any) {
         console.error('Error fetching user profile:', error);
@@ -252,14 +254,28 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  {/* Vote Weight Badge */}
-                  <div className="mt-6 flex items-center justify-center gap-3">
+                  {/* Stats Badges */}
+                  <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
+                    {/* Vote Streak */}
+                    {userStreak > 0 && (
+                      <div className="px-6 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 shadow-lg">
+                        <div className="text-xs text-white/80 font-semibold mb-1 text-center">VOTE STREAK</div>
+                        <div className="text-2xl font-black text-white text-center flex items-center gap-2">
+                          <Fire size={24} weight="fill" className={userStreak >= 7 ? 'animate-pulse' : ''} />
+                          {userStreak} {userStreak === 1 ? 'day' : 'days'}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vote Power */}
                     <div className={`px-6 py-3 rounded-2xl bg-gradient-to-r ${colors.gradient} shadow-lg`}>
                       <div className="text-xs text-white/80 font-semibold mb-1 text-center">VOTE POWER</div>
                       <div className="text-2xl font-black text-white text-center">
                         {xpInfo.levelInfo.voteWeight}x
                       </div>
                     </div>
+
+                    {/* Transfers */}
                     <div className={`px-6 py-3 rounded-2xl bg-gradient-to-r ${colors.gradient} shadow-lg`}>
                       <div className="text-xs text-white/80 font-semibold mb-1 text-center">TRANSFERS/WEEK</div>
                       <div className="text-2xl font-black text-white text-center">

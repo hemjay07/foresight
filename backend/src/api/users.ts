@@ -16,7 +16,12 @@ router.get(
     const userId = req.user!.userId;
 
     const user = await db('users')
-      .where({ id: userId })
+      .where({ 'users.id': userId })
+      .leftJoin('user_xp_totals', 'users.id', 'user_xp_totals.user_id')
+      .select(
+        'users.*',
+        'user_xp_totals.total_xp as xp'
+      )
       .first();
 
     if (!user) {
@@ -30,6 +35,8 @@ router.get(
       twitterHandle: user.twitter_handle,
       avatarUrl: user.avatar_url,
       xp: user.xp || 0,
+      voteStreak: user.vote_streak || 0,
+      lastVoteDate: user.last_vote_date,
       ctMasteryScore: user.ct_mastery_score,
       ctMasteryLevel: user.ct_mastery_level,
       createdAt: user.created_at,

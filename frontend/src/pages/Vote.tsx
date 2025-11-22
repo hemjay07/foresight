@@ -58,6 +58,7 @@ export default function Vote() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [userXP, setUserXP] = useState<number>(0);
+  const [userStreak, setUserStreak] = useState<number>(0);
 
   // Rarity mapping
   const getRarityInfo = (tier: string) => {
@@ -195,6 +196,7 @@ export default function Vote() {
       });
 
       setUserXP(response.data.xp || 0);
+      setUserStreak(response.data.voteStreak || 0);
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
@@ -230,12 +232,27 @@ export default function Vote() {
         }
       );
 
+      // Build notification message with streak info
+      let message = `${response.data.message}! Vote weight: ${response.data.vote_weight}x`;
+      if (response.data.xp_earned) {
+        message += ` (+${response.data.xp_earned} XP`;
+        if (response.data.bonus_xp > 0) {
+          message += `, ${response.data.bonus_xp} streak bonus!`;
+        } else {
+          message += `)`;
+        }
+        if (response.data.streak > 1) {
+          message += ` 🔥 ${response.data.streak} day streak!`;
+        }
+      }
+
       setNotification({
         type: 'success',
-        message: `${response.data.message}! Vote weight: ${response.data.vote_weight}x (+10 XP)`,
+        message,
       });
       setTimeout(() => setNotification(null), 5000); // Auto-dismiss after 5 seconds
       await fetchVoteStatus();
+      await fetchUserProfile(); // Refresh streak display
       await fetchLeaderboard();
     } catch (error: any) {
       setNotification({
@@ -346,6 +363,17 @@ export default function Vote() {
                 <span className="text-gray-300">
                   Week of {formatDateRange(voteStatus.contest.start_date, voteStatus.contest.end_date)}
                 </span>
+              </div>
+            )}
+
+            {/* Vote Streak Badge */}
+            {isAuthenticated && userStreak > 0 && (
+              <div className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-red-600 px-6 py-3 rounded-xl border-2 border-orange-400/50 shadow-lg shadow-orange-500/20">
+                <Fire size={24} weight="fill" className={userStreak >= 7 ? 'text-white animate-pulse' : 'text-white'} />
+                <div className="text-left">
+                  <div className="text-xs font-semibold text-white/80">VOTE STREAK</div>
+                  <div className="text-white font-black">{userStreak} {userStreak === 1 ? 'day' : 'days'}</div>
+                </div>
               </div>
             )}
 
