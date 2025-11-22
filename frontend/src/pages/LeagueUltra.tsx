@@ -746,8 +746,10 @@ export default function LeagueUltra() {
                 </div>
               )}
             </div>
+            </div>
 
-            {/* Budget Tracker */}
+            {/* Budget Tracker - Fixed at bottom of sidebar */}
+            <div className="flex-shrink-0 space-y-4">
             <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-5 shadow-soft-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-400">Budget</span>
@@ -785,6 +787,7 @@ export default function LeagueUltra() {
                 </div>
               </div>
             )}
+            </div>
             </div>
 
             {/* Action Button - Always Visible */}

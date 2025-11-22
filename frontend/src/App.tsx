@@ -7,6 +7,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { config } from './config/wagmi';
 import { RealtimeProvider } from './contexts/RealtimeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Layout from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -49,7 +50,9 @@ function App() {
           >
             <RealtimeProvider>
               <NotificationProvider>
-                <AppContent />
+                <ToastProvider>
+                  <AppContent />
+                </ToastProvider>
               </NotificationProvider>
             </RealtimeProvider>
           </RainbowKitProvider>
