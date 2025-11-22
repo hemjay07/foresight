@@ -11,6 +11,7 @@ import {
   ThumbsUp, TrendUp, CheckCircle, Fire, Warning, Lock,
   Crown, Sparkle, Star, Trophy, Lightning, CalendarBlank
 } from '@phosphor-icons/react';
+import { getXPLevel, getLevelBadge, getLevelColors } from '../utils/xp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -56,6 +57,7 @@ export default function Vote() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [userXP, setUserXP] = useState<number>(0);
 
   // Rarity mapping
   const getRarityInfo = (tier: string) => {
@@ -107,6 +109,7 @@ export default function Vote() {
     // Fetch user-specific data only if authenticated
     if (isConnected && token) {
       fetchVoteStatus();
+      fetchUserProfile();
     }
   }, [isConnected, address]);
 
@@ -142,6 +145,7 @@ export default function Vote() {
 
       await fetchInfluencers();
       await fetchVoteStatus();
+      await fetchUserProfile();
       await fetchLeaderboard();
     } catch (error: any) {
       console.error('Sign-in failed:', error);
@@ -178,6 +182,21 @@ export default function Vote() {
       }
     } catch (error) {
       console.error('Error fetching vote status:', error);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await axios.get(`${API_URL}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUserXP(response.data.xp || 0);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
     }
   };
 
@@ -319,15 +338,39 @@ export default function Vote() {
             Vote for the top CT performer this week. Help boost your team's score!
           </p>
 
-          {/* Week Info */}
-          {voteStatus?.contest && (
-            <div className="mt-6 inline-flex items-center gap-3 bg-gray-900/50 px-6 py-3 rounded-xl border-2 border-gray-700">
-              <CalendarBlank size={20} weight="bold" className="text-cyan-400" />
-              <span className="text-gray-300">
-                Week of {formatDateRange(voteStatus.contest.start_date, voteStatus.contest.end_date)}
-              </span>
-            </div>
-          )}
+          {/* Week Info & XP Level */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+            {voteStatus?.contest && (
+              <div className="inline-flex items-center gap-3 bg-gray-900/50 px-6 py-3 rounded-xl border-2 border-gray-700">
+                <CalendarBlank size={20} weight="bold" className="text-cyan-400" />
+                <span className="text-gray-300">
+                  Week of {formatDateRange(voteStatus.contest.start_date, voteStatus.contest.end_date)}
+                </span>
+              </div>
+            )}
+
+            {/* User XP Level Badge */}
+            {isAuthenticated && (() => {
+              const xpInfo = getXPLevel(userXP);
+              const colors = getLevelColors(xpInfo.level);
+              const badge = getLevelBadge(xpInfo.level);
+
+              return (
+                <div className={`inline-flex items-center gap-3 bg-gradient-to-r ${colors.bg} px-6 py-3 rounded-xl border-2 ${colors.border}`}>
+                  <span className="text-2xl">{badge}</span>
+                  <div className="text-left">
+                    <div className={`text-xs font-semibold ${colors.text}`}>YOUR LEVEL</div>
+                    <div className="text-white font-black">{xpInfo.level}</div>
+                  </div>
+                  <div className="h-8 w-px bg-gray-600"></div>
+                  <div className="text-left">
+                    <div className="text-xs text-gray-400 font-semibold">VOTE POWER</div>
+                    <div className={`font-black ${colors.text}`}>{xpInfo.levelInfo.voteWeight}x</div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Current Vote Status */}

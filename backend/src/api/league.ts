@@ -6,6 +6,7 @@
 import express, { Request, Response } from 'express';
 import { authenticate as authenticateToken } from '../middleware/auth';
 import db from '../utils/db';
+import { getVoteWeight } from '../utils/xp';
 
 const router = express.Router();
 
@@ -544,12 +545,14 @@ router.post('/vote', authenticateToken, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Influencer not found' });
     }
 
-    // Calculate vote weight based on user level/reputation
-    const userXP = await db('user_xp_totals')
-      .where({ user_id: userId })
+    // Calculate vote weight based on user XP level (1x to 2x multiplier)
+    const user = await db('users')
+      .where({ id: userId })
+      .select('xp')
       .first();
 
-    const voteWeight = userXP ? Math.floor(userXP.current_level / 5) + 1 : 1;
+    const userXP = user?.xp || 0;
+    const voteWeight = getVoteWeight(userXP); // Returns 1.0 to 2.0 based on level
 
     // Check if user already voted this week
     const existingVote = await db('weekly_spotlight_votes')

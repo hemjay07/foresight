@@ -9,8 +9,9 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   Trophy, Crown, Sparkle, Star, Fire, Users, TrendUp,
-  CheckCircle, Lock, Lightning, Target
+  CheckCircle, Lock, Lightning, Target, TrendDown
 } from '@phosphor-icons/react';
+import { getXPLevel, getLevelBadge, getLevelColors, formatXP } from '../utils/xp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -49,6 +50,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [myTeam, setMyTeam] = useState<Team | null>(null);
   const [myLeagues, setMyLeagues] = useState<League[]>([]);
+  const [userXP, setUserXP] = useState<number>(0);
 
   // Rarity mapping (same as LeagueUltra)
   const getRarityInfo = (tier: string) => {
@@ -94,6 +96,18 @@ export default function Profile() {
       if (!token) {
         setLoading(false);
         return;
+      }
+
+      // Fetch user profile (XP, username, etc.)
+      try {
+        const profileResponse = await axios.get(`${API_URL}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (profileResponse.data) {
+          setUserXP(profileResponse.data.xp || 0);
+        }
+      } catch (error: any) {
+        console.error('Error fetching user profile:', error);
       }
 
       // Fetch user's team
@@ -162,6 +176,102 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        {/* XP Level Card */}
+        {(() => {
+          const xpInfo = getXPLevel(userXP);
+          const colors = getLevelColors(xpInfo.level);
+          const badge = getLevelBadge(xpInfo.level);
+
+          return (
+            <div className="mb-10">
+              <div className={`relative overflow-hidden bg-gradient-to-br ${colors.bg} backdrop-blur-xl rounded-3xl border-2 ${colors.border} p-8 shadow-2xl`}>
+                {/* Background Glow Effect */}
+                <div className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br ${colors.gradient} opacity-10 blur-3xl`}></div>
+
+                {/* Content */}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className={`text-6xl animate-pulse`}>{badge}</div>
+                      <div>
+                        <div className="text-sm text-gray-400 font-semibold mb-1">YOUR LEVEL</div>
+                        <div className={`text-4xl font-black ${colors.text}`}>
+                          {xpInfo.level}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-400 font-semibold mb-1">TOTAL XP</div>
+                      <div className="text-4xl font-black text-white">
+                        {formatXP(userXP)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-300 font-semibold">
+                        Level Progress
+                      </span>
+                      {xpInfo.nextLevel && (
+                        <span className="text-sm text-gray-400">
+                          {xpInfo.xpToNext} XP to {xpInfo.nextLevel}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative h-4 bg-gray-800/50 rounded-full overflow-hidden border border-gray-700">
+                      <div
+                        className={`absolute left-0 top-0 h-full bg-gradient-to-r ${colors.gradient} transition-all duration-500 rounded-full`}
+                        style={{ width: `${xpInfo.progress}%` }}
+                      >
+                        <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="text-right mt-1">
+                      <span className={`text-xs font-bold ${colors.text}`}>
+                        {xpInfo.progress.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Perks Grid */}
+                  <div>
+                    <div className="text-sm text-gray-400 font-semibold mb-3">LEVEL PERKS</div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {xpInfo.levelInfo.perks.map((perk, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-gray-900/50 border border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-300"
+                        >
+                          <CheckCircle size={14} weight="fill" className={`inline mr-2 ${colors.text}`} />
+                          {perk}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Vote Weight Badge */}
+                  <div className="mt-6 flex items-center justify-center gap-3">
+                    <div className={`px-6 py-3 rounded-2xl bg-gradient-to-r ${colors.gradient} shadow-lg`}>
+                      <div className="text-xs text-white/80 font-semibold mb-1 text-center">VOTE POWER</div>
+                      <div className="text-2xl font-black text-white text-center">
+                        {xpInfo.levelInfo.voteWeight}x
+                      </div>
+                    </div>
+                    <div className={`px-6 py-3 rounded-2xl bg-gradient-to-r ${colors.gradient} shadow-lg`}>
+                      <div className="text-xs text-white/80 font-semibold mb-1 text-center">TRANSFERS/WEEK</div>
+                      <div className="text-2xl font-black text-white text-center">
+                        {xpInfo.levelInfo.maxTransfers === 999 ? '∞' : xpInfo.levelInfo.maxTransfers}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* My Team Section */}
         <div className="mb-10">

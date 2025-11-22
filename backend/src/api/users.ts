@@ -6,6 +6,38 @@ import { authenticate, optionalAuthenticate } from '../middleware/auth';
 const router: Router = Router();
 
 /**
+ * GET /api/users/me
+ * Get current user's profile (authenticated)
+ */
+router.get(
+  '/me',
+  authenticate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+
+    const user = await db('users')
+      .where({ id: userId })
+      .first();
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    res.json({
+      id: user.id,
+      walletAddress: user.wallet_address,
+      username: user.username,
+      twitterHandle: user.twitter_handle,
+      avatarUrl: user.avatar_url,
+      xp: user.xp || 0,
+      ctMasteryScore: user.ct_mastery_score,
+      ctMasteryLevel: user.ct_mastery_level,
+      createdAt: user.created_at,
+    });
+  })
+);
+
+/**
  * GET /api/users/:walletAddress
  * Get user profile by wallet address
  */
