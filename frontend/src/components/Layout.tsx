@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useRealtime } from '../contexts/RealtimeContext';
 import { useAccount } from 'wagmi';
 import {
   House,
@@ -16,7 +15,6 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const { onlineUsers, isConnected } = useRealtime();
   const { address } = useAccount();
 
   const navItems: Array<{ path: string; label: string; icon: any; highlight?: boolean }> = [
@@ -36,16 +34,6 @@ export default function Layout({ children }: LayoutProps) {
               CT LEAGUE
             </div>
           </Link>
-
-          {/* Live Presence Indicator */}
-          {isConnected && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-green-400 font-medium">
-                {onlineUsers.toLocaleString()} online
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-3">
