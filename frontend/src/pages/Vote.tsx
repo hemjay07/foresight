@@ -604,55 +604,93 @@ export default function Vote() {
               <p className="text-gray-400 text-lg">Be the first to vote!</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {(() => {
-                // Calculate total votes for percentages
-                const totalVotes = leaderboard.reduce((sum, inf) => sum + (inf.vote_count || 0), 0);
+            <div className="space-y-6">
+              {/* Top 3 Podium */}
+              {leaderboard.length >= 3 && (
+                <div className="flex items-end justify-center gap-4 mb-8 pt-8">
+                  {/* 2nd Place */}
+                  <div className="flex flex-col items-center">
+                    <div className="relative mb-3">
+                      <div className="w-16 h-16 rounded-full border-3 border-gray-400 shadow-soft overflow-hidden bg-gray-700">
+                        {leaderboard[1].profile_image_url ? (
+                          <img src={leaderboard[1].profile_image_url} alt={leaderboard[1].name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <Fire size={20} weight="bold" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center text-xs font-bold text-gray-900">2</div>
+                    </div>
+                    <p className="text-sm font-semibold text-white truncate max-w-[80px]">{leaderboard[1].name}</p>
+                    <p className="text-xs text-gray-400">{leaderboard[1].vote_count || 0} votes</p>
+                    <div className="h-20 w-24 bg-gray-700 rounded-t-lg mt-2 flex items-center justify-center">
+                      <span className="text-xs text-gray-400">+5%</span>
+                    </div>
+                  </div>
 
-                return leaderboard.map((influencer, index) => {
+                  {/* 1st Place */}
+                  <div className="flex flex-col items-center -mt-8">
+                    <div className="relative mb-3">
+                      <div className="w-20 h-20 rounded-full border-3 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)] overflow-hidden bg-gray-700">
+                        {leaderboard[0].profile_image_url ? (
+                          <img src={leaderboard[0].profile_image_url} alt={leaderboard[0].name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <Fire size={24} weight="bold" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-yellow-500 rounded-full flex items-center justify-center text-sm font-bold text-gray-900">1</div>
+                    </div>
+                    <p className="text-sm font-bold text-white truncate max-w-[100px]">{leaderboard[0].name}</p>
+                    <p className="text-xs text-yellow-400 font-semibold">{leaderboard[0].vote_count || 0} votes</p>
+                    <div className="h-28 w-28 bg-yellow-500/20 border border-yellow-500/50 rounded-t-lg mt-2 flex items-center justify-center">
+                      <span className="text-sm font-bold text-yellow-400">+10%</span>
+                    </div>
+                  </div>
+
+                  {/* 3rd Place */}
+                  <div className="flex flex-col items-center">
+                    <div className="relative mb-3">
+                      <div className="w-16 h-16 rounded-full border-3 border-orange-400 shadow-soft overflow-hidden bg-gray-700">
+                        {leaderboard[2].profile_image_url ? (
+                          <img src={leaderboard[2].profile_image_url} alt={leaderboard[2].name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <Fire size={20} weight="bold" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center text-xs font-bold text-gray-900">3</div>
+                    </div>
+                    <p className="text-sm font-semibold text-white truncate max-w-[80px]">{leaderboard[2].name}</p>
+                    <p className="text-xs text-gray-400">{leaderboard[2].vote_count || 0} votes</p>
+                    <div className="h-16 w-24 bg-orange-500/20 border border-orange-500/30 rounded-t-lg mt-2 flex items-center justify-center">
+                      <span className="text-xs text-orange-400">+3%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Remaining Rankings (4th onwards, or all if less than 3) */}
+              {(() => {
+                const totalVotes = leaderboard.reduce((sum, inf) => sum + (inf.vote_count || 0), 0);
+                const startIndex = leaderboard.length >= 3 ? 3 : 0;
+
+                return leaderboard.slice(startIndex).map((influencer, idx) => {
+                  const index = startIndex + idx;
                   const rarity = getRarityInfo(influencer.tier);
                   const votePercentage = totalVotes > 0 ? ((influencer.vote_count || 0) / totalVotes * 100) : 0;
-                  const spotlightBonus = index === 0 ? '+10%' : index === 1 ? '+5%' : index === 2 ? '+3%' : null;
 
                   return (
                     <div
                       key={influencer.id}
-                      className={`relative bg-gray-800/80 rounded-lg p-6 border transition-all ${
-                        index === 0
-                          ? 'border-yellow-500/50 shadow-soft-lg'
-                          : index === 1
-                          ? 'border-gray-400/50 shadow-soft'
-                          : index === 2
-                          ? 'border-orange-400/50 shadow-soft'
-                          : 'border-gray-700'
-                      }`}
+                      className="relative bg-gray-800/80 rounded-lg p-6 border border-gray-700 transition-all"
                     >
-                      {/* Spotlight Bonus Badge */}
-                      {spotlightBonus && (
-                        <div className={`absolute -top-3 right-6 px-3 py-1 rounded-full text-xs font-black shadow-lg ${
-                          index === 0
-                            ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900'
-                            : index === 1
-                            ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-gray-900'
-                            : 'bg-gradient-to-r from-orange-400 to-amber-600 text-gray-900'
-                        }`}>
-                          {spotlightBonus} SPOTLIGHT
-                        </div>
-                      )}
-
                       <div className="flex items-center gap-6 mb-3">
                         {/* Rank */}
-                        <div
-                          className={`text-2xl font-bold w-14 h-14 flex items-center justify-center rounded-lg ${
-                            index === 0
-                              ? 'bg-yellow-500/20 text-yellow-400'
-                              : index === 1
-                              ? 'bg-gray-400/20 text-gray-300'
-                              : index === 2
-                              ? 'bg-orange-400/20 text-orange-400'
-                              : 'bg-gray-700/20 text-gray-500'
-                          }`}
-                        >
+                        <div className="text-xl font-bold w-12 h-12 flex items-center justify-center rounded-lg bg-gray-700/20 text-gray-500">
                           #{index + 1}
                         </div>
 

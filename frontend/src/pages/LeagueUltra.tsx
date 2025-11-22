@@ -1039,8 +1039,8 @@ export default function LeagueUltra() {
                   disabled={!isSelected && selectedInfluencers.length >= 5}
                   className={`card-hover relative p-6 rounded-lg border-2 transition-all duration-300 text-left group ${
                     isSelected
-                      ? `border-brand-500 bg-gradient-to-br ${rarity.gradient} shadow-soft-lg scale-105`
-                      : 'border-gray-700 bg-gradient-to-br from-gray-800/80 to-gray-900/80 hover:border-gray-600 hover:scale-105 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+                      ? `${rarity.border} bg-gradient-to-br ${rarity.gradient} ${rarity.glow} scale-[1.02]`
+                      : 'border-gray-700 bg-gradient-to-br from-gray-800/80 to-gray-900/80 hover:border-gray-600 hover:scale-[1.02] hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
                   }`}
                 >
                   {/* Top Badges Row */}
