@@ -3,7 +3,7 @@
  * Generates shareable cards for social media
  */
 
-import { Trophy, Twitter, Copy, X } from '@phosphor-icons/react';
+import { Trophy, TwitterLogo, Copy, X } from '@phosphor-icons/react';
 import { getRarityInfo } from '../utils/rarities';
 import { useToast } from '../contexts/ToastContext';
 
@@ -114,7 +114,7 @@ export default function ShareTeamCard({ teamName, totalScore, rank, picks, onClo
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#1DA1F2] hover:bg-[#1a8cd8] rounded-xl text-white font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105"
             >
-              <Twitter size={24} weight="fill" />
+              <TwitterLogo size={24} weight="fill" />
               Share on Twitter
             </a>
 

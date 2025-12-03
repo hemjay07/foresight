@@ -146,7 +146,7 @@ export default function Referrals() {
           <h1 className="text-5xl font-black text-white mb-3">Invite & Earn</h1>
           <p className="text-xl text-gray-300">
             {data.isFoundingMember
-              ? '👑 You're a Founding Member. Early supporters will be rewarded.'
+              ? '👑 You\'re a Founding Member. Early supporters will be rewarded.'
               : 'Invite friends, earn XP, build your position'}
           </p>
         </div>
