@@ -9,10 +9,13 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   Trophy, Crown, Sparkle, Star, Fire, Users, TrendUp,
-  CheckCircle, Lock, Lightning, Target, TrendDown, Medal
+  CheckCircle, Lock, Lightning, Target, TrendDown, Medal, Gear,
+  PencilSimple, Check, X
 } from '@phosphor-icons/react';
 import AchievementBadge from '../components/AchievementBadge';
+import { EmptyState } from '../components/EmptyState';
 import { getXPLevel, getLevelBadge, getLevelColors, formatXP } from '../utils/xp';
+import { useToast } from '../contexts/ToastContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -48,6 +51,7 @@ interface League {
 
 export default function Profile() {
   const { address, isConnected } = useAccount();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [myTeam, setMyTeam] = useState<Team | null>(null);
   const [myLeagues, setMyLeagues] = useState<League[]>([]);
@@ -55,6 +59,9 @@ export default function Profile() {
   const [userStreak, setUserStreak] = useState<number>(0);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [achievementsLoading, setAchievementsLoading] = useState(true);
+  const [username, setUsername] = useState<string>('');
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [tempUsername, setTempUsername] = useState('');
 
   // Rarity mapping (same as LeagueUltra)
   const getRarityInfo = (tier: string) => {
@@ -115,6 +122,36 @@ export default function Profile() {
     }
   };
 
+  const handleSaveUsername = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token || !tempUsername.trim()) return;
+
+      await axios.patch(
+        `${API_URL}/api/users/profile`,
+        { username: tempUsername.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setUsername(tempUsername.trim());
+      setIsEditingUsername(false);
+      showToast('success', `Username updated to ${tempUsername.trim()}!`);
+    } catch (error: any) {
+      console.error('Error updating username:', error);
+      showToast('error', error.response?.data?.error || 'Failed to update username');
+    }
+  };
+
+  const handleStartEditUsername = () => {
+    setTempUsername(username);
+    setIsEditingUsername(true);
+  };
+
+  const handleCancelEditUsername = () => {
+    setTempUsername('');
+    setIsEditingUsername(false);
+  };
+
   const fetchUserData = async () => {
     try {
       setLoading(true);
@@ -132,6 +169,7 @@ export default function Profile() {
         if (profileResponse.data) {
           setUserXP(profileResponse.data.xp || 0);
           setUserStreak(profileResponse.data.voteStreak || 0);
+          setUsername(profileResponse.data.username || '');
         }
       } catch (error: any) {
         console.error('Error fetching user profile:', error);
@@ -195,11 +233,63 @@ export default function Profile() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-brand-600 rounded-xl mb-6 shadow-soft-lg">
               <Users size={48} weight="bold" className="text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-semibold text-white mb-4">
-              Your Profile
-            </h1>
-            <div className="font-mono text-sm text-gray-400 bg-gray-900/50 px-4 py-2 rounded-lg inline-block">
+
+            {/* Editable Username */}
+            {!isEditingUsername ? (
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h1 className="text-4xl md:text-5xl font-semibold text-white">
+                  {username || 'Anonymous Trader'}
+                </h1>
+                <button
+                  onClick={handleStartEditUsername}
+                  className="p-2 hover:bg-gray-800 rounded-lg transition-all text-gray-400 hover:text-brand-400"
+                  title="Edit username"
+                >
+                  <PencilSimple size={24} weight="bold" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <input
+                  type="text"
+                  value={tempUsername}
+                  onChange={(e) => setTempUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveUsername()}
+                  className="text-4xl md:text-5xl font-semibold text-white bg-gray-800 border-2 border-brand-500 rounded-lg px-4 py-2 text-center focus:outline-none focus:border-brand-400"
+                  placeholder="Enter username"
+                  maxLength={20}
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveUsername}
+                  className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-all text-white"
+                  title="Save"
+                >
+                  <Check size={24} weight="bold" />
+                </button>
+                <button
+                  onClick={handleCancelEditUsername}
+                  className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all text-white"
+                  title="Cancel"
+                >
+                  <X size={24} weight="bold" />
+                </button>
+              </div>
+            )}
+
+            <div className="font-mono text-sm text-gray-400 bg-gray-900/50 px-4 py-2 rounded-lg inline-block mb-4">
               {address}
+            </div>
+
+            {/* Settings Link */}
+            <div className="mt-2">
+              <Link
+                to="/settings"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-brand-500/50 rounded-lg text-white font-semibold transition-all"
+              >
+                <Gear size={20} weight="bold" />
+                Edit Profile
+              </Link>
             </div>
           </div>
         </div>
@@ -427,20 +517,22 @@ export default function Profile() {
               </div>
             </div>
           ) : (
-            <div className="card p-16 text-center">
-              <Fire size={48} weight="bold" className="text-brand-400 mx-auto mb-6" />
-              <h3 className="text-2xl font-semibold text-white mb-4">No Team Yet</h3>
-              <p className="text-gray-300 text-lg mb-8 max-w-md mx-auto">
-                Create your first Fantasy League team and start competing!
-              </p>
-              <Link
-                to="/draft"
-                className="btn-primary inline-flex items-center gap-3 px-8 py-4"
-              >
-                <Crown size={24} weight="bold" />
-                Create Team
-                <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm">+50 XP</span>
-              </Link>
+            <div className="card p-8">
+              <EmptyState
+                icon="crown"
+                title="No Team Yet"
+                description="Draft your first Fantasy League team with 5 CT influencers and start climbing the leaderboard!"
+                action={
+                  <Link
+                    to="/draft"
+                    className="btn-primary inline-flex items-center gap-3 px-8 py-4 shadow-soft-lg hover:scale-105 transition-transform"
+                  >
+                    <Crown size={24} weight="bold" />
+                    Create Your Team
+                    <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm font-bold">+50 XP</span>
+                  </Link>
+                }
+              />
             </div>
           )}
         </div>
@@ -512,18 +604,21 @@ export default function Profile() {
               ))}
             </div>
           ) : (
-            <div className="card p-16 text-center">
-              <Trophy size={48} weight="bold" className="text-brand-400 mx-auto mb-6" />
-              <h3 className="text-2xl font-semibold text-white mb-4">No Private Leagues</h3>
-              <p className="text-gray-300 text-lg mb-8 max-w-md mx-auto">
-                Join or create a private league to compete with friends!
-              </p>
-              <Link
-                to="/draft"
-                className="btn-primary inline-block px-8 py-4"
-              >
-                Explore Leagues
-              </Link>
+            <div className="card p-8">
+              <EmptyState
+                icon="trophy"
+                title="No Private Leagues Yet"
+                description="Create your own private league and invite friends to compete for glory and prizes!"
+                action={
+                  <Link
+                    to="/draft"
+                    className="btn-primary inline-flex items-center gap-3 px-8 py-4 shadow-soft-lg hover:scale-105 transition-transform"
+                  >
+                    <Trophy size={24} weight="bold" />
+                    Create Private League
+                  </Link>
+                }
+              />
             </div>
           )}
         </div>
@@ -571,6 +666,7 @@ export default function Profile() {
                     unlocked={achievement.unlocked}
                     unlockedAt={achievement.unlocked_at}
                     size="md"
+                    showShare={true}
                   />
                 ))}
               </div>

@@ -1,5 +1,6 @@
 import { Component, ReactNode } from 'react';
 import { Warning } from '@phosphor-icons/react';
+import { logCriticalError } from '../utils/errorLogger';
 
 interface Props {
   children: ReactNode;
@@ -22,6 +23,17 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+
+    // Log the error to backend
+    logCriticalError(
+      error.message || 'Application error',
+      errorInfo.componentStack?.split('\n')[1]?.trim() || 'Unknown component',
+      {
+        error_name: error.name,
+        component_stack: errorInfo.componentStack,
+        error_boundary: true,
+      }
+    );
   }
 
   render() {

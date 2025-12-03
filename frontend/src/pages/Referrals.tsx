@@ -1,0 +1,381 @@
+/**
+ * Referrals Page
+ * Invite friends, earn XP, build your position
+ *
+ * Smart monetization hints:
+ * - Founding member status (early = valuable)
+ * - Quality score (determines future rewards)
+ * - XP tracking (converts to value later)
+ * - "Building equity" messaging
+ */
+
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import axios from 'axios';
+import {
+  Users,
+  Trophy,
+  Crown,
+  ShareNetwork,
+  Copy,
+  TrendUp,
+  Sparkle,
+  Fire,
+  ChartLine,
+  Check
+} from '@phosphor-icons/react';
+import { useToast } from '../contexts/ToastContext';
+
+// Auto-detect API URL
+const getApiUrl = () => {
+  if (window.location.hostname.includes('ngrok-free.app')) {
+    return 'https://20b22fba1aa8.ngrok-free.app';
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+};
+
+const API_URL = getApiUrl();
+
+interface ReferralData {
+  referralCode: string;
+  referralCount: number;
+  activeReferralCount: number;
+  isFoundingMember: boolean;
+  foundingMemberNumber: number | null;
+  qualityScore: number;
+  totalReferralXP: number;
+  recruiterRank: number;
+  milestones: Array<{
+    type: string;
+    achievedAt: string;
+  }>;
+  recentReferrals: Array<{
+    username: string;
+    level: number;
+    joinedAt: string;
+    lastActive: string;
+  }>;
+}
+
+export default function Referrals() {
+  const { address } = useAccount();
+  const { showToast } = useToast();
+
+  const [data, setData] = useState<ReferralData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetchReferralData();
+  }, [address]);
+
+  const fetchReferralData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await axios.get(`${API_URL}/api/referrals/my-code`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setData(response.data);
+    } catch (error) {
+      console.error('Error fetching referral data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!data) return;
+
+    const shareUrl = `${window.location.origin}?ref=${data.referralCode}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    showToast('success', 'Referral link copied!');
+
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareTwitter = () => {
+    if (!data) return;
+
+    const shareUrl = `${window.location.origin}?ref=${data.referralCode}`;
+    const text = data.isFoundingMember
+      ? `I'm Founding Member #${data.foundingMemberNumber} of @ForesightLeague! 👑\n\nJoin the CT Fantasy revolution. Draft influencers, earn points, build your position.\n\n Early supporters will be rewarded 💰`
+      : `Just invited ${data.activeReferralCount} players to @ForesightLeague! 🎮\n\nCT Fantasy is heating up. Get in early.\n\nJoin me:`;
+
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(twitterUrl, '_blank');
+  };
+
+  const getMilestoneInfo = (type: string) => {
+    const info: Record<string, { icon: any; label: string; color: string }> = {
+      recruiter: { icon: Users, label: 'Recruiter', color: 'text-blue-400' },
+      talent_scout: { icon: Sparkle, label: 'Talent Scout', color: 'text-purple-400' },
+      ct_influencer: { icon: Fire, label: 'CT Influencer', color: 'text-orange-400' },
+      kingmaker: { icon: Crown, label: 'Kingmaker', color: 'text-yellow-400' },
+      legend: { icon: Trophy, label: 'Legend', color: 'text-yellow-300' },
+    };
+    return info[type] || { icon: Users, label: type, color: 'text-gray-400' };
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-400">Connect wallet to view referrals</div>
+      </div>
+    );
+  }
+
+  const shareUrl = `${window.location.origin}?ref=${data.referralCode}`;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-black text-white mb-3">Invite & Earn</h1>
+          <p className="text-xl text-gray-300">
+            {data.isFoundingMember
+              ? '👑 You're a Founding Member. Early supporters will be rewarded.'
+              : 'Invite friends, earn XP, build your position'}
+          </p>
+        </div>
+
+        {/* Founding Member Banner (If applicable) */}
+        {data.isFoundingMember && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-yellow-900/30 via-amber-900/30 to-yellow-900/30 border-2 border-yellow-500/50 rounded-xl">
+            <div className="flex items-center gap-4">
+              <Crown size={48} weight="fill" className="text-yellow-400" />
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-yellow-400 mb-1">
+                  Founding Member #{data.foundingMemberNumber}
+                </h2>
+                <p className="text-gray-300">
+                  You're one of the first 1,000 users. This status will be valuable. 💰
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Stats Cards */}
+          <div className="card bg-gray-800/50 p-6 border border-brand-500/30">
+            <div className="flex items-center gap-3 mb-2">
+              <Users size={24} className="text-brand-400" />
+              <span className="text-gray-400 font-medium">Total Invited</span>
+            </div>
+            <div className="text-4xl font-black text-white">{data.referralCount}</div>
+            <div className="text-sm text-gray-500 mt-1">
+              {data.activeReferralCount} active (last 7 days)
+            </div>
+          </div>
+
+          <div className="card bg-gray-800/50 p-6 border border-purple-500/30">
+            <div className="flex items-center gap-3 mb-2">
+              <ChartLine size={24} className="text-purple-400" />
+              <span className="text-gray-400 font-medium">Quality Score</span>
+            </div>
+            <div className="text-4xl font-black text-white">{data.qualityScore}%</div>
+            <div className="text-sm text-gray-500 mt-1">
+              Determines future reward multiplier
+            </div>
+          </div>
+
+          <div className="card bg-gray-800/50 p-6 border border-green-500/30">
+            <div className="flex items-center gap-3 mb-2">
+              <TrendUp size={24} className="text-green-400" />
+              <span className="text-gray-400 font-medium">Referral XP</span>
+            </div>
+            <div className="text-4xl font-black text-white">
+              {data.totalReferralXP.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              Building your position 📈
+            </div>
+          </div>
+        </div>
+
+        {/* Share Section */}
+        <div className="card bg-gradient-to-br from-brand-900/30 to-brand-800/30 border-2 border-brand-500 p-8 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+            <ShareNetwork size={28} weight="fill" className="text-brand-400" />
+            Your Referral Link
+          </h2>
+
+          <div className="bg-gray-900/50 rounded-lg p-4 mb-4 border border-brand-500/30">
+            <div className="flex items-center gap-3">
+              <code className="flex-1 text-brand-300 font-mono text-lg break-all">
+                {shareUrl}
+              </code>
+              <button
+                onClick={handleCopy}
+                className="flex-shrink-0 p-3 bg-brand-600 hover:bg-brand-700 rounded-lg transition-all"
+              >
+                {copied ? (
+                  <Check size={24} weight="bold" className="text-white" />
+                ) : (
+                  <Copy size={24} weight="bold" className="text-white" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleShareTwitter}
+              className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-6 py-4 bg-[#1DA1F2] hover:bg-[#1a8cd8] rounded-xl text-white font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              <ShareNetwork size={24} weight="fill" />
+              Share on Twitter
+            </button>
+
+            <button
+              onClick={handleCopy}
+              className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-6 py-4 bg-gray-700 hover:bg-gray-600 rounded-xl text-white font-bold transition-all"
+            >
+              <Copy size={24} weight="bold" />
+              Copy Link
+            </button>
+          </div>
+
+          {/* Value Hint */}
+          <div className="mt-4 p-4 bg-brand-950/30 rounded-lg border border-brand-500/20">
+            <p className="text-sm text-gray-300 text-center">
+              💡 <strong>Pro Tip:</strong> High quality score = higher share of future rewards.
+              Invite friends who'll actually play.
+            </p>
+          </div>
+        </div>
+
+        {/* Milestones */}
+        {data.milestones.length > 0 && (
+          <div className="card bg-gray-800/50 p-6 mb-8">
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+              <Trophy size={28} weight="fill" className="text-yellow-400" />
+              Milestones Achieved
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.milestones.map((milestone, index) => {
+                const info = getMilestoneInfo(milestone.type);
+                const Icon = info.icon;
+
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-4 bg-gray-900/50 rounded-lg border border-gray-700"
+                  >
+                    <Icon size={32} weight="fill" className={info.color} />
+                    <div>
+                      <div className={`font-bold ${info.color}`}>{info.label}</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(milestone.achievedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Referrals */}
+        {data.recentReferrals.length > 0 && (
+          <div className="card bg-gray-800/50 p-6">
+            <h2 className="text-2xl font-bold text-white mb-4">Recent Invites</h2>
+
+            <div className="space-y-3">
+              {data.recentReferrals.map((referral, index) => {
+                const daysSinceActive = Math.floor(
+                  (new Date().getTime() - new Date(referral.lastActive).getTime()) / (1000 * 60 * 60 * 24)
+                );
+                const isActive = daysSinceActive < 7;
+
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-700"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-400' : 'bg-gray-600'}`} />
+                      <div>
+                        <div className="font-bold text-white">{referral.username}</div>
+                        <div className="text-sm text-gray-400">Level {referral.level}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-300">
+                        {isActive ? 'Active' : `${daysSinceActive}d ago`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Joined {new Date(referral.joinedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* How It Works */}
+        <div className="mt-8 card bg-gray-800/30 p-6 border border-gray-700">
+          <h3 className="text-xl font-bold text-white mb-4">How Referrals Work</h3>
+
+          <div className="space-y-3 text-gray-300">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-bold">1</div>
+              <div>
+                <strong>Share your link</strong> - Friend signs up with your code
+                <div className="text-sm text-gray-400 mt-1">You: +100 XP | Them: +50 XP</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
+              <div>
+                <strong>They draft a team</strong> - Friend creates their first team
+                <div className="text-sm text-gray-400 mt-1">You: +50 XP bonus</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-bold">3</div>
+              <div>
+                <strong>They stay active</strong> - Friend completes Week 1
+                <div className="text-sm text-gray-400 mt-1">You: +100 XP | Quality score increases</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-bold">4</div>
+              <div>
+                <strong>Build your position</strong> - High quality score = bigger share later
+                <div className="text-sm text-gray-400 mt-1">💰 Early supporters with engaged referrals will be rewarded</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Leaderboard Rank */}
+        <div className="mt-6 text-center">
+          <p className="text-gray-400">
+            You're ranked <strong className="text-brand-400">#{data.recruiterRank}</strong> among all recruiters
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

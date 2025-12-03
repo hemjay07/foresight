@@ -68,7 +68,7 @@ const WelcomeModal = () => {
                   <div>
                     <h3 className="font-semibold mb-1 text-white">Build Your Squad</h3>
                     <p className="text-sm text-gray-400">
-                      Select 5 CT influencers within your 100-point budget
+                      Select 5 CT influencers within your 150-point budget
                     </p>
                   </div>
                 </div>

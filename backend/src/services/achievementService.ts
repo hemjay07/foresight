@@ -124,10 +124,10 @@ export async function getAllAchievementsWithStatus(userId: string) {
  * Check team-based achievements after scoring
  */
 export async function checkTeamAchievements(userId: string, teamId: number, contestId: number) {
-  const newAchievements = [];
+  const newAchievements: any[] = [];
 
   // Get team score and details
-  const team = await db('fantasy_teams')
+  const team = await db('user_teams')
     .where({ id: teamId })
     .first();
 
@@ -184,7 +184,7 @@ export async function checkDraftAchievements(userId: string, teamId: number) {
   }
 
   // FIRST_TEAM: Created first team
-  const teamCount = await db('fantasy_teams')
+  const teamCount = await db('user_teams')
     .where({ user_id: userId })
     .count('* as count')
     .first();

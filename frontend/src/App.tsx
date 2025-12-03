@@ -3,6 +3,7 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
+import { useEffect } from 'react';
 
 import { config } from './config/wagmi';
 import { RealtimeProvider } from './contexts/RealtimeContext';
@@ -12,13 +13,18 @@ import { AchievementToastProvider } from './contexts/AchievementToastContext';
 import AchievementToastContainer from './components/AchievementToastContainer';
 import Layout from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { setupGlobalErrorHandlers } from './utils/errorLogger';
 
 // Pages
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import LeagueUltra from './pages/LeagueUltra';
 import Vote from './pages/Vote';
+import Leaderboard from './pages/Leaderboard';
 import XPLeaderboard from './pages/XPLeaderboard';
+import UserStats from './pages/UserStats';
+import Referrals from './pages/Referrals';
 
 // Legal Pages
 import Terms from './pages/Terms';
@@ -32,6 +38,11 @@ import ShareCardDemo from './pages/ShareCardDemo';
 const queryClient = new QueryClient();
 
 function AppContent() {
+  // Setup global error handlers on mount
+  useEffect(() => {
+    setupGlobalErrorHandlers();
+  }, []);
+
   return (
     <Router>
       <Layout>
@@ -40,8 +51,12 @@ function AppContent() {
           <Route path="/draft" element={<LeagueUltra />} />
           <Route path="/league" element={<LeagueUltra />} />
           <Route path="/vote" element={<Vote />} />
-          <Route path="/leaderboard" element={<XPLeaderboard />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/leaderboard/xp" element={<XPLeaderboard />} />
+          <Route path="/stats" element={<UserStats />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/referrals" element={<Referrals />} />
 
           {/* Legal Pages */}
           <Route path="/terms" element={<Terms />} />

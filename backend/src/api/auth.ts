@@ -35,7 +35,7 @@ router.post(
   '/verify',
   authLimiter,
   asyncHandler(async (req: Request, res: Response) => {
-    const { message, signature } = req.body;
+    const { message, signature, referralCode } = req.body;
 
     if (!message || !signature) {
       throw new AppError('Message and signature are required', 400);
@@ -52,19 +52,92 @@ router.post(
 
     // Find or create user
     let user = await db('users').where({ wallet_address: walletAddress }).first();
+    let isNewUser = false;
+    let referrerId: string | null = null;
 
     if (!user) {
-      // Create new user
+      isNewUser = true;
+
+      // Validate referral code if provided
+      if (referralCode) {
+        const referrer = await db('users')
+          .where({ referral_code: referralCode })
+          .first();
+
+        if (referrer) {
+          referrerId = referrer.id;
+        }
+      }
+
+      // Check if user should be marked as founding member (first 1000 users)
+      const userCount = await db('users').count('* as count').first();
+      const totalUsers = parseInt(userCount?.count as string || '0');
+      const isFoundingMember = totalUsers < 1000;
+      const foundingMemberNumber = isFoundingMember ? totalUsers + 1 : null;
+
+      // Generate unique referral code
+      const refCode = `FORESIGHT_${walletAddress.slice(2, 10).toUpperCase()}`;
+
+      // Create new user with auto-generated username
+      const autoUsername = `Trader_${walletAddress.slice(2, 8)}`;
+
       const [newUser] = await db('users')
         .insert({
           id: uuidv4(),
           wallet_address: walletAddress,
+          username: autoUsername,
+          referral_code: refCode,
+          referred_by: referrerId,
+          is_founding_member: isFoundingMember,
+          founding_member_number: foundingMemberNumber,
+          joined_at: db.fn.now(),
           created_at: db.fn.now(),
           last_seen_at: db.fn.now(),
+          // Give bonus XP if referred
+          ct_mastery_score: referrerId ? 50 : 0,
         })
         .returning('*');
 
       user = newUser;
+
+      // Award referrer
+      if (referrerId) {
+        // Increment referrer's count
+        await db('users')
+          .where({ id: referrerId })
+          .increment('referral_count', 1)
+          .increment('ct_mastery_score', 100); // Referrer gets 100 XP
+
+        // Update first_referral_at if this is their first
+        const referrer = await db('users').where({ id: referrerId }).first();
+        if (referrer && !referrer.first_referral_at) {
+          await db('users')
+            .where({ id: referrerId })
+            .update({ first_referral_at: db.fn.now() });
+        }
+
+        // Create referral event
+        await db('referral_events').insert({
+          id: uuidv4(),
+          referrer_id: referrerId,
+          referee_id: user.id,
+          event_type: 'signup',
+          xp_awarded: 100,
+          metadata: { founding_member: isFoundingMember },
+          created_at: db.fn.now(),
+        });
+
+        // Log XP action for referrer
+        await db('xp_actions').insert({
+          id: uuidv4(),
+          user_id: referrerId,
+          action_key: 'referral_signup',
+          xp_earned: 100,
+          reference_type: 'referral',
+          reference_id: user.id,
+          created_at: db.fn.now(),
+        });
+      }
     } else {
       // Update last seen
       await db('users').where({ id: user.id }).update({
@@ -108,7 +181,18 @@ router.post(
         avatarUrl: user.avatar_url,
         ctMasteryScore: user.ct_mastery_score,
         ctMasteryLevel: user.ct_mastery_level,
+        referralCode: user.referral_code,
+        isFoundingMember: user.is_founding_member,
+        foundingMemberNumber: user.founding_member_number,
       },
+      // Hint at future value for new users
+      message: isNewUser
+        ? user.is_founding_member
+          ? `Welcome, Founding Member #${user.founding_member_number}! Early supporters will be rewarded.`
+          : referrerId
+          ? 'Welcome! You earned 50 bonus XP from your referral.'
+          : 'Welcome to CT Fantasy League!'
+        : 'Welcome back!',
     });
   })
 );

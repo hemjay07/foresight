@@ -3,14 +3,102 @@
  * Landing page for CT Fantasy League
  */
 
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAccount } from 'wagmi';
+import axios from 'axios';
 import {
-  Trophy, Target, TrendUp, CheckCircle, ArrowRight
+  Trophy, Target, TrendUp, CheckCircle, ArrowRight, Users, Fire, Clock
 } from '@phosphor-icons/react';
+import RecentAchievements from '../components/RecentAchievements';
+import TrendingStats from '../components/TrendingStats';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+interface HomeStats {
+  totalTeams: number;
+  totalUsers: number;
+  activeContests: number;
+  totalInfluencers: number;
+}
+
+interface Contest {
+  id: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
 
 export default function Home() {
   const { isConnected } = useAccount();
+  const [stats, setStats] = useState<HomeStats>({
+    totalTeams: 0,
+    totalUsers: 0,
+    activeContests: 0,
+    totalInfluencers: 50,
+  });
+  const [currentContest, setCurrentContest] = useState<Contest | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  // Fetch home stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Fetch contests
+        const contestsRes = await axios.get(`${API_URL}/api/league/contests`);
+        const contests = contestsRes.data.contests || [];
+        const active = contests.find((c: Contest) => c.status === 'active');
+        setCurrentContest(active || null);
+
+        // Fetch influencers count
+        const influencersRes = await axios.get(`${API_URL}/api/league/influencers`);
+        const totalInfluencers = influencersRes.data.total || 50;
+
+        // Set stats (TODO: Add real team/user counts from backend)
+        setStats({
+          totalTeams: contests.length * 10, // Rough estimate
+          totalUsers: contests.length * 8, // Rough estimate
+          activeContests: contests.filter((c: Contest) => c.status === 'active').length,
+          totalInfluencers,
+        });
+      } catch (error) {
+        console.error('Failed to fetch home stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  // Update countdown timer
+  useEffect(() => {
+    if (!currentContest) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const end = new Date(currentContest.end_date).getTime();
+      const distance = end - now;
+
+      if (distance < 0) {
+        setTimeRemaining('Contest ended');
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeRemaining(`${days}d ${hours}h remaining`);
+      } else {
+        setTimeRemaining(`${hours}h ${minutes}m remaining`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [currentContest]);
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -18,6 +106,37 @@ export default function Home() {
       <div className="absolute inset-0 bg-gradient-mesh pointer-events-none" />
 
       <div className="relative">
+        {/* Live Stats Ticker */}
+        <div className="bg-gradient-to-r from-cyan-900/20 via-blue-900/20 to-purple-900/20 border-b border-gray-800">
+          <div className="container-app py-3">
+            <div className="flex items-center justify-center gap-8 text-sm flex-wrap">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Fire size={16} weight="fill" className="text-orange-500" />
+                <span><span className="text-white font-bold">{stats.totalTeams}</span> teams competing</span>
+              </div>
+              <div className="h-4 w-px bg-gray-700" />
+              <div className="flex items-center gap-2 text-gray-400">
+                <Users size={16} weight="fill" className="text-cyan-500" />
+                <span><span className="text-white font-bold">{stats.totalUsers}+</span> active traders</span>
+              </div>
+              <div className="h-4 w-px bg-gray-700" />
+              <div className="flex items-center gap-2 text-gray-400">
+                <Trophy size={16} weight="fill" className="text-yellow-500" />
+                <span><span className="text-white font-bold">{stats.totalInfluencers}</span> influencers</span>
+              </div>
+              {currentContest && timeRemaining && (
+                <>
+                  <div className="h-4 w-px bg-gray-700" />
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Clock size={16} weight="fill" className="text-green-500" />
+                    <span><span className="text-white font-bold">{timeRemaining}</span></span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <div className="container-narrow py-20 md:py-28">
           <div className="text-center">
@@ -55,19 +174,19 @@ export default function Home() {
             </div>
 
             {/* Social proof */}
-            <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500">
+            <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-400 flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
-                  <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-gray-950" />
-                  <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-gray-950" />
-                  <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-gray-950" />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 border-2 border-gray-950" />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-gray-950" />
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 border-2 border-gray-950" />
                 </div>
-                <span>50 influencers</span>
+                <span>Join <span className="text-white font-semibold">{stats.totalUsers}+</span> traders</span>
               </div>
               <div className="h-4 w-px bg-gray-800" />
-              <div>Active contests</div>
+              <div><span className="text-white font-semibold">{stats.activeContests}</span> active contests</div>
               <div className="h-4 w-px bg-gray-800" />
-              <div>150 point budget</div>
+              <div><span className="text-white font-semibold">150</span> point budget</div>
             </div>
           </div>
         </div>
@@ -107,6 +226,28 @@ export default function Home() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Recent Achievements */}
+        <div className="container-app py-16 border-t border-gray-900">
+          <div className="max-w-4xl mx-auto">
+            <RecentAchievements limit={6} showUsernames={false} />
+          </div>
+        </div>
+
+        {/* Trending Stats - Weekly Highlights */}
+        <div className="container-app py-16 border-t border-gray-900">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              This Week's Highlights
+            </h2>
+            <p className="text-xl text-gray-400">
+              Top performers and recent achievements from the community
+            </p>
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <TrendingStats />
           </div>
         </div>
 

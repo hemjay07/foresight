@@ -9,13 +9,13 @@ import {
  * Fantasy League Scoring Service
  * Calculates metrics-based scores for CT Draft teams
  *
- * Scoring Formula (Enhanced):
- * Base Score = base_price + (follower_count / 1,000,000) * 10
- *
- * Future enhancements will add:
- * - Engagement rate multiplier
- * - Tweet velocity bonus
- * - Follower growth trend
+ * Daily Scoring Formula:
+ * - Base: base_price (tier-based pricing)
+ * - Follower bonus: (follower_count / 1M) * 5 points
+ * - Tweet activity: daily_tweets * 2 points
+ * - Engagement: (likes + retweets + replies) * 0.01 points
+ * - Engagement rate multiplier: (1 + engagement_rate / 100)
+ * - Captain gets 2x multiplier (FPL-style)
  */
 
 interface Influencer {
@@ -27,6 +27,16 @@ interface Influencer {
   follower_count: number;
   engagement_rate?: number;
   is_captain?: boolean;
+}
+
+interface InfluencerMetrics {
+  follower_count: number;
+  daily_tweets: number;
+  likes_count: number;
+  retweets_count: number;
+  replies_count: number;
+  engagement_rate: number;
+  scraped_at: Date;
 }
 
 interface Team {
@@ -45,22 +55,54 @@ interface TeamWithInfluencers extends Team {
 }
 
 /**
- * Calculate score for a single influencer
- * Enhanced formula that can be expanded with Twitter API data
+ * Get latest metrics for an influencer
  */
-export function calculateInfluencerScore(influencer: Influencer): number {
-  // Base score from tier pricing (ensure it's a number)
+async function getLatestMetrics(influencerId: number): Promise<InfluencerMetrics | null> {
+  const metrics = await db('influencer_metrics')
+    .where({ influencer_id: influencerId })
+    .orderBy('scraped_at', 'desc')
+    .first();
+
+  return metrics || null;
+}
+
+/**
+ * Calculate daily score for a single influencer based on Twitter metrics
+ * Uses real-time Twitter data from influencer_metrics table
+ */
+export function calculateInfluencerDailyScore(
+  influencer: Influencer,
+  metrics: InfluencerMetrics | null
+): number {
+  // Base score from tier pricing
   const baseScore = Number(influencer.base_price) || 0;
 
-  // Follower bonus: 10 points per million followers (ensure it's a number)
-  const followerCount = Number(influencer.follower_count) || 0;
-  const followerBonus = (followerCount / 1_000_000) * 10;
+  // If no metrics available yet, return base price only
+  if (!metrics) {
+    return baseScore;
+  }
 
-  // Engagement bonus (future enhancement)
-  // const engagementBonus = (influencer.engagement_rate || 0) * 5;
+  // Follower bonus: 5 points per million followers
+  const followerCount = Number(metrics.follower_count) || 0;
+  const followerBonus = (followerCount / 1_000_000) * 5;
 
-  // Total score
-  const totalScore = baseScore + followerBonus;
+  // Tweet activity bonus: 2 points per tweet today
+  const dailyTweets = Number(metrics.daily_tweets) || 0;
+  const tweetBonus = dailyTweets * 2;
+
+  // Engagement bonus: 0.01 points per interaction
+  const likes = Number(metrics.likes_count) || 0;
+  const retweets = Number(metrics.retweets_count) || 0;
+  const replies = Number(metrics.replies_count) || 0;
+  const engagementBonus = (likes + retweets + replies) * 0.01;
+
+  // Engagement rate multiplier (1.0 to 2.0x based on engagement rate)
+  const engagementRate = Number(metrics.engagement_rate) || 0;
+  const engagementMultiplier = 1 + (engagementRate / 100);
+
+  // Calculate total score with engagement multiplier
+  const rawScore = baseScore + followerBonus + tweetBonus + engagementBonus;
+  const totalScore = rawScore * engagementMultiplier;
 
   // Round to 2 decimals
   return Math.round(totalScore * 100) / 100;
@@ -106,6 +148,7 @@ async function getTeamsWithInfluencers(contestId: number): Promise<TeamWithInflu
 /**
  * Calculate scores for all teams in a contest
  * Includes weekly spotlight bonus for top voted influencers
+ * Stores individual influencer scores in team_picks
  */
 export async function calculateContestScores(contestId: number): Promise<void> {
   console.log('========================================');
@@ -143,25 +186,44 @@ export async function calculateContestScores(contestId: number): Promise<void> {
     }
 
     for (const team of teamsWithInfluencers) {
-      // Calculate base score for this team
-      let totalScore = team.influencers.reduce((sum, influencer) => {
-        const influencerScore = calculateInfluencerScore(influencer);
+      let totalScore = 0;
+      let bonusAmount = 0;
+
+      // Calculate score for each influencer and update team_picks
+      for (const influencer of team.influencers) {
+        // Get latest metrics for this influencer
+        const metrics = await getLatestMetrics(influencer.id);
+
+        // Calculate daily score using real Twitter metrics
+        const dailyScore = calculateInfluencerDailyScore(influencer, metrics);
+
         // Apply 2x multiplier for captain (FPL-style)
         const multiplier = influencer.is_captain ? 2 : 1;
-        return sum + (influencerScore * multiplier);
-      }, 0);
+        const influencerFinalScore = dailyScore * multiplier;
 
-      // Apply weekly spotlight bonus if any team members are in top 3
-      let bonusAmount = 0;
-      for (const influencer of team.influencers) {
+        // Apply spotlight bonus if this influencer is in top 3
+        let influencerWithBonus = influencerFinalScore;
         if (spotlightBonuses[influencer.id]) {
-          const bonus = totalScore * spotlightBonuses[influencer.id];
+          const bonus = influencerFinalScore * spotlightBonuses[influencer.id];
+          influencerWithBonus += bonus;
           bonusAmount += bonus;
         }
-      }
 
-      if (bonusAmount > 0) {
-        totalScore += bonusAmount;
+        // Update team_picks with individual influencer scores
+        await db('team_picks')
+          .where({
+            team_id: team.id,
+            influencer_id: influencer.id,
+          })
+          .update({
+            daily_points: Math.round(dailyScore),
+            total_points: db.raw('total_points + ?', [Math.round(dailyScore)]),
+            updated_at: db.fn.now(),
+          });
+
+        totalScore += influencerWithBonus;
+
+        console.log(`  ${influencer.display_name}: ${Math.round(dailyScore)} pts${influencer.is_captain ? ' (Captain 2x)' : ''}`);
       }
 
       // Round to integer for leaderboard ranking
@@ -184,10 +246,10 @@ export async function calculateContestScores(contestId: number): Promise<void> {
         });
 
       const bonusText = bonusAmount > 0 ? ` +${Math.round(bonusAmount)} spotlight bonus` : '';
-      console.log(`✓ Team "${team.team_name}": ${roundedScore} pts (${scoreChange >= 0 ? '+' : ''}${scoreChange})${bonusText}`);
+      console.log(`✓ Team "${team.team_name}": ${roundedScore} pts (${scoreChange >= 0 ? '+' : ''}${scoreChange})${bonusText}\n`);
     }
 
-    console.log('\n✅ All team scores calculated');
+    console.log('✅ All team scores calculated');
   } catch (error) {
     console.error('❌ Failed to calculate team scores:', error);
     throw error;
@@ -395,9 +457,9 @@ export async function checkVotingAchievements(userId: number, totalVotes: number
   if (totalVotes >= 50) await tryUnlockAchievement(userId, 'VOTES_50');
   if (totalVotes >= 100) await tryUnlockAchievement(userId, 'VOTES_100');
 
-  // Streak achievements
-  if (streak >= 7) await tryUnlockAchievement(userId, 'STREAK_7');
-  if (streak >= 30) await tryUnlockAchievement(userId, 'STREAK_30');
+  // Streak achievements (CT themed)
+  if (streak >= 7) await tryUnlockAchievement(userId, 'GM_STREAK');
+  if (streak >= 30) await tryUnlockAchievement(userId, 'GM_LEGEND');
 }
 
 /**
@@ -469,7 +531,7 @@ export async function runFantasyScoringCycle(): Promise<void> {
 async function checkAchievementsForContest(contestId: number): Promise<void> {
   try {
     // Get all teams with scores and ranks
-    const teams = await db('fantasy_teams')
+    const teams = await db('user_teams')
       .where('contest_id', contestId)
       .select('*');
 

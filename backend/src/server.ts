@@ -15,6 +15,8 @@ import adminRoutes from './api/admin';
 import leagueRoutes from './api/league';
 import privateLeaguesRoutes from './api/privateLeagues';
 import achievementsRoutes from './api/achievements';
+import errorsRoutes from './api/errors';
+import referralsRoutes from './api/referrals';
 
 // Create Express app and HTTP server
 const app: Application = express();
@@ -46,6 +48,11 @@ app.use(cors({
       return callback(null, true);
     }
 
+    // Allow ngrok URLs for sharing
+    if (origin.includes('.ngrok-free.app')) {
+      return callback(null, true);
+    }
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -74,6 +81,7 @@ app.get('/', (req, res) => {
       league: '/api/league',
       privateLeagues: '/api/private-leagues',
       admin: '/api/admin',
+      errors: '/api/errors',
     },
   });
 });
@@ -94,6 +102,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/league', leagueRoutes);
 app.use('/api/private-leagues', privateLeaguesRoutes);
 app.use('/api/achievements', achievementsRoutes);
+app.use('/api/errors', errorsRoutes);
+app.use('/api/referrals', referralsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

@@ -1,3 +1,5 @@
+import { ShareNetwork } from '@phosphor-icons/react';
+
 interface AchievementBadgeProps {
   icon: string;
   name: string;
@@ -7,6 +9,7 @@ interface AchievementBadgeProps {
   unlockedAt?: string;
   size?: 'sm' | 'md' | 'lg';
   showName?: boolean;
+  showShare?: boolean;
   onClick?: () => void;
 }
 
@@ -48,9 +51,18 @@ const AchievementBadge = ({
   unlockedAt,
   size = 'md',
   showName = false,
+  showShare = false,
   onClick,
 }: AchievementBadgeProps) => {
   const colors = rarityColors[rarity];
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const text = `just unlocked "${name}" on @ForesightCT ${icon}`;
+    const url = 'https://foresight.ct';
+    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(tweetUrl, '_blank', 'width=550,height=420');
+  };
 
   return (
     <div
@@ -80,6 +92,17 @@ const AchievementBadge = ({
             {name}
           </div>
         </div>
+      )}
+
+      {/* Share button (only for unlocked achievements if showShare is true) */}
+      {showShare && unlocked && (
+        <button
+          onClick={handleShare}
+          className="absolute -top-2 -right-2 w-6 h-6 bg-[#1DA1F2] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:scale-110 z-10"
+          title="Share on Twitter"
+        >
+          <ShareNetwork size={12} weight="fill" className="text-white" />
+        </button>
       )}
 
       {/* Tooltip on hover */}

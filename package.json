@@ -4,7 +4,7 @@
   "description": "CT league - Revolutionary prediction & fantasy gaming ecosystem",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"pnpm --filter frontend dev\" \"pnpm --filter backend dev\"",
+    "dev": "concurrently \"cd backend && pnpm dev\" \"cd frontend && pnpm dev\"",
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev",
     "build": "pnpm --filter frontend build && pnpm --filter backend build",

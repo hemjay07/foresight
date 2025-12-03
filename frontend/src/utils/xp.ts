@@ -170,3 +170,16 @@ export function formatXP(xp: number): string {
   if (xp >= 1000) return `${(xp / 1000).toFixed(1)}K`;
   return xp.toString();
 }
+
+/**
+ * Get numeric level from XP (simplified)
+ * Returns a number from 1-6 based on XP thresholds
+ */
+export function getNumericLevel(xp: number): number {
+  if (xp >= 2500) return 6; // LEGENDARY
+  if (xp >= 1000) return 5; // MASTER
+  if (xp >= 500) return 4; // EXPERT
+  if (xp >= 250) return 3; // SKILLED
+  if (xp >= 100) return 2; // APPRENTICE
+  return 1; // NOVICE
+}

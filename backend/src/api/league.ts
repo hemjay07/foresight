@@ -8,6 +8,7 @@ import { authenticate as authenticateToken } from '../middleware/auth';
 import db from '../utils/db';
 import { getVoteWeight } from '../utils/xp';
 import { checkVotingAchievements, checkMilestoneAchievements, tryUnlockAchievement } from '../services/fantasyScoringService';
+import { checkDraftAchievements } from '../services/achievementService';
 
 const router = express.Router();
 
@@ -248,8 +249,8 @@ router.post('/team/create', authenticateToken, async (req: Request, res: Respons
 
     const totalBudget = picks.reduce((sum, pick) => sum + parseFloat(pick.price || 0), 0);
 
-    // Check for first team achievement
-    tryUnlockAchievement(userId, 'FIRST_TEAM').catch(console.error);
+    // Check for draft achievements (async, don't block response)
+    checkDraftAchievements(userId, team.id).catch(console.error);
 
     res.json({
       success: true,
@@ -381,6 +382,99 @@ router.put('/team/update', authenticateToken, async (req: Request, res: Response
 });
 
 /**
+ * Update team name
+ * PATCH /api/league/team/name
+ * Body: { team_name: string }
+ */
+router.patch('/team/name', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { team_name } = req.body;
+
+    // Validate team name
+    if (!team_name || typeof team_name !== 'string') {
+      return res.status(400).json({ error: 'Team name is required' });
+    }
+
+    const trimmedName = team_name.trim();
+
+    if (trimmedName.length < 3) {
+      return res.status(400).json({ error: 'Team name must be at least 3 characters' });
+    }
+
+    if (trimmedName.length > 50) {
+      return res.status(400).json({ error: 'Team name must be 50 characters or less' });
+    }
+
+    // Check for profanity/inappropriate content (basic check)
+    const inappropriateWords = ['fuck', 'shit', 'bitch', 'ass', 'damn', 'crap'];
+    const lowerCaseName = trimmedName.toLowerCase();
+    const hasProfanity = inappropriateWords.some(word => lowerCaseName.includes(word));
+
+    if (hasProfanity) {
+      return res.status(400).json({ error: 'Team name contains inappropriate content' });
+    }
+
+    // Get active contest
+    const contest = await db('fantasy_contests')
+      .where({ status: 'active' })
+      .first();
+
+    if (!contest) {
+      return res.status(404).json({ error: 'No active contest' });
+    }
+
+    // Get user's team
+    const team = await db('user_teams')
+      .where({ user_id: userId, contest_id: contest.id })
+      .first();
+
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found. Create a team first.' });
+    }
+
+    // Update team name
+    await db('user_teams')
+      .where({ id: team.id })
+      .update({ team_name: trimmedName });
+
+    // Fetch updated team with picks
+    const updatedTeam = await db('user_teams')
+      .where({ id: team.id })
+      .first();
+
+    const picks = await db('team_picks')
+      .join('influencers', 'team_picks.influencer_id', 'influencers.id')
+      .where({ team_id: team.id })
+      .select(
+        'team_picks.*',
+        'influencers.display_name as influencer_name',
+        'influencers.twitter_handle as influencer_handle',
+        'influencers.avatar_url as profile_image_url',
+        'influencers.tier',
+        'influencers.price'
+      )
+      .orderBy('team_picks.pick_order');
+
+    const totalBudget = picks.reduce((sum, pick) => sum + parseFloat(pick.price || 0), 0);
+
+    res.json({
+      success: true,
+      message: 'Team name updated successfully',
+      team: {
+        ...updatedTeam,
+        picks,
+        total_budget_used: totalBudget,
+        max_budget: 150,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error updating team name:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Lock team (finalize picks)
  * POST /api/league/team/lock
  */
@@ -436,29 +530,56 @@ router.post('/team/lock', authenticateToken, async (req: Request, res: Response)
 router.get('/influencers', async (req: Request, res: Response) => {
   try {
     // Get all 50 influencers with pricing (S, A, B, C tiers)
-    // Order by tier: S (Legendary) first, then A (Epic), B (Rare), C (Common)
+    // Join with latest metrics to show recent performance
     const influencers = await db('influencers')
-      .where({ is_active: true })
-      .whereIn('tier', ['S', 'A', 'B', 'C'])
+      .leftJoin('influencer_metrics', function() {
+        this.on('influencers.id', '=', 'influencer_metrics.influencer_id')
+          .andOn('influencer_metrics.scraped_at', '=', db.raw(`(
+            SELECT MAX(scraped_at)
+            FROM influencer_metrics im2
+            WHERE im2.influencer_id = influencers.id
+          )`));
+      })
+      .where({ 'influencers.is_active': true })
+      .whereIn('influencers.tier', ['S', 'A', 'B', 'C'])
       .orderByRaw(`
-        CASE tier
+        CASE influencers.tier
           WHEN 'S' THEN 1
           WHEN 'A' THEN 2
           WHEN 'B' THEN 3
           WHEN 'C' THEN 4
         END ASC
       `)
-      .orderBy('price', 'desc')
+      .orderBy('influencers.price', 'desc')
       .select(
-        'id',
-        'display_name as name',
-        'twitter_handle as handle',
-        'avatar_url as profile_image_url',
-        'tier',
-        'price',
-        'follower_count',
-        'form_score',
-        'total_points'
+        'influencers.id',
+        'influencers.display_name as name',
+        'influencers.twitter_handle as handle',
+        'influencers.avatar_url as profile_image_url',
+        'influencers.tier',
+        'influencers.price',
+        'influencers.follower_count',
+        db.raw('COALESCE(influencer_metrics.daily_tweets, 0) as daily_tweets'),
+        db.raw('COALESCE(influencer_metrics.engagement_rate, 0) as engagement_rate'),
+        db.raw(`
+          CASE
+            WHEN influencer_metrics.daily_tweets > 8 THEN 95
+            WHEN influencer_metrics.daily_tweets > 5 THEN 85
+            WHEN influencer_metrics.daily_tweets > 2 THEN 75
+            ELSE 65
+          END as form_score
+        `),
+        db.raw(`
+          ROUND(
+            influencers.price +
+            (COALESCE(influencer_metrics.follower_count, influencers.follower_count, 0) / 1000000.0) * 5 +
+            COALESCE(influencer_metrics.daily_tweets, 0) * 2 +
+            (COALESCE(influencer_metrics.likes_count, 0) +
+             COALESCE(influencer_metrics.retweets_count, 0) +
+             COALESCE(influencer_metrics.replies_count, 0)) * 0.01 *
+            (1 + COALESCE(influencer_metrics.engagement_rate, 0) / 100.0)
+          ) as total_points
+        `)
       );
 
     res.json({

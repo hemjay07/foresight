@@ -9,14 +9,29 @@ import { SiweMessage } from 'siwe';
 import axios from 'axios';
 import {
   Trophy, Users, Lock, CheckCircle, TrendUp, Warning,
-  MagnifyingGlass, Sparkle, Crown, Star, Fire,
- X, Medal, Circle
+  MagnifyingGlass, Sparkle, Crown, Star, Fire, TrendDown,
+ X, Medal, Circle, ShareNetwork
 } from '@phosphor-icons/react';
 import WelcomeModal from '../components/WelcomeModal';
+import SkeletonCard from '../components/SkeletonCard';
+import { EmptyState } from '../components/EmptyState';
+import ShareTeamCard from '../components/ShareTeamCard';
+import FirstTimeOnboarding from '../components/FirstTimeOnboarding';
 import { formatFollowerCount } from '../utils/formatFollowers';
 import { getRarityInfo } from '../utils/rarities';
+import { useToast } from '../contexts/ToastContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Auto-detect API URL based on current hostname
+const getApiUrl = () => {
+  // If accessing via ngrok, use ngrok backend
+  if (window.location.hostname.includes('ngrok-free.app')) {
+    return 'https://20b22fba1aa8.ngrok-free.app';
+  }
+  // Otherwise use env var or localhost
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+};
+
+const API_URL = getApiUrl();
 
 interface Influencer {
   id: number;
@@ -24,10 +39,12 @@ interface Influencer {
   handle: string;
   profile_image_url?: string;
   tier: string;
-  price: number;
+  price: string | number;
   follower_count?: number;
+  daily_tweets?: number;
+  engagement_rate?: string | number;
   form_score?: number;
-  total_points?: number;
+  total_points?: string | number;
 }
 
 interface Pick extends Influencer {
@@ -72,6 +89,7 @@ interface LeaderboardEntry {
 export default function LeagueUltra() {
   const { address, isConnected, chainId } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { showToast } = useToast();
 
   // State
   const [contests, setContests] = useState<Contest[]>([]);
@@ -85,7 +103,7 @@ export default function LeagueUltra() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Derived state
-  const selectedContest = contests.find(c => c.id === selectedContestId) || contests[0] || null;
+  const selectedContest = (contests || []).find(c => c.id === selectedContestId) || (contests && contests[0]) || null;
 
   // New filter/search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,6 +120,8 @@ export default function LeagueUltra() {
   const [teamBadge, setTeamBadge] = useState<string>('fire');
   const [teamColor, setTeamColor] = useState<string>('brand');
   const [showPersonalization, setShowPersonalization] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Professional badges - no emojis
   const badges = {
@@ -209,6 +229,15 @@ export default function LeagueUltra() {
     return availableInfluencers.filter(inf => selectedInfluencers.includes(inf.id));
   }, [selectedInfluencers, availableInfluencers]);
 
+  // Check if user has seen onboarding
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    if (!hasSeenOnboarding) {
+      // Show onboarding after a short delay for better UX
+      setTimeout(() => setShowOnboarding(true), 1000);
+    }
+  }, []);
+
   // API calls (keeping existing logic)
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -252,10 +281,11 @@ export default function LeagueUltra() {
           'Pragma': 'no-cache'
         }
       });
-      console.log('Fetched influencers:', response.data.influencers?.length || 0);
-      setAvailableInfluencers(response.data.influencers || []);
+      const influencers = response.data.influencers || [];
+      setAvailableInfluencers(influencers);
     } catch (error) {
       console.error('Error fetching influencers:', error);
+      setAvailableInfluencers([]);
     }
   };
 
@@ -310,17 +340,15 @@ export default function LeagueUltra() {
 
   const handleManualSignIn = async () => {
     if (!address) {
-      alert('Please connect your wallet first');
+      showToast('error', 'Please connect your wallet first');
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Starting sign-in...', { address, chainId });
 
       // Step 1: Get nonce
       const nonceResponse = await axios.get(`${API_URL}/api/auth/nonce?address=${address}`);
-      console.log('Got nonce:', nonceResponse.data.nonce);
 
       // Step 2: Create SIWE message
       const siweConfig = {
@@ -329,27 +357,14 @@ export default function LeagueUltra() {
         statement: 'Sign in to Foresight Fantasy League',
         uri: window.location.origin,
         version: '1',
-        chainId: chainId || 1, // Default to mainnet if undefined
+        chainId: chainId || 1,
         nonce: nonceResponse.data.nonce,
       };
-      console.log('SIWE config:', JSON.stringify(siweConfig, null, 2));
 
       let message: SiweMessage;
       try {
         message = new SiweMessage(siweConfig);
-        console.log('SIWE message created successfully');
       } catch (error) {
-        console.error('=== SIWE ERROR ===');
-        console.error('Failed to create SiweMessage:', error);
-        console.error('Error type:', typeof error);
-        console.error('Error instanceof Error:', error instanceof Error);
-        console.error('Error details:', {
-          name: ( error instanceof Error) ? error.name : 'unknown',
-          message: (error instanceof Error) ? error.message : String(error),
-        });
-
-        console.error('Full SIWE error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-
         const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
         throw new Error(`Failed to create SIWE message: ${errorMsg}`);
       }
@@ -357,25 +372,18 @@ export default function LeagueUltra() {
       let messageToSign: string;
       try {
         messageToSign = message.prepareMessage();
-        console.log('Message prepared successfully');
-        console.log('Message to sign:', messageToSign);
       } catch (siweError) {
-        console.error('SIWE prepareMessage error:', siweError);
         throw new Error(`Failed to prepare SIWE message: ${siweError instanceof Error ? siweError.message : String(siweError)}`);
       }
 
       // Step 3: Sign message with wallet
-      console.log('Requesting signature from wallet...');
       const signature = await signMessageAsync({ message: messageToSign });
-      console.log('Signature received:', signature);
 
       // Step 4: Verify signature with backend
-      console.log('Verifying signature with backend...');
       const verifyResponse = await axios.post(`${API_URL}/api/auth/verify`, {
         message: messageToSign,
         signature,
       });
-      console.log('Verification successful!');
 
       // Step 5: Store tokens
       localStorage.setItem('authToken', verifyResponse.data.accessToken);
@@ -384,14 +392,8 @@ export default function LeagueUltra() {
 
       // Step 6: Fetch team data
       await fetchTeam();
-      alert('Successfully signed in!');
+      showToast('success', 'Successfully signed in!');
     } catch (error) {
-      console.error('=== SIGN-IN ERROR ===');
-      console.error('Error object:', error instanceof Error);
-      console.error('Error name:', (error instanceof Error) ? error.name : 'unknown');
-      console.error('Error message:', (error instanceof Error) ? error.message : String(error));
-      console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-
       // Better error messages
       let errorMessage = 'Error signing in';
       const errorCode = (error as {code?: string | number}).code;
@@ -403,7 +405,7 @@ export default function LeagueUltra() {
         errorMessage = error.message;
       }
 
-      alert(errorMessage);
+      showToast('error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -477,19 +479,30 @@ export default function LeagueUltra() {
     setSelectedInfluencers(prev => [...prev, ...picks]);
   };
 
+  const handleCompleteOnboarding = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setShowOnboarding(false);
+    showToast('success', 'Welcome to CT Fantasy League! Start building your team 🚀');
+  };
+
+  const handleSkipOnboarding = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setShowOnboarding(false);
+  };
+
   const handleCreateTeam = async () => {
     if (!selectedContest) {
-      alert('Please select a league');
+      showToast('error', 'Please select a league');
       return;
     }
 
     if (!teamName || selectedInfluencers.length !== 5 || budgetUsed > TOTAL_BUDGET) {
-      alert('Please enter a team name and select exactly 5 influencers within budget');
+      showToast('error', 'Please enter a team name and select exactly 5 influencers within budget');
       return;
     }
 
     if (!captainId) {
-      alert('Please select a captain (one influencer will get 2x points)');
+      showToast('error', 'Please select a captain (one influencer will get 2x points)');
       return;
     }
 
@@ -515,9 +528,10 @@ export default function LeagueUltra() {
 
       // Switch to My Squad view to show the new team
       setCurrentView('squad');
+      showToast('success', `Team "${teamName}" created successfully! 🎉`);
     } catch (error) {
       const errorMsg = axios.isAxiosError(error) && error.response?.data?.error ? error.response.data.error : 'Error creating team'
-      alert(errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setLoading(false);
     }
@@ -525,12 +539,12 @@ export default function LeagueUltra() {
 
   const handleUpdateTeam = async () => {
     if (selectedInfluencers.length !== 5 || budgetUsed > TOTAL_BUDGET) {
-      alert('Please select exactly 5 influencers within budget');
+      showToast('error', 'Please select exactly 5 influencers within budget');
       return;
     }
 
     if (!captainId) {
-      alert('Please select a captain (one influencer will get 2x points)');
+      showToast('error', 'Please select a captain (one influencer will get 2x points)');
       return;
     }
 
@@ -552,24 +566,31 @@ export default function LeagueUltra() {
 
       // Switch to My Squad view to show the updated team
       setCurrentView('squad');
+      showToast('success', 'Team updated successfully! ✨');
     } catch (error) {
       const errorMsg = axios.isAxiosError(error) && error.response?.data?.error
       ? error.response.data.error
       : 'Error updating team';
-      alert(errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && availableInfluencers.length === 0) {
+  if (loading && (!availableInfluencers || availableInfluencers.length === 0)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin mb-6">
-            <Circle size={48} weight="bold" className="text-brand-500" />
+      <div className="min-h-screen bg-dark-bg p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <div className="h-10 bg-dark-border rounded w-64 animate-pulse mb-4"></div>
+            <div className="h-6 bg-dark-border rounded w-96 animate-pulse"></div>
           </div>
-          <p className="text-xl text-gray-400">Loading Fantasy League...</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -616,9 +637,9 @@ export default function LeagueUltra() {
           >
             <Trophy size={24} weight="bold" />
             Leaderboard
-            {leaderboard.length > 0 && (
+            {(leaderboard || []).length > 0 && (
               <span className="bg-brand-500 text-white px-2 py-0.5 rounded-full text-sm font-bold">
-                {leaderboard.length}
+                {(leaderboard || []).length}
               </span>
             )}
           </button>
@@ -851,7 +872,7 @@ export default function LeagueUltra() {
         {/* RIGHT MAIN AREA - Influencer Grid */}
         <div className="flex-1">
           {/* League Selector */}
-          {contests.length > 0 && (
+          {(contests || []).length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
               {contests.map((contestOption) => (
                 <button
@@ -1012,8 +1033,8 @@ export default function LeagueUltra() {
             {/* Results Count & Auto-Pick */}
             <div className="flex items-center justify-between pt-4 border-t border-gray-700">
               <p className="text-sm text-gray-400">
-                <span className="badge-primary bg-brand-500/20 text-brand-400 px-3 py-1 rounded-full font-bold">{filteredInfluencers.length} influencers</span>
-                {' '}shown of {availableInfluencers.length} total
+                <span className="badge-primary bg-brand-500/20 text-brand-400 px-3 py-1 rounded-full font-bold">{(filteredInfluencers || []).length} influencers</span>
+                {' '}shown of {(availableInfluencers || []).length} total
               </p>
 
               {selectedInfluencers.length < 5 && isAuthenticated && (
@@ -1038,11 +1059,30 @@ export default function LeagueUltra() {
               // Form indicator based on form_score (0-100 scale, with 50 being average)
               const formScore = influencer.form_score || 50;
               const getFormInfo = () => {
-                if (formScore >= 70) return { text: 'Hot', color: 'text-orange-400', bg: 'bg-orange-500/20 border-orange-500/50' };
-                if (formScore >= 40) return { text: 'Steady', color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/50' };
-                return { text: 'Cold', color: 'text-gray-400', bg: 'bg-gray-500/20 border-gray-500/50' };
+                if (formScore > 80) return {
+                  text: 'Hot',
+                  icon: Fire,
+                  color: 'text-red-400',
+                  bg: 'bg-red-500/20 border-red-500/50',
+                  glow: 'shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                };
+                if (formScore >= 50) return {
+                  text: 'Stable',
+                  icon: Star,
+                  color: 'text-blue-400',
+                  bg: 'bg-blue-500/20 border-blue-500/50',
+                  glow: 'shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                };
+                return {
+                  text: 'Cold',
+                  icon: TrendDown,
+                  color: 'text-gray-400',
+                  bg: 'bg-gray-500/20 border-gray-500/50',
+                  glow: ''
+                };
               };
               const form = getFormInfo();
+              const FormIcon = form.icon;
 
               return (
                 <button
@@ -1052,13 +1092,14 @@ export default function LeagueUltra() {
                   className={`card-hover relative p-6 rounded-lg border-2 transition-all duration-300 text-left group ${
                     isSelected
                       ? `${rarity.border} bg-gradient-to-br ${rarity.gradient} ${rarity.glow} scale-[1.02]`
-                      : 'border-gray-700 bg-gradient-to-br from-gray-800/80 to-gray-900/80 hover:border-gray-600 hover:scale-[1.02] hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+                      : 'border-gray-700 bg-gradient-to-br from-gray-800/80 to-gray-900/80 hover:border-gray-600 hover:scale-[1.02] hover:shadow-soft disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:hover:scale-100'
                   }`}
                 >
                   {/* Top Badges Row */}
                   <div className="absolute top-3 left-3 right-3 z-10 flex items-start justify-between gap-2">
                     {/* Form Badge */}
-                    <div className={`${form.bg} border-2 px-2 py-1 rounded-full flex items-center gap-1 shadow-soft`}>
+                    <div className={`${form.bg} ${form.glow} border-2 px-2 py-1 rounded-full flex items-center gap-1`}>
+                      <FormIcon size={14} weight="fill" className={form.color} />
                       <span className={`text-xs font-bold ${form.color}`}>{form.text}</span>
                     </div>
 
@@ -1071,9 +1112,9 @@ export default function LeagueUltra() {
 
                   {/* Profile Picture */}
                   <div className="mb-4 mt-6">
-                    <div className={`w-24 h-24 mx-auto rounded-full border-4 ${isSelected ? 'border-white' : 'border-gray-600'} shadow-soft overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 ${formScore >= 70 ? 'ring-2 ring-orange-500/50 ring-offset-2 ring-offset-gray-900' : ''}`}>
+                    <div className={`w-24 h-24 mx-auto rounded-full border-4 ${isSelected ? 'border-white' : 'border-gray-600'} shadow-soft overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 ${formScore > 80 ? 'ring-2 ring-red-500/50 ring-offset-2 ring-offset-gray-900' : ''}`}>
                       {influencer.profile_image_url ? (
-                        <img src={influencer.profile_image_url} alt={influencer.name} className="w-full h-full object-cover" />
+                        <img src={influencer.profile_image_url} alt={influencer.name} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-4xl text-gray-500">
                           <Users size={48} weight="bold" />
@@ -1148,13 +1189,20 @@ export default function LeagueUltra() {
 
           {/* Empty State */}
           {filteredInfluencers.length === 0 && (
-            <div className="text-center py-20">
-              <div className="mb-4">
-                <MagnifyingGlass size={64} weight="bold" className="text-gray-600 mx-auto" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">No influencers found</h3>
-              <p className="text-gray-400">Try adjusting your search or filters</p>
-            </div>
+            <EmptyState
+              icon="search"
+              title="No Influencers Found"
+              description="Try adjusting your search query or filter settings to find the perfect CT kings for your team."
+              action={
+                <button
+                  onClick={handleResetFilters}
+                  className="btn-primary px-8 py-4 flex items-center gap-3 font-bold text-base shadow-soft-lg hover:scale-105 transition-transform"
+                >
+                  <span className="text-xl">↻</span>
+                  Clear All Filters
+                </button>
+              }
+            />
           )}
         </div>
       </div>
@@ -1183,6 +1231,13 @@ export default function LeagueUltra() {
                 </div>
               </div>
               <div className="flex items-center gap-6">
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="btn-secondary px-6 py-3 rounded-lg font-bold text-white transition-all flex items-center gap-2 shadow-soft hover:scale-105"
+                >
+                  <ShareNetwork size={20} weight="fill" />
+                  Share Team
+                </button>
                 <button
                   onClick={() => setShowPersonalization(!showPersonalization)}
                   className="btn-primary px-6 py-3 rounded-lg font-bold text-white transition-all flex items-center gap-2 shadow-soft"
@@ -1278,10 +1333,10 @@ export default function LeagueUltra() {
 
             {/* Team Stats Cards */}
             <div className="grid grid-cols-4 gap-4 mb-8">
-              <div className={`card bg-gradient-to-br ${colorSchemes[teamColor as keyof typeof colorSchemes].gradient} bg-opacity-20 border-2 ${colorSchemes[teamColor as keyof typeof colorSchemes].border} border-opacity-50 p-6`}>
-                <p className={`text-sm ${colorSchemes[teamColor as keyof typeof colorSchemes].text} opacity-80 font-bold mb-2`}>Total Foresight</p>
+              <div className={`card bg-gradient-to-br ${colorSchemes[teamColor as keyof typeof colorSchemes].gradient} border-2 ${colorSchemes[teamColor as keyof typeof colorSchemes].border} p-6`}>
+                <p className={`text-sm ${colorSchemes[teamColor as keyof typeof colorSchemes].text} font-bold mb-2`}>Total Foresight</p>
                 <p className={`text-5xl font-black ${colorSchemes[teamColor as keyof typeof colorSchemes].text}`}>{team.total_score}</p>
-                <p className={`text-xs ${colorSchemes[teamColor as keyof typeof colorSchemes].text} opacity-80 mt-2`}>Points Scored</p>
+                <p className={`text-xs ${colorSchemes[teamColor as keyof typeof colorSchemes].text} mt-2`}>Points Scored</p>
               </div>
               <div className="card bg-gradient-to-br from-yellow-600/20 to-amber-600/20 border-2 border-yellow-500/50 p-6">
                 <p className="text-sm text-yellow-300 font-bold mb-2">Budget Spent</p>
@@ -1905,6 +1960,33 @@ export default function LeagueUltra() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Share Team Modal */}
+      {showShareModal && team && team.picks && (
+        <ShareTeamCard
+          teamName={team.team_name}
+          totalScore={team.total_score}
+          rank={team.rank}
+          picks={team.picks.map(pick => ({
+            id: pick.id,
+            influencer_name: pick.name,
+            influencer_handle: pick.handle,
+            influencer_tier: pick.tier,
+            total_points: pick.total_points,
+            profile_image_url: pick.profile_image_url,
+            is_captain: pick.is_captain
+          }))}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {/* First Time Onboarding */}
+      {showOnboarding && (
+        <FirstTimeOnboarding
+          onComplete={handleCompleteOnboarding}
+          onSkip={handleSkipOnboarding}
+        />
       )}
     </div>
   );

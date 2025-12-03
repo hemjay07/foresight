@@ -121,6 +121,7 @@ export default {
         'scale-in': 'scaleIn 0.2s ease-out',
         'slide-in': 'slideIn 0.3s ease-out',
         'shimmer': 'shimmer 2s linear infinite',
+        'bounce-slow': 'bounceSlow 3s ease-in-out infinite',
       },
 
       keyframes: {
@@ -161,6 +162,10 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
+        },
+        bounceSlow: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
         },
       },
 

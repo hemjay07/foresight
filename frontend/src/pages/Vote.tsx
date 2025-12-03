@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { SiweMessage } from 'siwe';
 import axios from 'axios';
+import confetti from 'canvas-confetti';
 import {
   ThumbsUp, TrendUp, CheckCircle, Fire, Warning, Lock,
   Crown, Sparkle, Star, Trophy, Lightning, CalendarBlank
@@ -250,6 +251,36 @@ export default function Vote() {
         type: 'success',
         message,
       });
+
+      // Celebrate with confetti!
+      const duration = 3000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 99999 };
+
+      function randomInRange(min: number, max: number) {
+        return Math.random() * (max - min) + min;
+      }
+
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+        });
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+        });
+      }, 250);
+
       setTimeout(() => setNotification(null), 5000); // Auto-dismiss after 5 seconds
       await fetchVoteStatus();
       await fetchUserProfile(); // Refresh streak display
