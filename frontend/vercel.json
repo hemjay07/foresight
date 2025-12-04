@@ -3,9 +3,6 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "env": {
-    "VITE_API_URL": "@api_url"
-  },
   "rewrites": [
     {
       "source": "/(.*)",
