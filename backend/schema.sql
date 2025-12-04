@@ -86,38 +86,6 @@ CREATE TABLE tweets (
   scraped_at TIMESTAMP DEFAULT NOW()
 );
 
--- CT Whisperer questions
-CREATE TABLE ct_whisperer_questions (
-  id SERIAL PRIMARY KEY,
-  tweet_id INTEGER REFERENCES tweets(id),
-  correct_influencer_id INTEGER REFERENCES influencers(id),
-  difficulty VARCHAR(10) CHECK (difficulty IN ('easy', 'medium', 'hard')),
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- CT Whisperer user answers
-CREATE TABLE ct_whisperer_answers (
-  id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  question_id INTEGER REFERENCES ct_whisperer_questions(id),
-  selected_influencer_id INTEGER REFERENCES influencers(id),
-  is_correct BOOLEAN NOT NULL,
-  answered_at TIMESTAMP DEFAULT NOW(),
-  response_time_ms INTEGER
-);
-
--- CT Whisperer stats
-CREATE TABLE ct_whisperer_stats (
-  user_id UUID PRIMARY KEY REFERENCES users(id),
-  total_answered INTEGER DEFAULT 0,
-  total_correct INTEGER DEFAULT 0,
-  current_streak INTEGER DEFAULT 0,
-  best_streak INTEGER DEFAULT 0,
-  ct_iq INTEGER DEFAULT 0,
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
 -- Authentication sessions
 CREATE TABLE auth_sessions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -220,10 +188,6 @@ CREATE INDEX idx_private_leagues_creator ON private_leagues(creator_id);
 CREATE INDEX idx_tweets_influencer_date ON tweets(influencer_id, posted_at);
 CREATE INDEX idx_tweets_tweet_id ON tweets(tweet_id);
 CREATE INDEX idx_tweets_influencer ON tweets(influencer_id, posted_at DESC);
-
--- CT Whisperer answers indexes
-CREATE INDEX idx_ct_whisperer_answers_user ON ct_whisperer_answers(user_id);
-CREATE INDEX idx_ct_whisperer_answers_question ON ct_whisperer_answers(question_id);
 
 -- Auth sessions indexes
 CREATE INDEX idx_auth_sessions_user ON auth_sessions(user_id);
