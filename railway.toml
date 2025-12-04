@@ -1,8 +1,0 @@
-[build]
-builder = "nixpacks"
-buildCommand = "cd backend && pnpm install && pnpm build"
-
-[deploy]
-startCommand = "cd backend && pnpm start"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 100
