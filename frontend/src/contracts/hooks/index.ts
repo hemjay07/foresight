@@ -1,15 +1,7 @@
 /**
  * Contract Hooks Index
- * Export all contract interaction hooks
+ * Export all contract interaction hooks for Foresight CT Fantasy
  */
-
-export {
-  useTimecasterArena,
-  useGetDuel,
-  useHasVoted,
-  useGetVotes,
-  useArenaConstants,
-} from './useTimecasterArena';
 
 export {
   useCTDraft,
@@ -20,16 +12,6 @@ export {
   useGetPlayerCount,
   useDraftConstants,
 } from './useCTDraft';
-
-export {
-  useDailyGauntlet,
-  useGetGauntlet,
-  useGetPrediction,
-  useGetEntry,
-  useGetParticipants,
-  useCurrentDay,
-  useGauntletConstants,
-} from './useDailyGauntlet';
 
 export {
   useHasForesightNFT,

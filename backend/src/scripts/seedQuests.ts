@@ -16,7 +16,7 @@ async function seedQuests() {
       {
         quest_id: 'first_login',
         name: 'First Login',
-        description: 'Connect your wallet and join Timecaster',
+        description: 'Connect your wallet and join Foresight',
         category: 'beginner',
         points_reward: 50,
         eth_reward_wei: 0,
@@ -32,14 +32,14 @@ async function seedQuests() {
         active: true,
       },
       {
-        quest_id: 'first_gauntlet',
-        name: 'First Gauntlet',
-        description: 'Complete your first Daily Gauntlet',
+        quest_id: 'first_draft',
+        name: 'First Draft',
+        description: 'Draft your first CT Fantasy team',
         category: 'beginner',
-        points_reward: 50,
+        points_reward: 100,
         eth_reward_wei: 0,
         eth_reward_enabled: false,
-        requirements: JSON.stringify({ type: 'gauntlet_played', value: 1 }),
+        requirements: JSON.stringify({ type: 'draft_created', value: 1 }),
         min_reputation: 0,
         min_account_age_days: 0,
         min_wallet_age_days: 0,
@@ -50,14 +50,14 @@ async function seedQuests() {
         active: true,
       },
       {
-        quest_id: 'first_duel',
-        name: 'First Arena Duel',
-        description: 'Participate in your first Arena duel',
+        quest_id: 'first_vote',
+        name: 'First Vote',
+        description: 'Cast your first vote on CT takes',
         category: 'beginner',
         points_reward: 50,
         eth_reward_wei: 0,
         eth_reward_enabled: false,
-        requirements: JSON.stringify({ type: 'duel_played', value: 1 }),
+        requirements: JSON.stringify({ type: 'vote_cast', value: 1 }),
         min_reputation: 0,
         min_account_age_days: 0,
         min_wallet_age_days: 0,
@@ -90,14 +90,14 @@ async function seedQuests() {
         active: true,
       },
       {
-        quest_id: 'weekly_streak_7',
-        name: 'Gauntlet Streak (7 days)',
-        description: 'Play Daily Gauntlet for 7 consecutive days',
+        quest_id: 'weekly_draft_streak',
+        name: 'Weekly Draft Streak',
+        description: 'Draft a team for 4 consecutive weeks',
         category: 'intermediate',
         points_reward: 200,
         eth_reward_wei: 5000000000000000, // 0.005 ETH
         eth_reward_enabled: true,
-        requirements: JSON.stringify({ type: 'gauntlet_streak', value: 7 }),
+        requirements: JSON.stringify({ type: 'draft_streak', value: 4 }),
         min_reputation: 50,
         min_account_age_days: 7,
         min_wallet_age_days: 7,
@@ -108,33 +108,15 @@ async function seedQuests() {
         active: true,
       },
       {
-        quest_id: 'perfect_score',
-        name: 'Perfect Prediction',
-        description: 'Get 5/5 correct in Daily Gauntlet',
+        quest_id: 'top_100_score',
+        name: 'Top 100 Finish',
+        description: 'Finish in the top 100 of weekly fantasy league',
         category: 'intermediate',
         points_reward: 150,
         eth_reward_wei: 3000000000000000, // 0.003 ETH
         eth_reward_enabled: true,
-        requirements: JSON.stringify({ type: 'gauntlet_perfect', value: 5 }),
+        requirements: JSON.stringify({ type: 'weekly_rank', max_rank: 100 }),
         min_reputation: 50,
-        min_account_age_days: 7,
-        min_wallet_age_days: 7,
-        min_games_played: 5,
-        max_completions_per_user: null,
-        max_total_completions: null,
-        cooldown_hours: 24,
-        active: true,
-      },
-      {
-        quest_id: 'win_3_duels',
-        name: 'Arena Victor',
-        description: 'Win 3 Arena duels',
-        category: 'intermediate',
-        points_reward: 150,
-        eth_reward_wei: 2000000000000000, // 0.002 ETH
-        eth_reward_enabled: true,
-        requirements: JSON.stringify({ type: 'duels_won', value: 3 }),
-        min_reputation: 100,
         min_account_age_days: 7,
         min_wallet_age_days: 7,
         min_games_played: 5,
@@ -147,24 +129,6 @@ async function seedQuests() {
       // ========================================
       // TIER 3: ADVANCED QUESTS (Larger ETH Rewards)
       // ========================================
-      {
-        quest_id: 'monthly_streak_30',
-        name: '30-Day Champion',
-        description: 'Play Daily Gauntlet for 30 consecutive days',
-        category: 'advanced',
-        points_reward: 500,
-        eth_reward_wei: 50000000000000000, // 0.05 ETH
-        eth_reward_enabled: true,
-        requirements: JSON.stringify({ type: 'gauntlet_streak', value: 30 }),
-        min_reputation: 200,
-        min_account_age_days: 30,
-        min_wallet_age_days: 30,
-        min_games_played: 30,
-        max_completions_per_user: null,
-        max_total_completions: 100, // Cap total payouts
-        cooldown_hours: 720, // 30 days
-        active: true,
-      },
       {
         quest_id: 'reputation_500',
         name: 'Reputation Milestone: 500',
@@ -184,39 +148,21 @@ async function seedQuests() {
         active: true,
       },
       {
-        quest_id: 'win_10_duels',
-        name: 'Arena Master',
-        description: 'Win 10 Arena duels',
-        category: 'advanced',
-        points_reward: 300,
-        eth_reward_wei: 10000000000000000, // 0.01 ETH
-        eth_reward_enabled: true,
-        requirements: JSON.stringify({ type: 'duels_won', value: 10 }),
-        min_reputation: 200,
-        min_account_age_days: 14,
-        min_wallet_age_days: 14,
-        min_games_played: 15,
-        max_completions_per_user: null,
-        max_total_completions: 150,
-        cooldown_hours: 720,
-        active: true,
-      },
-      {
-        quest_id: 'top_10_gauntlet',
-        name: 'Top 10 Gauntlet',
-        description: 'Finish in the top 10 of Daily Gauntlet',
+        quest_id: 'top_10_finish',
+        name: 'Top 10 Finish',
+        description: 'Finish in the top 10 of weekly fantasy league',
         category: 'advanced',
         points_reward: 400,
         eth_reward_wei: 30000000000000000, // 0.03 ETH
         eth_reward_enabled: true,
-        requirements: JSON.stringify({ type: 'gauntlet_ranking', max_rank: 10 }),
+        requirements: JSON.stringify({ type: 'weekly_rank', max_rank: 10 }),
         min_reputation: 300,
         min_account_age_days: 14,
         min_wallet_age_days: 14,
         min_games_played: 20,
         max_completions_per_user: null,
         max_total_completions: 100,
-        cooldown_hours: 24,
+        cooldown_hours: 168,
         active: true,
       },
 
@@ -226,7 +172,7 @@ async function seedQuests() {
       {
         quest_id: 'refer_friend',
         name: 'Refer a Friend',
-        description: 'Refer 1 active friend who deposits and plays',
+        description: 'Refer 1 active friend who drafts a team',
         category: 'referral',
         points_reward: 200,
         eth_reward_wei: 10000000000000000, // 0.01 ETH
@@ -254,10 +200,10 @@ async function seedQuests() {
     // Display summary
     console.log('📊 Quest Summary:');
     console.log(`   - Tier 1 (Beginner): 3 quests (points only)`);
-    console.log(`   - Tier 2 (Intermediate): 4 quests (0.001-0.005 ETH)`);
-    console.log(`   - Tier 3 (Advanced): 4 quests (0.01-0.05 ETH)`);
+    console.log(`   - Tier 2 (Intermediate): 3 quests (0.001-0.005 ETH)`);
+    console.log(`   - Tier 3 (Advanced): 2 quests (0.02-0.03 ETH)`);
     console.log(`   - Tier 4 (Referral): 1 quest (0.01 ETH)`);
-    console.log(`\n✨ Total: ${quests.length} quests seeded successfully!`);
+    console.log(`\n✨ Total: ${quests.length} CT Fantasy quests seeded successfully!`);
 
     process.exit(0);
   } catch (error: any) {
