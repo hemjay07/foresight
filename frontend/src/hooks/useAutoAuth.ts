@@ -20,6 +20,13 @@ export function useAutoAuth() {
     // Reset flag when address changes or disconnects
     if (!isConnected || address !== lastAddress.current) {
       hasAttemptedAuth.current = false;
+
+      // Clear auth token when wallet disconnects
+      if (!isConnected && lastAddress.current) {
+        console.log('🔓 Wallet disconnected, clearing auth token');
+        localStorage.removeItem('authToken');
+      }
+
       lastAddress.current = address;
     }
 
@@ -28,16 +35,37 @@ export function useAutoAuth() {
       return;
     }
 
-    // Check if already authenticated
+    // Check if already authenticated with a VALID token
     const existingToken = localStorage.getItem('authToken');
     if (existingToken) {
-      hasAttemptedAuth.current = true;
+      // Validate the token before trusting it
+      validateToken(existingToken).then((isValid) => {
+        if (isValid) {
+          hasAttemptedAuth.current = true;
+        } else {
+          // Token is invalid/expired - clear it and re-authenticate
+          console.log('🔄 Token expired, re-authenticating...');
+          localStorage.removeItem('authToken');
+          handleAuth();
+        }
+      });
       return;
     }
 
-    // Auto-authenticate
+    // No token - auto-authenticate
     handleAuth();
   }, [isConnected, address, chainId]);
+
+  const validateToken = async (token: string): Promise<boolean> => {
+    try {
+      const response = await axios.get(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.status === 200;
+    } catch {
+      return false;
+    }
+  };
 
   const handleAuth = async () => {
     if (!address || !chainId || hasAttemptedAuth.current) return;

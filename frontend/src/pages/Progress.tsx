@@ -1,0 +1,689 @@
+/**
+ * Progress - Unified Progress Hub
+ * Combines Foresight Score overview with Quest system
+ */
+
+import { useState, useEffect } from 'react';
+import { useAccount, useSignMessage } from 'wagmi';
+import { SiweMessage } from 'siwe';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import {
+  Target, Trophy, Star, Sparkle, TrendUp, Lightning, Gift,
+  CheckCircle, Sun, CalendarBlank, Users, TwitterLogo, Share,
+  Chat, Medal, Crown, Eye, Diamond, Flame, CaretRight, Rocket, Lock,
+} from '@phosphor-icons/react';
+import { useToast } from '../contexts/ToastContext';
+import FoundingMemberBadge from '../components/FoundingMemberBadge';
+import FoundingMembersWall from '../components/FoundingMembersWall';
+import TierGuide from '../components/TierGuide';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+type QuestTab = 'daily' | 'weekly' | 'onboarding' | 'achievement';
+
+interface TierProgress {
+  currentTier: string;
+  nextTier: string | null;
+  currentThreshold: number;
+  nextThreshold: number;
+  progress: number;
+  fsToNextTier: number;
+}
+
+interface FsData {
+  totalScore: number;
+  weekScore: number;
+  seasonScore: number;
+  tier: string;
+  tierProgress: TierProgress;
+  allTimeRank: number | null;
+  seasonRank: number | null;
+  weekRank: number | null;
+  effectiveMultiplier: number;
+  isFoundingMember: boolean;
+  foundingMemberNumber?: number;
+  earlyAdopterTier?: string;
+}
+
+interface Quest {
+  id: string;
+  name: string;
+  description: string;
+  target: number;
+  fsReward: number;
+  icon: string;
+  progress: number;
+  isCompleted: boolean;
+  isClaimed: boolean;
+  fsEarned: number;
+}
+
+interface QuestSummary {
+  total: number;
+  completed: number;
+  claimed: number;
+}
+
+const TIER_CONFIG = {
+  bronze: { color: 'text-orange-400', bg: 'bg-orange-500/20', gradient: 'from-orange-500 to-amber-600' },
+  silver: { color: 'text-gray-300', bg: 'bg-gray-400/20', gradient: 'from-gray-400 to-gray-500' },
+  gold: { color: 'text-yellow-400', bg: 'bg-yellow-500/20', gradient: 'from-yellow-500 to-amber-500' },
+  platinum: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', gradient: 'from-cyan-400 to-blue-500' },
+  diamond: { color: 'text-purple-400', bg: 'bg-purple-500/20', gradient: 'from-purple-500 to-pink-500' },
+} as const;
+
+const QUEST_ICONS: Record<string, React.ElementType> = {
+  wallet: Lightning, user: Users, users: Users, trophy: Trophy,
+  twitter: TwitterLogo, share: Share, star: Star, sun: Sun,
+  chart: TrendUp, target: Target, message: Chat, 'check-circle': CheckCircle,
+  medal: Medal, fire: Flame, crown: Crown, eye: Eye, diamond: Diamond,
+};
+
+export default function Progress() {
+  const { address, isConnected, chainId } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { showToast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [fsData, setFsData] = useState<FsData | null>(null);
+  const [activeTab, setActiveTab] = useState<QuestTab>('daily');
+  const [quests, setQuests] = useState<Record<string, Quest[]>>({});
+  const [summary, setSummary] = useState<Record<string, QuestSummary>>({});
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [claimingAll, setClaimingAll] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+
+  const handleSignIn = async () => {
+    if (!address || !chainId) return;
+
+    try {
+      setSigningIn(true);
+
+      // Step 1: Get nonce
+      const nonceRes = await axios.get(`${API_URL}/api/auth/nonce`);
+      const nonce = nonceRes.data.nonce;
+
+      // Step 2: Create SIWE message
+      const message = new SiweMessage({
+        domain: window.location.host,
+        address,
+        statement: 'Sign in to Foresight',
+        uri: window.location.origin,
+        version: '1',
+        chainId,
+        nonce,
+      });
+
+      const messageToSign = message.prepareMessage();
+
+      // Step 3: Sign message (this will prompt wallet)
+      const signature = await signMessageAsync({ message: messageToSign });
+
+      // Step 4: Verify with backend
+      const verifyRes = await axios.post(`${API_URL}/api/auth/verify`, {
+        message: messageToSign,
+        signature,
+      });
+
+      const token = verifyRes.data.accessToken || verifyRes.data.token;
+
+      if (token) {
+        localStorage.setItem('authToken', token);
+        showToast('Signed in successfully!', 'success');
+        // Reload page to fetch data with new auth
+        window.location.reload();
+      } else {
+        throw new Error('No token received');
+      }
+    } catch (error: any) {
+      console.error('Sign in failed:', error);
+      const errorMsg = error?.shortMessage || error?.message || 'Unknown error';
+      if (errorMsg.includes('User rejected') || errorMsg.includes('denied')) {
+        showToast('Sign in cancelled', 'error');
+      } else if (errorMsg.includes('Connector not connected')) {
+        showToast('Wallet disconnected. Please reconnect.', 'error');
+      } else {
+        showToast(`Sign in failed: ${errorMsg}`, 'error');
+      }
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isConnected) fetchData();
+    else setLoading(false);
+  }, [isConnected]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setNeedsAuth(false);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setNeedsAuth(true);
+        setLoading(false);
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+      const [fsRes, questsRes] = await Promise.all([
+        axios.get(`${API_URL}/api/v2/fs/me`, { headers }).catch((e) => ({ data: { success: false }, status: e.response?.status })),
+        axios.get(`${API_URL}/api/v2/quests`, { headers }).catch((e) => ({ data: { success: false }, status: e.response?.status })),
+      ]);
+
+      // Check if APIs failed due to auth issues
+      const fsAuthFailed = !fsRes.data.success && ((fsRes as any).status === 401 || fsRes.data.error?.includes('token'));
+      const questsAuthFailed = !questsRes.data.success && ((questsRes as any).status === 401 || questsRes.data.error?.includes('token'));
+
+      if (fsAuthFailed || questsAuthFailed) {
+        // Auth failure - token is invalid
+        localStorage.removeItem('authToken');
+        setNeedsAuth(true);
+        setLoading(false);
+        return;
+      }
+
+      // Only set fsData if we have valid data with required fields
+      if (fsRes.data.success && fsRes.data.data && typeof fsRes.data.data.totalScore === 'number') {
+        setFsData(fsRes.data.data);
+      }
+      if (questsRes.data.success && questsRes.data.data) {
+        setQuests(questsRes.data.data.quests || {});
+        setSummary(questsRes.data.data.summary || {});
+      }
+    } catch (error) {
+      console.error('Error fetching progress:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const claimReward = async (questId: string) => {
+    try {
+      setClaiming(questId);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await axios.post(
+        `${API_URL}/api/v2/quests/${questId}/claim`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        showToast(`+${response.data.data.multipliedReward} FS earned!`, 'success');
+        fetchData();
+      }
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to claim', 'error');
+    } finally {
+      setClaiming(null);
+    }
+  };
+
+  const claimAllRewards = async () => {
+    try {
+      setClaimingAll(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const claimableQuests = Object.values(quests).flat().filter(q => q.isCompleted && !q.isClaimed);
+      let totalEarned = 0;
+
+      for (const quest of claimableQuests) {
+        const response = await axios.post(
+          `${API_URL}/api/v2/quests/${quest.id}/claim`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (response.data.success) {
+          totalEarned += response.data.data.multipliedReward;
+        }
+      }
+
+      showToast(`+${totalEarned} FS earned from ${claimableQuests.length} quests!`, 'success');
+      fetchData();
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to claim all', 'error');
+    } finally {
+      setClaimingAll(false);
+    }
+  };
+
+  const getQuestIcon = (iconName: string) => QUEST_ICONS[iconName] || Target;
+  const tierConfig = fsData ? TIER_CONFIG[fsData.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.bronze : TIER_CONFIG.bronze;
+
+  const getTierProgress = () => {
+    if (!fsData || !fsData.tierProgress?.nextTier) return 100;
+    return Math.min(100, fsData.tierProgress.progress || 0);
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        {/* Hero */}
+        <div className="text-center py-8">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-gold">
+            <TrendUp size={32} className="text-gray-950" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Your Foresight Score</h1>
+          <p className="text-gray-400 max-w-md mx-auto">Track your progress, complete quests, and climb the rankings</p>
+        </div>
+
+        {/* Preview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
+            <div className="w-12 h-12 rounded-lg bg-gold-500/20 flex items-center justify-center mx-auto mb-3">
+              <Sparkle size={24} weight="fill" className="text-gold-400" />
+            </div>
+            <h3 className="font-semibold text-white mb-1">Foresight Score</h3>
+            <p className="text-sm text-gray-500">Earn FS through gameplay and quests</p>
+          </div>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
+            <div className="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-3">
+              <Target size={24} weight="fill" className="text-cyan-400" />
+            </div>
+            <h3 className="font-semibold text-white mb-1">Daily Quests</h3>
+            <p className="text-sm text-gray-500">Complete challenges for bonus rewards</p>
+          </div>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
+            <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+              <Trophy size={24} weight="fill" className="text-purple-400" />
+            </div>
+            <h3 className="font-semibold text-white mb-1">Tier Rewards</h3>
+            <p className="text-sm text-gray-500">Unlock perks as you level up</p>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="bg-gradient-to-r from-gold-500/10 to-amber-500/10 border border-gold-500/30 rounded-xl p-6 text-center">
+          <h3 className="text-lg font-bold text-white mb-2">Ready to start earning?</h3>
+          <p className="text-gray-400 mb-4">Connect your wallet to begin tracking your progress</p>
+          <div className="text-sm text-gray-500">Use the "Connect Wallet" button above</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto text-center py-12">
+        <div className="animate-spin w-12 h-12 border-4 border-gold-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading progress...</p>
+      </div>
+    );
+  }
+
+  // Connected but needs SIWE authentication
+  if (needsAuth && isConnected) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center py-8">
+          <div className="w-16 h-16 rounded-2xl bg-gold-500/20 flex items-center justify-center mx-auto mb-4">
+            <Lock size={32} className="text-gold-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Sign In Required</h1>
+          <p className="text-gray-400 mb-6 max-w-md mx-auto">
+            Your wallet is connected, but you need to sign in to view your progress and quests.
+          </p>
+
+          {/* Sign In Button */}
+          <button
+            onClick={handleSignIn}
+            disabled={signingIn}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-gray-950 font-semibold transition-all mb-6"
+          >
+            {signingIn ? (
+              <>
+                <div className="w-5 h-5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              <>
+                <Lightning size={20} weight="fill" />
+                Sign In with Wallet
+              </>
+            )}
+          </button>
+
+          <p className="text-sm text-gray-500 max-w-sm mx-auto">
+            This will prompt your wallet to sign a message. No gas fees required.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: 'daily' as QuestTab, label: 'Daily', icon: Sun },
+    { id: 'weekly' as QuestTab, label: 'Weekly', icon: CalendarBlank },
+    { id: 'onboarding' as QuestTab, label: 'Onboarding', icon: Star },
+    { id: 'achievement' as QuestTab, label: 'Achievements', icon: Trophy },
+  ];
+
+  // Get all claimable quests (shown in prominent section)
+  const allClaimableQuests = Object.values(quests).flat().filter(q => q.isCompleted && !q.isClaimed);
+  const claimableCount = allClaimableQuests.length;
+
+  // For the tabs, show non-claimable quests (in-progress or claimed), sorted
+  const currentQuests = (quests[activeTab] || [])
+    .filter(q => q.isClaimed || !q.isCompleted) // Exclude claimable (shown above)
+    .sort((a, b) => {
+      // Sort: in-progress first, then claimed
+      if (a.isClaimed && !b.isClaimed) return 1;
+      if (!a.isClaimed && b.isClaimed) return -1;
+      return 0;
+    });
+  const currentSummary = summary[activeTab];
+  const hasQuests = Object.values(quests).some(arr => arr && arr.length > 0);
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-500 to-purple-600 flex items-center justify-center">
+            <TrendUp size={22} weight="fill" className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Progress</h1>
+            <p className="text-sm text-gray-400">Your Foresight Score & Quests</p>
+          </div>
+        </div>
+      </div>
+
+      {/* FS Hero Card */}
+      {fsData && (
+        <div className={`bg-gradient-to-br ${tierConfig.gradient} rounded-2xl p-[1px] mb-6`}>
+          <div className="bg-gray-900 rounded-2xl p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className={`w-16 h-16 rounded-xl ${tierConfig.bg} flex items-center justify-center`}>
+                  <Sparkle size={32} weight="fill" className={tierConfig.color} />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400 mb-1 flex items-center gap-2">
+                    Foresight Score
+                    <FoundingMemberBadge
+                      isFoundingMember={fsData.isFoundingMember}
+                      foundingMemberNumber={fsData.foundingMemberNumber}
+                      earlyAdopterTier={fsData.earlyAdopterTier}
+                      variant="minimal"
+                    />
+                  </div>
+                  <div className="text-4xl font-bold text-white">{(fsData.totalScore ?? 0).toLocaleString()}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${tierConfig.bg} ${tierConfig.color}`}>
+                      {fsData.tier || 'bronze'}
+                    </span>
+                    {(fsData.effectiveMultiplier ?? 1) > 1 && (
+                      <span className="text-xs text-green-400">{fsData.effectiveMultiplier.toFixed(2)}x</span>
+                    )}
+                    <TierGuide
+                      currentTier={fsData.tier}
+                      currentScore={fsData.totalScore}
+                      isFoundingMember={fsData.isFoundingMember}
+                      effectiveMultiplier={fsData.effectiveMultiplier}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 rounded-xl bg-gray-800/50">
+                  <div className="text-xs text-gray-500 mb-1">This Week</div>
+                  <div className="text-lg font-bold text-white">+{(fsData.weekScore ?? 0).toLocaleString()}</div>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gray-800/50">
+                  <div className="text-xs text-gray-500 mb-1">All-Time Rank</div>
+                  <div className="text-lg font-bold text-white">{fsData.allTimeRank ? `#${fsData.allTimeRank}` : '-'}</div>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gray-800/50">
+                  <div className="text-xs text-gray-500 mb-1">Season</div>
+                  <div className="text-lg font-bold text-gold-400">
+                    {(fsData.seasonScore ?? 0).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {fsData.tierProgress?.nextTier && (
+              <div className="mt-6 pt-6 border-t border-gray-800">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-gray-400">Progress to {fsData.tierProgress.nextTier}</span>
+                  <span className={tierConfig.color}>{(fsData.tierProgress.fsToNextTier ?? 0).toLocaleString()} FS to go</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className={`h-full bg-gradient-to-r ${tierConfig.gradient} rounded-full`} style={{ width: `${getTierProgress()}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* No FS yet - Check if user needs to sign in */}
+      {!fsData && (
+        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-8 text-center mb-6">
+          <Rocket size={40} className="mx-auto mb-3 text-gold-400" />
+          <h3 className="text-xl font-bold text-white mb-2">Start Earning Foresight Score</h3>
+          {!localStorage.getItem('authToken') ? (
+            <>
+              <p className="text-gray-400 mb-4">Sign in to track your progress and complete quests</p>
+              <Link to="/compete?tab=contests" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500 text-gray-950 font-medium">
+                <Lightning size={18} weight="fill" /> Sign In & Play <CaretRight size={16} />
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-400 mb-4">Complete quests and play games to build your score</p>
+              <Link to="/compete?tab=contests" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gold-500 text-gray-950 font-medium">
+                <Trophy size={18} /> Browse Contests <CaretRight size={16} />
+              </Link>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Ready to Claim Section - Prominent action area */}
+      {claimableCount > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Gift size={20} className="text-green-400" />
+              Ready to Claim
+              <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-xs font-bold">
+                {claimableCount}
+              </span>
+            </h2>
+            {claimableCount > 1 && (
+              <button
+                onClick={claimAllRewards}
+                disabled={claimingAll}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-all disabled:opacity-50"
+              >
+                {claimingAll ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Claiming...
+                  </>
+                ) : (
+                  <>
+                    <Sparkle size={16} weight="fill" />
+                    Claim All
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          <div className="space-y-2">
+            {Object.values(quests).flat().filter(q => q.isCompleted && !q.isClaimed).map((quest) => {
+              const QuestIcon = getQuestIcon(quest.icon);
+              return (
+                <div
+                  key={`claim-${quest.id}`}
+                  className="bg-gradient-to-r from-green-500/20 to-gold-500/10 border border-green-500/40 rounded-xl p-4 flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-green-500/30 flex items-center justify-center shrink-0">
+                    <QuestIcon size={24} weight="fill" className="text-green-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white">{quest.name}</h3>
+                    <p className="text-sm text-gray-400">{quest.description}</p>
+                  </div>
+                  <button
+                    onClick={() => claimReward(quest.id)}
+                    disabled={claiming === quest.id}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold transition-all disabled:opacity-50 shadow-lg shadow-green-500/20"
+                  >
+                    {claiming === quest.id ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Gift size={18} weight="fill" />
+                        Claim +{quest.fsReward} FS
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Quest Section - only show when we have quest data */}
+      {hasQuests && (
+        <>
+      {/* Quest Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          const tabSummary = summary[tab.id];
+          const hasClaimable = (quests[tab.id] || []).some(q => q.isCompleted && !q.isClaimed);
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                isActive ? 'bg-gold-600 text-white' : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800'
+              }`}
+            >
+              <Icon size={18} weight={isActive ? 'fill' : 'regular'} />
+              {tab.label}
+              {tabSummary && (
+                <span className={`text-xs px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20' : 'bg-gray-700'}`}>
+                  {tabSummary.completed}/{tabSummary.total}
+                </span>
+              )}
+              {hasClaimable && !isActive && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-400" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Quest List - shows in-progress and completed (not claimable) */}
+      <div className="space-y-2">
+        {currentQuests.map((quest) => {
+          const QuestIcon = getQuestIcon(quest.icon);
+          const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
+          const isInProgress = !quest.isClaimed && !quest.isCompleted;
+
+          return (
+            <div
+              key={quest.id}
+              className={`bg-gray-900/50 rounded-xl border transition-all ${
+                quest.isClaimed ? 'border-gray-700 opacity-60' : 'border-gray-800'
+              }`}
+            >
+              <div className="p-4 flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                  quest.isClaimed ? 'bg-green-500/20' : 'bg-gray-800'
+                }`}>
+                  {quest.isClaimed ? (
+                    <CheckCircle size={24} weight="fill" className="text-green-500" />
+                  ) : (
+                    <QuestIcon size={24} weight="fill" className="text-gray-400" />
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className={`font-semibold ${quest.isClaimed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                    {quest.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 truncate">{quest.description}</p>
+                </div>
+
+                <div className="shrink-0 flex items-center gap-3">
+                  {isInProgress && (
+                    <div className="text-right">
+                      <div className="text-sm font-mono text-gray-400">{quest.progress}/{quest.target}</div>
+                      <div className="w-20 h-2 bg-gray-800 rounded-full mt-1 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-gold-500 to-amber-500 rounded-full transition-all"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {quest.isClaimed && (
+                    <div className="text-green-500 font-semibold text-sm">
+                      ✓ +{quest.fsEarned} FS
+                    </div>
+                  )}
+                  {isInProgress && (
+                    <div className="flex items-center gap-1 text-gold-400 font-medium text-sm bg-gold-500/10 px-2 py-1 rounded-lg">
+                      <Sparkle size={14} weight="fill" /> {quest.fsReward}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {currentQuests.length === 0 && (
+          <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-8 text-center">
+            <CheckCircle size={40} className="mx-auto mb-3 text-gray-600" />
+            <p className="text-gray-400">
+              {claimableCount > 0
+                ? 'All quests ready to claim are shown above!'
+                : 'No quests available in this category'}
+            </p>
+          </div>
+        )}
+      </div>
+        </>
+      )}
+
+      {/* Leaderboard Link */}
+      <Link
+        to="/compete?tab=rankings&type=fs"
+        className="flex items-center justify-between p-4 mt-8 bg-gray-900/50 border border-gray-800 rounded-xl hover:border-gray-700 transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gold-500/20 flex items-center justify-center">
+            <Medal size={20} className="text-gold-400" />
+          </div>
+          <div>
+            <div className="font-semibold text-white">View FS Leaderboard</div>
+            <div className="text-sm text-gray-500">See where you rank</div>
+          </div>
+        </div>
+        <CaretRight size={20} className="text-gray-600 group-hover:text-white transition-colors" />
+      </Link>
+
+      {/* Founding Members Wall */}
+      <div className="mt-6">
+        <FoundingMembersWall variant="compact" limit={50} showCTA={true} />
+      </div>
+    </div>
+  );
+}

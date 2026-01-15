@@ -11,6 +11,10 @@ import {
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimiter';
 import { authenticate } from '../middleware/auth';
+import questService from '../services/questService';
+import foresightScoreService from '../services/foresightScoreService';
+import { sendSuccess } from '../utils/response';
+import logger from '../utils/logger';
 
 const router: Router = Router();
 
@@ -23,7 +27,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const nonce = generateNonce();
 
-    res.json({ nonce });
+    sendSuccess(res, { nonce });
   })
 );
 
@@ -137,6 +141,14 @@ router.post(
           reference_id: user.id,
           created_at: db.fn.now(),
         });
+
+        // Trigger referral quests for the referrer (async, non-blocking)
+        // 1. invite_friend quest (onboarding - first referral)
+        questService.triggerAction(referrerId, 'invite_friend').catch(console.error);
+        // 2. referral_converted (weekly quest)
+        questService.triggerAction(referrerId, 'referral_converted').catch(console.error);
+        // 3. Check referral milestone achievements (3, 10 referrals)
+        questService.checkReferralMilestone(referrerId, referrer.referral_count + 1).catch(console.error);
       }
     } else {
       // Update last seen
@@ -149,11 +161,13 @@ router.post(
     const accessToken = createAccessToken({
       userId: user.id,
       walletAddress: user.wallet_address,
+      role: user.role,
     });
 
     const refreshToken = createRefreshToken({
       userId: user.id,
       walletAddress: user.wallet_address,
+      role: user.role,
     });
 
     // Store session
@@ -171,7 +185,36 @@ router.post(
       created_at: db.fn.now(),
     });
 
-    res.json({
+    // Trigger quest progress and FS awarding (async, don't block response)
+    if (isNewUser) {
+      questService.triggerAction(user.id, 'wallet_connected').catch(console.error);
+      // Award initial FS to populate leaderboard
+      foresightScoreService.earnFs({
+        userId: user.id,
+        reason: 'signup_bonus',
+        category: 'engagement',
+        baseAmount: user.is_founding_member ? 100 : 25, // Founding members get more
+        sourceType: 'signup',
+        metadata: {
+          isFoundingMember: user.is_founding_member,
+          foundingMemberNumber: user.founding_member_number,
+        },
+      }).catch((err) => logger.error('Error triggering first_login quest:', err, { context: 'Auth API' }));
+    } else {
+      questService.triggerAction(user.id, 'daily_login').catch((err) =>
+        logger.error('Error triggering daily_login quest:', err, { context: 'Auth API' })
+      );
+      // Award daily login FS
+      foresightScoreService.earnFs({
+        userId: user.id,
+        reason: 'daily_login',
+        category: 'engagement',
+        baseAmount: 5,
+        sourceType: 'login',
+      }).catch((err) => logger.error('Error awarding daily login FS:', err, { context: 'Auth API' }));
+    }
+
+    sendSuccess(res, {
       accessToken,
       refreshToken,
       user: {
@@ -237,6 +280,7 @@ router.post(
     const newAccessToken = createAccessToken({
       userId: payload.userId,
       walletAddress: payload.walletAddress,
+      role: payload.role,
     });
 
     // Update session
@@ -246,7 +290,7 @@ router.post(
         access_token: newAccessToken,
       });
 
-    res.json({ accessToken: newAccessToken });
+    sendSuccess(res, { accessToken: newAccessToken });
   })
 );
 
@@ -263,7 +307,7 @@ router.post(
     // Delete all user sessions
     await db('sessions').where({ user_id: userId }).del();
 
-    res.json({ message: 'Logged out successfully' });
+    sendSuccess(res, { message: 'Logged out successfully' });
   })
 );
 
@@ -283,7 +327,7 @@ router.get(
       throw new AppError('User not found', 404);
     }
 
-    res.json({
+    sendSuccess(res, {
       id: user.id,
       walletAddress: user.wallet_address,
       username: user.username,

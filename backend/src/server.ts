@@ -7,6 +7,7 @@ import { testConnection } from './utils/db';
 import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeCronJobs } from './services/cronJobs';
+import logger from './utils/logger';
 
 // Import routes
 import authRoutes from './api/auth';
@@ -17,6 +18,14 @@ import privateLeaguesRoutes from './api/privateLeagues';
 import achievementsRoutes from './api/achievements';
 import errorsRoutes from './api/errors';
 import referralsRoutes from './api/referrals';
+import prizedContestsV2Routes from './api/prizedContestsV2';
+import foresightScoreRoutes from './api/foresightScore';
+import questsRoutes from './api/quests';
+import activityRoutes from './api/activity';
+import ctFeedRoutes from './api/ctFeed';
+import watchlistRoutes from './api/watchlist';
+import intelRoutes from './api/intel';
+import twitterRoutes from './api/twitter';
 
 // Create Express app and HTTP server
 const app: Application = express();
@@ -104,6 +113,14 @@ app.use('/api/private-leagues', privateLeaguesRoutes);
 app.use('/api/achievements', achievementsRoutes);
 app.use('/api/errors', errorsRoutes);
 app.use('/api/referrals', referralsRoutes);
+app.use('/api/v2', prizedContestsV2Routes);
+app.use('/api/v2/fs', foresightScoreRoutes);
+app.use('/api/v2/quests', questsRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/ct-feed', ctFeedRoutes);
+app.use('/api/watchlist', watchlistRoutes);
+app.use('/api/intel', intelRoutes);
+app.use('/api/twitter', twitterRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -127,28 +144,28 @@ export async function startServer() {
 
     // Start listening
     httpServer.listen(PORT, () => {
-      console.log('========================================');
-      console.log('CT league Backend');
-      console.log('========================================');
-      console.log(`Environment: ${NODE_ENV}`);
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-      console.log('========================================');
+      logger.info('========================================');
+      logger.info('CT league Backend');
+      logger.info('========================================');
+      logger.info(`Environment: ${NODE_ENV}`);
+      logger.info(`Server running on port ${PORT}`);
+      logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info('========================================');
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+  logger.info('SIGTERM received, shutting down gracefully...');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully...');
+  logger.info('SIGINT received, shutting down gracefully...');
   process.exit(0);
 });
 

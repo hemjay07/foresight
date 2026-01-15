@@ -14,7 +14,7 @@ interface ErrorLogData {
   stack_trace?: string;
   component?: string;
   user_action?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   url?: string;
   method?: string;
   status_code?: number;
@@ -94,25 +94,26 @@ export function logJavaScriptError(
  * Log an API error
  */
 export function logApiError(
-  error: any,
+  error: unknown,
   url: string,
   method: string = 'GET',
   userAction?: string
 ): void {
-  const statusCode = error.response?.status;
-  const message = error.response?.data?.error || error.response?.data?.message || error.message || 'API Error';
+  const err = error as { response?: { status?: number; data?: { error?: string; message?: string } }; message?: string; config?: { data?: unknown } };
+  const statusCode = err.response?.status;
+  const message = err.response?.data?.error || err.response?.data?.message || err.message || 'API Error';
 
   logError({
     error_type: 'api',
-    severity: statusCode >= 500 ? 'critical' : 'error',
+    severity: statusCode && statusCode >= 500 ? 'critical' : 'error',
     message,
     url,
     method,
     status_code: statusCode,
     user_action: userAction,
     metadata: {
-      response_data: error.response?.data,
-      request_data: error.config?.data,
+      response_data: err.response?.data,
+      request_data: err.config?.data,
     },
   });
 }
@@ -123,7 +124,7 @@ export function logApiError(
 export function logCriticalError(
   message: string,
   component?: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void {
   logError({
     error_type: 'frontend',
@@ -140,7 +141,7 @@ export function logCriticalError(
 export function logWarning(
   message: string,
   component?: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void {
   logError({
     error_type: 'frontend',

@@ -68,7 +68,7 @@ function generateMockEvent(): RealtimeEvent {
   switch (type) {
     case 'win':
       event.data.amount = parseFloat((Math.random() * 2 + 0.1).toFixed(3));
-      event.data.description = `Won ${event.data.amount} ETH in ${game === 'draft' ? 'CT Draft' : game === 'whisperer' ? 'CT Whisperer' : game === 'arena' ? 'Arena' : 'Daily Gauntlet'}`;
+      event.data.description = `Won ${event.data.amount} ETH in ${game === 'draft' ? 'CT League' : game === 'whisperer' ? 'CT Whisperer' : game === 'arena' ? 'League' : 'Daily Gauntlet'}`;
       if (Math.random() > 0.7) {
         event.data.multiplier = Math.floor(Math.random() * 3) + 2; // 2x, 3x, or 4x
       }
@@ -86,7 +86,7 @@ function generateMockEvent(): RealtimeEvent {
     case 'achievement':
       const achievements = [
         'First Blood', 'ETH Hunter', 'Prophet', 'Perfect Week',
-        'Influencer', 'Consistency', 'Draft Master', 'Arena Champion'
+        'Influencer', 'Consistency', 'Draft Master', 'League Champion'
       ];
       event.data.achievement = achievements[Math.floor(Math.random() * achievements.length)];
       event.data.description = `Unlocked "${event.data.achievement}"`;

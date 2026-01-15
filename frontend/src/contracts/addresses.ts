@@ -8,6 +8,7 @@ export const CONTRACT_ADDRESSES = {
   // Base Sepolia Testnet
   baseSepolia: {
     ctDraft: '0x378105C2081Cc2235e6637DC9757a63F20263aa9' as `0x${string}`,
+    ctDraftPrizedV2: '0xc9296C7D0868C99b9cB5bAbe783f5a23bBa6033a' as `0x${string}`,
     foresightNFT: '0x8DCEb1aC97d3Ab305b6d7B2D44305d3F52c26bfa' as `0x${string}`,
     reputationEngine: '0x24C8171af3e2EbA7fCF53BDB5B958Ed2AB36fb0c' as `0x${string}`,
     treasury: '0x7A395d0B4E1542335DB3478171a08Cf34E97180f' as `0x${string}`,
@@ -17,6 +18,7 @@ export const CONTRACT_ADDRESSES = {
   // Base Mainnet (for future deployment)
   base: {
     ctDraft: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+    ctDraftPrizedV2: '0x0000000000000000000000000000000000000000' as `0x${string}`,
     foresightNFT: '0x0000000000000000000000000000000000000000' as `0x${string}`,
     reputationEngine: '0x0000000000000000000000000000000000000000' as `0x${string}`,
     treasury: '0x0000000000000000000000000000000000000000' as `0x${string}`,

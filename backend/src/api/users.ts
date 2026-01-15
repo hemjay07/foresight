@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import db from '../utils/db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
+import { sendSuccess } from '../utils/response';
+import questService from '../services/questService';
+import logger from '../utils/logger';
 
 const router: Router = Router();
 
@@ -28,7 +31,7 @@ router.get(
       throw new AppError('User not found', 404);
     }
 
-    res.json({
+    sendSuccess(res, {
       id: user.id,
       walletAddress: user.wallet_address,
       username: user.username,
@@ -89,7 +92,7 @@ router.get(
       lifetime_xp: user.lifetime_xp || 0,
     }));
 
-    res.json({
+    sendSuccess(res, {
       users: rankedUsers,
       total: parseInt(total?.count as string) || 0,
       limit,
@@ -126,7 +129,7 @@ router.get(
 
     const allAchievements = await db('achievements').select('*');
 
-    res.json({
+    sendSuccess(res, {
       unlocked: achievements,
       all: allAchievements,
       total_unlocked: achievements.length,
@@ -160,7 +163,7 @@ router.get(
 
     const total = await db('users').count('* as count').first();
 
-    res.json({
+    sendSuccess(res, {
       users,
       total: parseInt(total?.count as string) || 0,
       limit,
@@ -258,7 +261,7 @@ router.get(
       Math.round(((parseInt(totalUsers.count as string) - userRank) / parseInt(totalUsers.count as string)) * 100) :
       0;
 
-    res.json({
+    sendSuccess(res, {
       user: {
         id: user.id,
         username: user.username,
@@ -367,7 +370,7 @@ router.get(
       .orderBy('vote_streak', 'desc')
       .limit(10);
 
-    res.json({
+    sendSuccess(res, {
       top_gainers: topGainers,
       top_voters: topVoters,
       recent_achievements: recentAchievements,
@@ -394,7 +397,7 @@ router.get(
       throw new AppError('User not found', 404);
     }
 
-    res.json({
+    sendSuccess(res, {
       id: user.id,
       walletAddress: user.wallet_address,
       username: user.username,
@@ -446,11 +449,22 @@ router.patch(
       throw new AppError('No updates provided', 400);
     }
 
+    // Check if user had no username before (for quest tracking)
+    const currentUser = await db('users').where({ id: userId }).first();
+    const hadNoUsername = !currentUser.username;
+
     await db('users').where({ id: userId }).update(updates);
+
+    // Trigger quest if username was set for the first time
+    if (updates.username && hadNoUsername) {
+      questService.triggerAction(userId, 'username_set').catch((err) =>
+        logger.error('Error triggering username_set quest:', err, { context: 'Users API' })
+      );
+    }
 
     const updatedUser = await db('users').where({ id: userId }).first();
 
-    res.json({
+    sendSuccess(res, {
       id: updatedUser.id,
       walletAddress: updatedUser.wallet_address,
       username: updatedUser.username,

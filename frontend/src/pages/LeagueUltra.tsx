@@ -4,34 +4,29 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { SiweMessage } from 'siwe';
 import axios from 'axios';
 import {
   Trophy, Users, Lock, CheckCircle, TrendUp, Warning,
   MagnifyingGlass, Sparkle, Crown, Star, Fire, TrendDown,
- X, Medal, Circle, ShareNetwork
+  X, Medal, Circle, CurrencyEth, Wallet
 } from '@phosphor-icons/react';
 import WelcomeModal from '../components/WelcomeModal';
 import SkeletonCard from '../components/SkeletonCard';
 import { EmptyState } from '../components/EmptyState';
 import ShareTeamCard from '../components/ShareTeamCard';
 import FirstTimeOnboarding from '../components/FirstTimeOnboarding';
+import ScoreBreakdownModal from '../components/ScoreBreakdownModal';
+import { Info } from '@phosphor-icons/react';
 import { formatFollowerCount } from '../utils/formatFollowers';
 import { getRarityInfo } from '../utils/rarities';
 import { useToast } from '../contexts/ToastContext';
-
-// Auto-detect API URL based on current hostname
-const getApiUrl = () => {
-  // If accessing via ngrok, use ngrok backend
-  if (window.location.hostname.includes('ngrok-free.app')) {
-    return 'https://20b22fba1aa8.ngrok-free.app';
-  }
-  // Otherwise use env var or localhost
-  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
-};
-
-const API_URL = getApiUrl();
+import { getContractAddresses } from '../contracts/addresses';
+import CTDraftPrizedV2ABI from '../contracts/abis/CTDraftPrizedV2.json';
+import { API_URL } from '../config/api';
 
 interface Influencer {
   id: number;
@@ -78,22 +73,28 @@ interface Contest {
   prize_distribution?: Record<string, number>;
 }
 
-interface LeaderboardEntry {
-  id: number;
-  team_name: string;
-  total_score: number;
-  rank: number;
-  user_id: string;
-}
-
 export default function LeagueUltra() {
   const { address, isConnected, chainId } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // URL Parameters from ContestsHub
+  const contestIdFromUrl = searchParams.get('contestId');
+  const contestTypeFromUrl = searchParams.get('type');
+  const teamSizeFromUrl = parseInt(searchParams.get('teamSize') || '5');
+  const hasCaptainFromUrl = searchParams.get('hasCaptain') !== 'false';
+  const isFreeFromUrl = searchParams.get('isFree') === 'true';
+
+  // Contest configuration (dynamic based on URL params)
+  const teamSize = teamSizeFromUrl || 5;
+  const hasCaptain = hasCaptainFromUrl;
+  const isFreeEntry = isFreeFromUrl;
 
   // State
   const [contests, setContests] = useState<Contest[]>([]);
-  const [selectedContestId, setSelectedContestId] = useState<number | null>(null);
+  const [selectedContestId, setSelectedContestId] = useState<number | null>(contestIdFromUrl ? parseInt(contestIdFromUrl) : null);
   const [team, setTeam] = useState<Team | null>(null);
   const [availableInfluencers, setAvailableInfluencers] = useState<Influencer[]>([]);
   const [selectedInfluencers, setSelectedInfluencers] = useState<number[]>([]);
@@ -110,67 +111,31 @@ export default function LeagueUltra() {
   const [selectedTier, setSelectedTier] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'price' | 'followers' | 'name'>('price');
 
-  // View state
-  const [currentView, setCurrentView] = useState<'draft' | 'squad' | 'leaderboard'>('draft');
+  // View state - simplified since squad/leaderboard views removed (use /contest/:id instead)
   const [influencerViewMode, setInfluencerViewMode] = useState<'grid' | 'list'>('grid');
-  const [squadViewMode, setSquadViewMode] = useState<'list' | 'formation'>('formation');
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-
-  // Personalization state
-  const [teamBadge, setTeamBadge] = useState<string>('fire');
-  const [teamColor, setTeamColor] = useState<string>('brand');
-  const [showPersonalization, setShowPersonalization] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showScoreBreakdown, setShowScoreBreakdown] = useState(false);
 
-  // Professional badges - no emojis
-  const badges = {
-    fire: { icon: Fire, label: 'Fire' },
-    diamond: { icon: Sparkle, label: 'Diamond Hands' },
-    rocket: { icon: TrendUp, label: 'To The Moon' },
-    trophy: { icon: Trophy, label: 'Champion' },
-    crown: { icon: Crown, label: 'King' },
-    star: { icon: Star, label: 'Star' },
-    lightning: { icon: Fire, label: 'Lightning' },
-    circle: { icon: Circle, label: 'Circle' },
-  };
+  // Paid contest entry state
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
+  const [contestEntryFee, setContestEntryFee] = useState<string>('0');
+  const [contractContestId, setContractContestId] = useState<number | null>(null);
+  const [entryStep, setEntryStep] = useState<'draft' | 'confirm' | 'pending' | 'success'>('draft');
 
-  // Professional color schemes - single brand color
-  const colorSchemes = {
-    brand: {
-      name: 'Brand Blue',
-      gradient: 'from-brand-500 to-brand-600',
-      text: 'text-brand-500',
-      bg: 'bg-brand-500',
-      border: 'border-brand-500'
-    },
-    green: {
-      name: 'Green',
-      gradient: 'from-green-500 to-emerald-600',
-      text: 'text-green-500',
-      bg: 'bg-green-500',
-      border: 'border-green-500'
-    },
-    orange: {
-      name: 'Orange',
-      gradient: 'from-orange-500 to-red-600',
-      text: 'text-orange-500',
-      bg: 'bg-orange-500',
-      border: 'border-orange-500'
-    },
-    yellow: {
-      name: 'Gold',
-      gradient: 'from-yellow-500 to-amber-600',
-      text: 'text-yellow-500',
-      bg: 'bg-yellow-500',
-      border: 'border-yellow-500'
-    },
-  };
+  // Contract interaction hooks
+  const contractAddresses = getContractAddresses(chainId || 84532);
+  const { data: txHash, writeContract, isPending: isWritePending, error: writeError, reset: resetWrite } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Helper: Convert month to quarter (CT style)
   const getQuarterFromDate = (date: string) => {
-    const month = new Date(date).getMonth() + 1; // 1-12
-    const year = new Date(date).getFullYear();
+    if (!date) return 'Current';
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return 'Current';
+
+    const month = parsed.getMonth() + 1; // 1-12
+    const year = parsed.getFullYear();
 
     if (month >= 1 && month <= 3) return `Q1 ${year}`;
     if (month >= 4 && month <= 6) return `Q2 ${year}`;
@@ -193,7 +158,8 @@ export default function LeagueUltra() {
       .reduce((sum, inf) => sum + parseFloat(inf.price.toString()), 0);
   }, [selectedInfluencers, availableInfluencers]);
 
-  const TOTAL_BUDGET = 150;
+  // Budget scales with team size: 30 points per pick slot
+  const TOTAL_BUDGET = teamSize * 30;
   const budgetRemaining = TOTAL_BUDGET - budgetUsed;
 
   // Filtered and sorted influencers
@@ -229,6 +195,15 @@ export default function LeagueUltra() {
     return availableInfluencers.filter(inf => selectedInfluencers.includes(inf.id));
   }, [selectedInfluencers, availableInfluencers]);
 
+  // If no contest ID provided, auto-select the first available contest (usually Free League)
+  // This allows Arena to embed LeagueUltra without requiring pre-selection
+  useEffect(() => {
+    if (!contestIdFromUrl && contests.length > 0 && !selectedContestId) {
+      // Auto-select first contest (typically Free League)
+      setSelectedContestId(contests[0].id);
+    }
+  }, [contestIdFromUrl, contests, selectedContestId]);
+
   // Check if user has seen onboarding
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
@@ -244,7 +219,6 @@ export default function LeagueUltra() {
     setIsAuthenticated(!!token);
     fetchContest();
     fetchInfluencers();
-    fetchLeaderboard();
     if (isConnected && token) {
       fetchTeam();
     }
@@ -259,6 +233,56 @@ export default function LeagueUltra() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContestId]);
+
+  // Fetch V2 contest details for entry fee
+  useEffect(() => {
+    if (contestIdFromUrl && !isFreeEntry) {
+      fetchV2ContestDetails();
+    }
+  }, [contestIdFromUrl, isFreeEntry]);
+
+  // Handle transaction confirmation
+  useEffect(() => {
+    if (isConfirmed && txHash) {
+      verifyPaidEntry(txHash);
+    }
+  }, [isConfirmed, txHash]);
+
+  // Handle write errors
+  useEffect(() => {
+    if (writeError) {
+      showToast('Transaction failed: ' + (writeError.message || 'Unknown error'), 'error');
+      setEntryStep('confirm');
+    }
+  }, [writeError]);
+
+  const fetchV2ContestDetails = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/v2/contests/${contestIdFromUrl}`);
+      const contest = response.data.contest;
+      setContestEntryFee(contest.entryFee?.toString() || '0');
+      setContractContestId(contest.contractContestId);
+    } catch (error) {
+      console.error('Error fetching V2 contest details:', error);
+    }
+  };
+
+  const verifyPaidEntry = async (hash: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      await axios.post(
+        `${API_URL}/api/v2/contests/${contestIdFromUrl}/verify-entry`,
+        { txHash: hash },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEntryStep('success');
+      showToast('Entry successful! Your team is in the contest.', 'success');
+      setTimeout(() => navigate('/contest/' + contestIdFromUrl), 2000);
+    } catch (error) {
+      console.error('Error verifying entry:', error);
+      showToast('Entry recorded on-chain but verification failed. Please contact support.', 'error');
+    }
+  };
 
   const fetchContest = async () => {
     try {
@@ -326,15 +350,6 @@ export default function LeagueUltra() {
       setTeamName('');
       setSelectedInfluencers([]);
       setCaptainId(null);
-    }
-  };
-
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/league/leaderboard`);
-      setLeaderboard(response.data.leaderboard || []);
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
     }
   };
 
@@ -415,7 +430,7 @@ export default function LeagueUltra() {
     if (selectedInfluencers.includes(id)) {
       setSelectedInfluencers(prev => prev.filter(i => i !== id));
     } else {
-      if (selectedInfluencers.length < 5) {
+      if (selectedInfluencers.length < teamSize) {
         setSelectedInfluencers(prev => [...prev, id]);
       }
     }
@@ -428,10 +443,10 @@ export default function LeagueUltra() {
   };
 
   const handleAutoPick = () => {
-    if (selectedInfluencers.length >= 5) return;
+    if (selectedInfluencers.length >= teamSize) return;
 
     // Smart auto-pick: Fill remaining slots within budget
-    const remaining = 5 - selectedInfluencers.length;
+    const remaining = teamSize - selectedInfluencers.length;
     const budgetLeft = TOTAL_BUDGET - budgetUsed;
 
     // Get available influencers not already selected
@@ -491,60 +506,149 @@ export default function LeagueUltra() {
   };
 
   const handleCreateTeam = async () => {
-    if (!selectedContest) {
-      showToast('error', 'Please select a league');
+    if (!selectedContest && !contestIdFromUrl) {
+      showToast('Please select a league', 'error');
       return;
     }
 
-    if (!teamName || selectedInfluencers.length !== 5 || budgetUsed > TOTAL_BUDGET) {
-      showToast('error', 'Please enter a team name and select exactly 5 influencers within budget');
+    if (!teamName || selectedInfluencers.length !== teamSize || budgetUsed > TOTAL_BUDGET) {
+      showToast(`Please enter a team name and select exactly ${teamSize} influencers within budget`, 'error');
       return;
     }
 
-    if (!captainId) {
-      showToast('error', 'Please select a captain (one influencer will get 2x points)');
+    if (hasCaptain && !captainId) {
+      showToast('Please select a captain (one influencer will get 1.5x points)', 'error');
       return;
     }
 
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken');
-      await axios.post(
-        `${API_URL}/api/league/team/create`,
-        {
+
+      // Different flow for free league vs paid contests
+      if (isFreeEntry && contestIdFromUrl) {
+        // Free league entry - use V2 API
+        console.log('📤 Submitting free league entry:', {
+          contestId: contestIdFromUrl,
+          teamIds: selectedInfluencers,
+          captainId: hasCaptain ? captainId : null,
+        });
+        await axios.post(
+          `${API_URL}/api/v2/contests/${contestIdFromUrl}/enter-free`,
+          {
+            teamIds: selectedInfluencers,
+            captainId: hasCaptain ? captainId : null,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        showToast(`Free League entry successful! Team "${teamName}" is in!`, 'success');
+        // Redirect to contest detail page to see the entry
+        setTimeout(() => navigate('/contest/' + contestIdFromUrl), 2000);
+      } else if (contestIdFromUrl && contractContestId) {
+        // V2 Paid contest with on-chain contract - show payment confirmation
+        setLoading(false);
+        setEntryStep('confirm');
+        setShowPaymentConfirm(true);
+        return;
+      } else if (contestIdFromUrl && !isFreeEntry) {
+        // V2 Paid contest without on-chain contract (test mode)
+        console.log('📤 Submitting test entry:', {
+          contestId: contestIdFromUrl,
           team_name: teamName,
           influencer_ids: selectedInfluencers,
-          captain_id: captainId,
-          contest_id: selectedContest.id,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+          captain_id: hasCaptain ? captainId : null,
+        });
+        await axios.post(
+          `${API_URL}/api/v2/contests/${contestIdFromUrl}/enter-test`,
+          {
+            team_name: teamName,
+            influencer_ids: selectedInfluencers,
+            captain_id: hasCaptain ? captainId : null,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        showToast(`Entry successful! Team "${teamName}" is in the contest!`, 'success');
+        setTimeout(() => navigate('/contest/' + contestIdFromUrl), 2000);
+      } else {
+        // Regular paid contest flow (old system - fallback)
+        const contestId = contestIdFromUrl ? parseInt(contestIdFromUrl) : selectedContest?.id;
+        await axios.post(
+          `${API_URL}/api/league/team/create`,
+          {
+            team_name: teamName,
+            influencer_ids: selectedInfluencers,
+            captain_id: hasCaptain ? captainId : null,
+            contest_id: contestId,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        // Refresh team
+        await fetchTeam();
+
+        // Redirect to contest detail page
+        showToast(`Team "${teamName}" created successfully!`, 'success');
+        if (contestId) {
+          setTimeout(() => navigate(`/contest/${contestId}`), 2000);
         }
-      );
-
-      // Refresh team and leaderboard
-      await fetchTeam();
-      await fetchLeaderboard();
-
-      // Switch to My Squad view to show the new team
-      setCurrentView('squad');
-      showToast('success', `Team "${teamName}" created successfully! 🎉`);
+      }
     } catch (error) {
       const errorMsg = axios.isAxiosError(error) && error.response?.data?.error ? error.response.data.error : 'Error creating team'
-      showToast('error', errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateTeam = async () => {
-    if (selectedInfluencers.length !== 5 || budgetUsed > TOTAL_BUDGET) {
-      showToast('error', 'Please select exactly 5 influencers within budget');
+  // Handle paid contest entry via smart contract
+  const handleConfirmPaidEntry = async () => {
+    if (!contractContestId || !contestEntryFee) {
+      showToast('Contest not properly configured for payment', 'error');
       return;
     }
 
-    if (!captainId) {
-      showToast('error', 'Please select a captain (one influencer will get 2x points)');
+    try {
+      setEntryStep('pending');
+      resetWrite();
+
+      // Convert selected influencer IDs to BigInt array
+      const teamIds = selectedInfluencers.map(id => BigInt(id));
+      const captain = hasCaptain && captainId ? BigInt(captainId) : BigInt(0);
+
+      writeContract({
+        address: contractAddresses.ctDraftPrizedV2,
+        abi: CTDraftPrizedV2ABI,
+        functionName: 'enterContest',
+        args: [BigInt(contractContestId), teamIds, captain],
+        value: parseEther(contestEntryFee),
+      });
+    } catch (error: any) {
+      console.error('Error initiating payment:', error);
+      showToast('Failed to initiate payment: ' + (error.message || 'Unknown error'), 'error');
+      setEntryStep('confirm');
+    }
+  };
+
+  const handleCancelPayment = () => {
+    setShowPaymentConfirm(false);
+    setEntryStep('draft');
+    resetWrite();
+  };
+
+  const handleUpdateTeam = async () => {
+    if (selectedInfluencers.length !== teamSize || budgetUsed > TOTAL_BUDGET) {
+      showToast('error', `Please select exactly ${teamSize} influencers within budget`);
+      return;
+    }
+
+    if (hasCaptain && !captainId) {
+      showToast('error', 'Please select a captain (one influencer will get 1.5x points)');
       return;
     }
 
@@ -556,17 +660,20 @@ export default function LeagueUltra() {
         {
           influencer_ids: selectedInfluencers,
           captain_id: captainId,
+          contest_id: selectedContestId,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Refresh team and leaderboard
+      // Refresh team
       await fetchTeam();
-      await fetchLeaderboard();
 
-      // Switch to My Squad view to show the updated team
-      setCurrentView('squad');
-      showToast('success', 'Team updated successfully! ✨');
+      // Redirect to contest detail page
+      showToast('success', 'Team updated successfully!');
+      const contestId = contestIdFromUrl || selectedContestId;
+      if (contestId) {
+        setTimeout(() => navigate(`/contest/${contestId}`), 2000);
+      }
     } catch (error) {
       const errorMsg = axios.isAxiosError(error) && error.response?.data?.error
       ? error.response.data.error
@@ -600,98 +707,135 @@ export default function LeagueUltra() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <WelcomeModal />
 
-      {/* View Tabs */}
-      <div className="max-w-[1800px] mx-auto px-6 pt-6">
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setCurrentView('draft')}
-            className={`flex items-center gap-2 px-8 py-4 rounded-lg font-bold text-lg transition-all ${
-              currentView === 'draft'
-                ? 'bg-brand-600 text-white shadow-soft-lg'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            <Users size={24} weight="bold" />
-            Draft Team
-          </button>
-          {team && (
-            <button
-              onClick={() => setCurrentView('squad')}
-              className={`flex items-center gap-2 px-8 py-4 rounded-lg font-bold text-lg transition-all ${
-                currentView === 'squad'
-                  ? 'bg-brand-600 text-white shadow-soft-lg'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              <Star size={24} weight="fill" />
-              My Squad
-            </button>
-          )}
-          <button
-            onClick={() => setCurrentView('leaderboard')}
-            className={`flex items-center gap-2 px-8 py-4 rounded-lg font-bold text-lg transition-all ${
-              currentView === 'leaderboard'
-                ? 'bg-brand-600 text-white shadow-soft-lg'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            <Trophy size={24} weight="bold" />
-            Leaderboard
-            {(leaderboard || []).length > 0 && (
-              <span className="bg-brand-500 text-white px-2 py-0.5 rounded-full text-sm font-bold">
-                {(leaderboard || []).length}
-              </span>
+      {/* Contest Selector - when no contest pre-selected (e.g., from Arena) */}
+      {!contestIdFromUrl && contests.length > 0 && (
+        <div className="max-w-[1800px] mx-auto px-6 pt-4">
+          <div className="flex items-center justify-between bg-gray-800/50 rounded-lg px-4 py-2">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">Contest:</span>
+              <select
+                value={selectedContestId || ''}
+                onChange={(e) => {
+                  const newId = parseInt(e.target.value);
+                  setSelectedContestId(newId);
+                  setSelectedInfluencers([]);
+                  setCaptainId(null);
+                }}
+                className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-sm focus:ring-1 focus:ring-gold-500"
+              >
+                {contests.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.is_prize_league ? `${c.contest_key} (${c.entry_fee} ETH)` : `${c.contest_key} (Free)`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedContest && (
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-gray-400">{selectedContest.total_participants} playing</span>
+                <span className={`px-2 py-0.5 rounded font-medium ${
+                  selectedContest.is_prize_league
+                    ? 'bg-gold-500/20 text-gold-400'
+                    : 'bg-emerald-500/20 text-emerald-400'
+                }`}>
+                  {selectedContest.is_prize_league ? `Prize: ${selectedContest.prize_pool} ETH` : 'Free'}
+                </span>
+              </div>
             )}
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Main Container - Two Column Layout */}
-      <div className={`flex gap-6 p-6 max-w-[1800px] mx-auto ${currentView !== 'draft' ? 'hidden' : ''}`}>
+      {/* Contest Header Banner - when coming from ContestsHub */}
+      {contestIdFromUrl && (
+        <div className={`${isFreeEntry ? 'bg-gradient-to-r from-emerald-900/50 to-teal-900/50' : 'bg-gradient-to-r from-brand-900/50 to-blue-900/50'} border-b ${isFreeEntry ? 'border-emerald-500/30' : 'border-brand-500/30'}`}>
+          <div className="max-w-[1800px] mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate('/contests')}
+                  className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 transition-all"
+                >
+                  <X size={20} className="text-gray-400" />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${isFreeEntry ? 'bg-emerald-500/20 text-emerald-400' : 'bg-brand-500/20 text-brand-400'}`}>
+                      {contestTypeFromUrl?.replace('_', ' ')}
+                    </span>
+                    <span className="text-gray-400 text-sm">Contest #{contestIdFromUrl}</span>
+                  </div>
+                  <h2 className="text-lg font-bold text-white">
+                    {isFreeEntry ? 'Free League Entry' : 'Draft Your Team'}
+                  </h2>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Team Size</p>
+                  <p className="text-xl font-bold text-white">{teamSize}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Captain</p>
+                  <p className="text-xl font-bold text-white">{hasCaptain ? 'Yes' : 'No'}</p>
+                </div>
+                {isFreeEntry && (
+                  <div className={`px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30`}>
+                    <p className="text-emerald-400 font-bold">FREE ENTRY</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-        {/* LEFT SIDEBAR - Team Preview (Sticky) */}
-        <div className="w-[380px] flex-shrink-0">
+      {/* Draft Header - No tabs, draft is the only view */}
+
+      {/* Main Container - Two Column Layout (Sidebar on RIGHT) */}
+      <div className="flex flex-row-reverse gap-4 px-6 pb-6 max-w-[1800px] mx-auto">
+
+        {/* RIGHT SIDEBAR - Team Preview (Sticky) */}
+        <div className="w-[320px] flex-shrink-0">
           <div className="sticky top-6 flex flex-col" style={{ maxHeight: 'calc(100vh - 3rem)' }}>
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4" style={{ scrollbarWidth: 'thin' }}>
             {/* Team Name Card */}
-            <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-5 shadow-soft-lg">
+            <div className="bg-gray-800/80 rounded-lg p-3">
               {!team ? (
                 <>
-                  <h2 className="text-2xl font-bold mb-4 text-white">Create Team</h2>
+                  <label className="text-xs text-gray-400 mb-1 block">Team Name</label>
                   <input
                     type="text"
                     value={teamName}
                     onChange={(e) => setTeamName(e.target.value)}
                     placeholder="Enter team name..."
-                    className="w-full px-4 py-3 bg-gray-900/80 border-2 border-gray-700 rounded-lg focus:outline-none focus:border-brand-500 transition-all text-white placeholder:text-gray-500"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-gold-500 text-white text-sm placeholder:text-gray-500"
                     maxLength={50}
                   />
                 </>
               ) : (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-3xl font-bold text-white">{team.team_name}</h2>
-                    {team.rank && (
-                      <div className="text-4xl font-black text-yellow-400">
-                        #{team.rank}
-                      </div>
-                    )}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">{team.team_name}</h2>
+                    <p className="text-xs text-gray-400">{selectedInfluencers.length}/{teamSize} players</p>
                   </div>
-                  <p className="text-brand-500">{selectedInfluencers.length}/5 influencers</p>
-                </>
+                  {team.rank && (
+                    <div className="text-2xl font-black text-gold-400">#{team.rank}</div>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Selected Squad */}
-            <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-5 shadow-soft-lg">
-              <h3 className="text-lg font-bold mb-3 text-white flex items-center gap-2">
-                <Users size={22} weight="bold" className="text-brand-500" />
+            <div className="bg-gray-800/80 rounded-lg p-3">
+              <h3 className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
+                <Users size={16} weight="bold" className="text-gold-500" />
                 Your Squad
               </h3>
 
               <div className="space-y-2">
-                {[...Array(5)].map((_, index) => {
+                {[...Array(teamSize)].map((_, index) => {
                   const influencer = selectedInfluencerObjects[index];
 
                   if (!influencer) {
@@ -726,7 +870,7 @@ export default function LeagueUltra() {
                         <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full ${rarity.badge} flex items-center justify-center text-white text-[10px] font-bold shadow-lg`}>
                           {influencer.tier}
                         </div>
-                        {isCaptain && (
+                        {hasCaptain && isCaptain && (
                           <div className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg">
                             <Crown size={10} weight="fill" className="text-gray-900" />
                           </div>
@@ -735,27 +879,29 @@ export default function LeagueUltra() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-white text-xs truncate flex items-center gap-1">
                           {influencer.name}
-                          {isCaptain && <span className="text-[9px] text-yellow-400 font-bold">(C)</span>}
+                          {hasCaptain && isCaptain && <span className="text-[9px] text-yellow-400 font-bold">(C)</span>}
                         </p>
                         <p className="text-[10px] text-gray-400">@{influencer.handle}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-yellow-400 text-xs">{parseFloat(influencer.price.toString()).toFixed(0)} pts</p>
                         {influencer.total_points !== undefined && (
-                          <p className="text-[10px] text-brand-500">{influencer.total_points} pts {isCaptain && '× 2'}</p>
+                          <p className="text-[10px] text-brand-500">{influencer.total_points} pts {hasCaptain && isCaptain && '× 1.5'}</p>
                         )}
                       </div>
-                      <button
-                        onClick={() => setCaptainId(influencer.id)}
-                        className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                          isCaptain
-                            ? 'bg-yellow-500 text-gray-900'
-                            : 'bg-gray-700 text-gray-400 hover:bg-yellow-500/20 hover:text-yellow-400'
-                        }`}
-                        title="Make Captain (2x points)"
-                      >
-                        <Crown size={12} weight={isCaptain ? 'fill' : 'regular'} />
-                      </button>
+                      {hasCaptain && (
+                        <button
+                          onClick={() => setCaptainId(influencer.id)}
+                          className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                            isCaptain
+                              ? 'bg-yellow-500 text-gray-900'
+                              : 'bg-gray-700 text-gray-400 hover:bg-yellow-500/20 hover:text-yellow-400'
+                          }`}
+                          title="Make Captain (1.5x points)"
+                        >
+                          <Crown size={12} weight={isCaptain ? 'fill' : 'regular'} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleSelectInfluencer(influencer.id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -778,45 +924,25 @@ export default function LeagueUltra() {
               )}
             </div>
 
-            {/* Budget Tracker - Fixed at bottom of sidebar */}
-            <div className="flex-shrink-0 space-y-4">
-            <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-5 shadow-soft-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">Budget</span>
-                <span className={`text-2xl font-black ${budgetRemaining < 0 ? 'text-red-400' : 'text-brand-500'}`}>
+            {/* Budget Tracker */}
+            <div className="bg-gray-800/80 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-400">Budget</span>
+                <span className={`text-lg font-bold ${budgetRemaining < 0 ? 'text-red-400' : 'text-gold-400'}`}>
                   {budgetUsed.toFixed(0)}/{TOTAL_BUDGET}
                 </span>
               </div>
-              <div className="relative h-3 bg-gray-700 rounded-full overflow-hidden">
+              <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={`absolute left-0 top-0 h-full transition-all duration-300 ${
-                    budgetRemaining < 0
-                      ? 'bg-gradient-to-r from-red-500 to-red-600'
-                      : 'bg-brand-600'
+                    budgetRemaining < 0 ? 'bg-red-500' : 'bg-gold-500'
                   }`}
                   style={{ width: `${Math.min((budgetUsed / TOTAL_BUDGET) * 100, 100)}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {budgetRemaining >= 0
-                  ? `${budgetRemaining.toFixed(0)} pts remaining`
-                  : `Over by ${Math.abs(budgetRemaining).toFixed(0)} pts`
-                }
+              <p className="text-[10px] text-gray-500 mt-1">
+                {budgetRemaining >= 0 ? `${budgetRemaining.toFixed(0)} remaining` : `Over by ${Math.abs(budgetRemaining).toFixed(0)}`}
               </p>
-            </div>
-
-            {/* Deadline Info */}
-            {selectedContest && (
-              <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 border-2 border-orange-500/50 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <Warning size={16} weight="fill" className="text-orange-400 flex-shrink-0" />
-                  <div className="text-[11px] text-orange-200">
-                    <p className="font-bold">Deadline: {new Date(selectedContest.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} 00:00 UTC</p>
-                    <p className="text-orange-300/80 mt-0.5">Team locks when gameweek starts</p>
-                  </div>
-                </div>
-              </div>
-            )}
             </div>
             </div>
 
@@ -836,13 +962,32 @@ export default function LeagueUltra() {
               ) : !team ? (
                 <button
                   onClick={handleCreateTeam}
-                  disabled={loading || !teamName || selectedInfluencers.length !== 5 || budgetUsed > TOTAL_BUDGET}
-                  className="btn-primary w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-lg font-bold text-base transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-soft-lg"
+                  disabled={loading || !teamName || selectedInfluencers.length !== teamSize || budgetUsed > TOTAL_BUDGET || (hasCaptain && !captainId)}
+                  className={`btn-primary w-full py-3 ${
+                    isFreeEntry
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700'
+                  } rounded-lg font-bold text-base transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-soft-lg`}
                 >
                   <span className="flex items-center gap-2 justify-center">
-                    <TrendUp size={20} weight="bold" />
-                    Create Team
-                    <span className="badge-warning bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full text-xs">+50 XP</span>
+                    {isFreeEntry ? (
+                      <>
+                        <TrendUp size={20} weight="bold" />
+                        Enter Free League
+                        <span className="badge-warning bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full text-xs">+50 XP</span>
+                      </>
+                    ) : contestIdFromUrl && parseFloat(contestEntryFee) > 0 ? (
+                      <>
+                        <CurrencyEth size={20} weight="bold" />
+                        Enter ({parseFloat(contestEntryFee).toFixed(3)} ETH)
+                      </>
+                    ) : (
+                      <>
+                        <TrendUp size={20} weight="bold" />
+                        Create Team
+                        <span className="badge-warning bg-yellow-400 text-gray-900 px-2 py-0.5 rounded-full text-xs">+50 XP</span>
+                      </>
+                    )}
                   </span>
                 </button>
               ) : team.is_locked ? (
@@ -856,7 +1001,7 @@ export default function LeagueUltra() {
               ) : (
                 <button
                   onClick={handleUpdateTeam}
-                  disabled={loading || selectedInfluencers.length !== 5 || budgetUsed > TOTAL_BUDGET}
+                  disabled={loading || selectedInfluencers.length !== teamSize || budgetUsed > TOTAL_BUDGET || (hasCaptain && !captainId)}
                   className="btn-primary w-full py-3 rounded-lg font-bold text-base transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-soft-lg"
                 >
                   <span className="flex items-center gap-2 justify-center">
@@ -869,97 +1014,10 @@ export default function LeagueUltra() {
           </div>
         </div>
 
-        {/* RIGHT MAIN AREA - Influencer Grid */}
+        {/* LEFT MAIN AREA - Influencer Grid */}
         <div className="flex-1">
-          {/* League Selector */}
-          {(contests || []).length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-              {contests.map((contestOption) => (
-                <button
-                  key={contestOption.id}
-                  onClick={() => setSelectedContestId(contestOption.id)}
-                  className={`card-hover relative p-4 rounded-lg border-2 transition-all text-left ${
-                    selectedContestId === contestOption.id
-                      ? contestOption.is_prize_league
-                        ? 'bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border-yellow-500/70 shadow-soft'
-                        : 'bg-brand-500/10 border-brand-500/70 shadow-soft'
-                      : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        {contestOption.is_prize_league ? (
-                          <>
-                            <Trophy size={20} weight="fill" className="text-yellow-400" />
-                            <span className="font-bold text-yellow-400">Prize League</span>
-                          </>
-                        ) : (
-                          <>
-                            <Users size={20} weight="bold" className="text-brand-500" />
-                            <span className="font-bold text-brand-500">Free League</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-300">
-                        {contestOption.is_prize_league ? (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <span className="text-yellow-300 font-semibold">${parseFloat(contestOption.entry_fee).toFixed(2)} entry</span>
-                              <span className="text-gray-500">•</span>
-                              <span className="text-green-400 font-semibold">${parseFloat(contestOption.prize_pool).toFixed(0)} pool</span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {contestOption.total_participants}/{contestOption.max_participants} entered
-                            </div>
-                          </>
-                        ) : (
-                          <div>
-                            No entry fee • {contestOption.total_participants} players
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {selectedContestId === contestOption.id && (
-                      <CheckCircle size={24} weight="fill" className={contestOption.is_prize_league ? 'text-yellow-400' : 'text-brand-500'} />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Contest Info Bar */}
-          {selectedContest && (
-            <div className="card bg-brand-500/10 border-2 border-brand-500/50 rounded-lg p-4 mb-4 flex items-center justify-between backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-brand-600 rounded-full flex items-center justify-center shadow-soft">
-                  <Fire size={24} weight="fill" className="text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="badge-primary text-xs px-2 py-0.5 rounded-full font-bold">
-                      {getQuarterFromDate(selectedContest.start_date)}
-                    </span>
-                    <p className="text-lg font-black text-white">
-                      GW{getGameweekNumber(selectedContest.start_date)}
-                    </p>
-                  </div>
-                  <p className="text-xs text-brand-300 font-semibold mt-1">
-                    {new Date(selectedContest.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(selectedContest.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-brand-300 font-bold">Deadline</p>
-                <p className="text-xl font-black text-white">{new Date(selectedContest.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                <p className="text-[10px] text-brand-400 mt-0.5">00:00 UTC</p>
-              </div>
-            </div>
-          )}
-
           {/* Search and Filters */}
-          <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-6 mb-6 shadow-soft-lg">
+          <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
             {/* Search Bar */}
             <div className="relative mb-4">
               <MagnifyingGlass size={20} weight="bold" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1037,7 +1095,7 @@ export default function LeagueUltra() {
                 {' '}shown of {(availableInfluencers || []).length} total
               </p>
 
-              {selectedInfluencers.length < 5 && isAuthenticated && (
+              {selectedInfluencers.length < teamSize && isAuthenticated && (
                 <button
                   onClick={handleAutoPick}
                   className="btn-primary px-4 py-2 rounded-lg font-bold text-sm transition-all text-white flex items-center gap-2 shadow-soft"
@@ -1088,7 +1146,7 @@ export default function LeagueUltra() {
                 <button
                   key={influencer.id}
                   onClick={() => handleSelectInfluencer(influencer.id)}
-                  disabled={!isSelected && selectedInfluencers.length >= 5}
+                  disabled={!isSelected && selectedInfluencers.length >= teamSize}
                   className={`card-hover relative p-6 rounded-lg border-2 transition-all duration-300 text-left group ${
                     isSelected
                       ? `${rarity.border} bg-gradient-to-br ${rarity.gradient} ${rarity.glow} scale-[1.02]`
@@ -1207,760 +1265,9 @@ export default function LeagueUltra() {
         </div>
       </div>
 
-      {/* My Squad View */}
-      {currentView === 'squad' && team && (
-        <div className="max-w-[1400px] mx-auto px-6 pb-6">
-          <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-8 shadow-soft-lg">
-            {/* Squad Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <div className={`p-4 bg-gradient-to-br ${colorSchemes[teamColor as keyof typeof colorSchemes].gradient} rounded-lg shadow-soft`}>
-                  {(() => {
-                    const BadgeIcon = badges[teamBadge as keyof typeof badges].icon;
-                    return <BadgeIcon size={32} weight="fill" className="text-white" />;
-                  })()}
-                </div>
-                <div>
-                  <h2 className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r ${colorSchemes[teamColor as keyof typeof colorSchemes].gradient}`}>{team.team_name}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="badge-primary text-xs px-2 py-0.5 rounded-full font-bold">
-                      {getQuarterFromDate(selectedContest?.start_date || '')}
-                    </span>
-                    <p className="text-brand-300 font-bold">5 CT Kings Selected</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="btn-secondary px-6 py-3 rounded-lg font-bold text-white transition-all flex items-center gap-2 shadow-soft hover:scale-105"
-                >
-                  <ShareNetwork size={20} weight="fill" />
-                  Share Team
-                </button>
-                <button
-                  onClick={() => setShowPersonalization(!showPersonalization)}
-                  className="btn-primary px-6 py-3 rounded-lg font-bold text-white transition-all flex items-center gap-2 shadow-soft"
-                >
-                  <Sparkle size={20} weight="fill" />
-                  Customize Team
-                </button>
-                <div className="text-right">
-                  <p className="text-sm text-brand-300 font-bold mb-1">Contest Rank</p>
-                  <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500">
-                    #{team.rank || '–'}
-                  </p>
-                </div>
-              </div>
-            </div>
+      {/* My Squad View - REMOVED: Use /contest/:id for squad viewing */}
 
-            {/* Personalization Panel */}
-            {showPersonalization && (
-              <div className="mb-8 card bg-brand-500/10 border-2 border-brand-500/50 p-6 backdrop-blur-sm">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                  <Sparkle size={24} weight="fill" className="text-brand-400" />
-                  Personalize Your Squad
-                </h3>
-
-                {/* Badge Selector */}
-                <div className="mb-6">
-                  <p className="text-sm font-bold text-brand-300 mb-3">Team Badge</p>
-                  <div className="grid grid-cols-4 gap-3">
-                    {Object.entries(badges).map(([key, badge]) => {
-                      const BadgeIcon = badge.icon;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setTeamBadge(key)}
-                          className={`card-hover p-4 rounded-lg border-2 transition-all hover:scale-105 ${
-                            teamBadge === key
-                              ? 'bg-brand-600 border-brand-400 shadow-soft'
-                              : 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <BadgeIcon size={32} weight="fill" className="text-white mx-auto mb-2" />
-                            <p className="text-xs font-bold text-white">{badge.label}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Color Picker */}
-                <div>
-                  <p className="text-sm font-bold text-brand-300 mb-3">Team Colors</p>
-                  <div className="grid grid-cols-4 gap-3">
-                    {Object.entries(colorSchemes).map(([key, scheme]) => (
-                      <button
-                        key={key}
-                        onClick={() => setTeamColor(key)}
-                        className={`card-hover p-4 rounded-lg border-2 transition-all hover:scale-105 ${
-                          teamColor === key
-                            ? `bg-gradient-to-br ${scheme.gradient} border-white shadow-soft`
-                            : `bg-gradient-to-br ${scheme.gradient} opacity-60 border-gray-700 hover:opacity-100`
-                        }`}
-                      >
-                        <div className="text-center">
-                          <p className="text-sm font-black text-white">{scheme.name}</p>
-                          <div className="flex items-center justify-center gap-1 mt-2">
-                            <div className="w-3 h-3 rounded-full bg-white"></div>
-                            <div className="w-3 h-3 rounded-full bg-white/60"></div>
-                            <div className="w-3 h-3 rounded-full bg-white/30"></div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Apply Button */}
-                <div className="mt-6 flex items-center justify-between">
-                  <p className="text-sm text-brand-300">
-                    Changes apply instantly to your squad view
-                  </p>
-                  <button
-                    onClick={() => setShowPersonalization(false)}
-                    className="btn-primary px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-lg font-bold text-white transition-all flex items-center gap-2"
-                  >
-                    <CheckCircle size={20} weight="fill" />
-                    Done
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Team Stats Cards */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
-              <div className={`card bg-gradient-to-br ${colorSchemes[teamColor as keyof typeof colorSchemes].gradient} border-2 ${colorSchemes[teamColor as keyof typeof colorSchemes].border} p-6`}>
-                <p className={`text-sm ${colorSchemes[teamColor as keyof typeof colorSchemes].text} font-bold mb-2`}>Total Foresight</p>
-                <p className={`text-5xl font-black ${colorSchemes[teamColor as keyof typeof colorSchemes].text}`}>{team.total_score}</p>
-                <p className={`text-xs ${colorSchemes[teamColor as keyof typeof colorSchemes].text} mt-2`}>Points Scored</p>
-              </div>
-              <div className="card bg-gradient-to-br from-yellow-600/20 to-amber-600/20 border-2 border-yellow-500/50 p-6">
-                <p className="text-sm text-yellow-300 font-bold mb-2">Budget Spent</p>
-                <p className="text-5xl font-black text-yellow-400">{budgetUsed.toFixed(0)}<span className="text-2xl">/{TOTAL_BUDGET}</span></p>
-                <p className="text-xs text-yellow-300 mt-2">{(TOTAL_BUDGET - budgetUsed).toFixed(0)} pts left</p>
-              </div>
-              <div className="card bg-brand-500/10 border-2 border-brand-500/50 p-6">
-                <p className="text-sm text-brand-300 font-bold mb-2">Top Performer</p>
-                <p className="text-3xl font-black text-brand-400">
-                  {team.picks.reduce((max: Pick, p: Pick) => p.total_points > (max?.total_points || 0) ? p : max, team.picks[0])?.influencer_name?.split(' ')[0] || 'N/A'}
-                </p>
-                <p className="text-xs text-brand-300 mt-2">{team.picks.reduce((max: Pick, p: Pick) => p.total_points > (max?.total_points || 0) ? p : max, team.picks[0])?.total_points || 0} pts</p>
-              </div>
-              <div className="card bg-gradient-to-br from-orange-600/20 to-red-600/20 border-2 border-orange-500/50 p-6">
-                <p className="text-sm text-orange-300 font-bold mb-2">Contest Ends In</p>
-                {(() => {
-                  if (!selectedContest) return <p className="text-3xl font-bold text-orange-400">N/A</p>;
-
-                  const endDate = new Date(selectedContest.end_date);
-                  const now = new Date();
-                  const diff = endDate.getTime() - now.getTime();
-                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-                  if (diff <= 0) {
-                    return (
-                      <>
-                        <p className="text-3xl font-bold text-red-400">CLOSED</p>
-                        <p className="text-xs text-red-300 mt-2">Contest ended</p>
-                      </>
-                    );
-                  }
-
-                  return (
-                    <>
-                      <p className="text-3xl font-black text-orange-400">
-                        {days}d {hours}h
-                      </p>
-                      <p className="text-xs text-orange-300 mt-2">
-                        {team.is_locked ? 'Team locked' : 'Lock before deadline'}
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Squad Members */}
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Users size={24} weight="bold" className="text-brand-500" />
-                  Squad Members
-                </h3>
-                {/* View Toggle */}
-                <div className="flex bg-gray-800 rounded-lg border-2 border-gray-700">
-                  <button
-                    onClick={() => setSquadViewMode('formation')}
-                    className={`px-4 py-2 rounded-l-lg font-bold text-sm transition-all ${
-                      squadViewMode === 'formation' ? 'bg-brand-500 text-white' : 'text-gray-400'
-                    }`}
-                  >
-                    Formation
-                  </button>
-                  <button
-                    onClick={() => setSquadViewMode('list')}
-                    className={`px-4 py-2 rounded-r-lg font-bold text-sm transition-all ${
-                      squadViewMode === 'list' ? 'bg-brand-500 text-white' : 'text-gray-400'
-                    }`}
-                  >
-                    List
-                  </button>
-                </div>
-              </div>
-
-              {/* Formation View - 5-a-Side Pitch */}
-              {squadViewMode === 'formation' && (
-                <div className="relative rounded-xl border-2 border-gray-700 overflow-hidden min-h-[700px]">
-                  {/* Pitch Background */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-green-900/20 via-gray-900/80 to-gray-900/90"></div>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]"></div>
-
-                  {/* Center Circle */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 border-2 border-white/10 rounded-full"></div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white/20 rounded-full"></div>
-
-                  {/* Grid Lines */}
-                  <div className="absolute inset-0">
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-white/5"></div>
-                    <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/5"></div>
-                  </div>
-
-                  {/* Formation: 5-a-Side Layout */}
-                  <div className="relative z-10 p-12 h-[700px] flex items-center justify-center">
-                    <div className="relative w-full max-w-4xl mx-auto">
-                      {/* Position players in a 2-1-2 formation */}
-                      <div className="space-y-16">
-                        {/* Top Row - 2 Forwards */}
-                        <div className="flex justify-center gap-24">
-                          {team.picks.slice(0, 2).map((pick: Pick) => {
-                            const rarity = getRarityInfo(pick.tier || pick.influencer_tier || 'C');
-                            const isCaptain = pick.is_captain;
-
-                            return (
-                              <div key={pick.id} className="relative group">
-                                {/* Captain Badge */}
-                                {isCaptain && (
-                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
-                                    <div className="badge-warning bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-1 rounded-full flex items-center gap-1 shadow-soft border-2 border-yellow-300">
-                                      <Crown size={14} weight="fill" className="text-white" />
-                                      <span className="text-xs font-black text-white">CAPTAIN</span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Player Card */}
-                                <div className={`relative`}>
-                                  <div className={`card-hover relative bg-gradient-to-br ${rarity.gradient} p-1 rounded-lg shadow-soft-lg transition-all group-hover:scale-110 ${isCaptain ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-900' : ''}`}>
-                                    <div className="bg-gray-900 rounded-lg p-4 w-40">
-                                      {/* Avatar */}
-                                      <div className="relative w-20 h-20 mx-auto mb-2">
-                                        <div className={`w-full h-full rounded-full border-4 ${isCaptain ? 'border-yellow-400' : 'border-white/20'} overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 shadow-soft`}>
-                                          {pick.profile_image_url ? (
-                                            <img src={pick.profile_image_url} alt={pick.influencer_name} className="w-full h-full object-cover" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-3xl text-gray-500">
-                                              <Users size={32} weight="bold" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        {/* Tier Badge */}
-                                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${rarity.badge} px-2 py-1 rounded-full shadow-soft text-xs font-black text-white`}>
-                                          {pick.tier || pick.influencer_tier || 'C'}
-                                        </div>
-                                      </div>
-
-                                      {/* Name */}
-                                      <h4 className="text-center text-sm font-black text-white mb-0.5 line-clamp-1">{pick.influencer_name?.split(' ')[0]}</h4>
-                                      <p className="text-center text-[10px] text-gray-400 mb-2 line-clamp-1">@{pick.influencer_handle}</p>
-
-                                      {/* Stats */}
-                                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-700">
-                                        <div className="text-center flex-1">
-                                          <p className="text-xs text-brand-400 font-bold">{pick.total_points || 0}</p>
-                                          <p className="text-[9px] text-gray-500">PTS</p>
-                                        </div>
-                                        <div className="w-px h-6 bg-gray-700"></div>
-                                        <div className="text-center flex-1">
-                                          <p className="text-xs text-yellow-400 font-bold">{parseFloat(pick.price || 15).toFixed(0)}</p>
-                                          <p className="text-[9px] text-gray-500">COST</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Captain 2x Multiplier Indicator */}
-                                  {isCaptain && (
-                                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-yellow-500 px-2 py-0.5 rounded-full shadow-soft">
-                                      <span className="text-xs font-black text-gray-900">2X</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Middle Row - 1 Midfielder */}
-                        <div className="flex justify-center">
-                          {team.picks.slice(2, 3).map((pick: Pick) => {
-                            const rarity = getRarityInfo(pick.tier || pick.influencer_tier || 'C');
-                            const isCaptain = pick.is_captain;
-
-                            return (
-                              <div key={pick.id} className="relative group">
-                                {isCaptain && (
-                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
-                                    <div className="badge-warning bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-1 rounded-full flex items-center gap-1 shadow-soft border-2 border-yellow-300">
-                                      <Crown size={14} weight="fill" className="text-white" />
-                                      <span className="text-xs font-black text-white">CAPTAIN</span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className={`relative`}>
-                                  <div className={`card-hover relative bg-gradient-to-br ${rarity.gradient} p-1 rounded-lg shadow-soft-lg transition-all group-hover:scale-110 ${isCaptain ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-900' : ''}`}>
-                                    <div className="bg-gray-900 rounded-lg p-4 w-40">
-                                      <div className="relative w-20 h-20 mx-auto mb-2">
-                                        <div className={`w-full h-full rounded-full border-4 ${isCaptain ? 'border-yellow-400' : 'border-white/20'} overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 shadow-soft`}>
-                                          {pick.profile_image_url ? (
-                                            <img src={pick.profile_image_url} alt={pick.influencer_name} className="w-full h-full object-cover" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-3xl text-gray-500">
-                                              <Users size={32} weight="bold" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${rarity.badge} px-2 py-1 rounded-full shadow-soft text-xs font-black text-white`}>
-                                          {pick.tier || pick.influencer_tier || 'C'}
-                                        </div>
-                                      </div>
-
-                                      <h4 className="text-center text-sm font-black text-white mb-0.5 line-clamp-1">{pick.influencer_name?.split(' ')[0]}</h4>
-                                      <p className="text-center text-[10px] text-gray-400 mb-2 line-clamp-1">@{pick.influencer_handle}</p>
-
-                                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-700">
-                                        <div className="text-center flex-1">
-                                          <p className="text-xs text-brand-400 font-bold">{pick.total_points || 0}</p>
-                                          <p className="text-[9px] text-gray-500">PTS</p>
-                                        </div>
-                                        <div className="w-px h-6 bg-gray-700"></div>
-                                        <div className="text-center flex-1">
-                                          <p className="text-xs text-yellow-400 font-bold">{parseFloat(pick.price || 15).toFixed(0)}</p>
-                                          <p className="text-[9px] text-gray-500">COST</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {isCaptain && (
-                                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-yellow-500 px-2 py-0.5 rounded-full shadow-soft">
-                                      <span className="text-xs font-black text-gray-900">2X</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Bottom Row - 2 Defenders */}
-                        <div className="flex justify-center gap-24">
-                          {team.picks.slice(3, 5).map((pick: Pick) => {
-                            const rarity = getRarityInfo(pick.tier || pick.influencer_tier || 'C');
-                            const isCaptain = pick.is_captain;
-
-                            return (
-                              <div key={pick.id} className="relative group">
-                                {isCaptain && (
-                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
-                                    <div className="badge-warning bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-1 rounded-full flex items-center gap-1 shadow-soft border-2 border-yellow-300">
-                                      <Crown size={14} weight="fill" className="text-white" />
-                                      <span className="text-xs font-black text-white">CAPTAIN</span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className={`relative`}>
-                                  <div className={`card-hover relative bg-gradient-to-br ${rarity.gradient} p-1 rounded-lg shadow-soft-lg transition-all group-hover:scale-110 ${isCaptain ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-900' : ''}`}>
-                                    <div className="bg-gray-900 rounded-lg p-4 w-40">
-                                      <div className="relative w-20 h-20 mx-auto mb-2">
-                                        <div className={`w-full h-full rounded-full border-4 ${isCaptain ? 'border-yellow-400' : 'border-white/20'} overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 shadow-soft`}>
-                                          {pick.profile_image_url ? (
-                                            <img src={pick.profile_image_url} alt={pick.influencer_name} className="w-full h-full object-cover" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-3xl text-gray-500">
-                                              <Users size={32} weight="bold" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${rarity.badge} px-2 py-1 rounded-full shadow-soft text-xs font-black text-white`}>
-                                          {pick.tier || pick.influencer_tier || 'C'}
-                                        </div>
-                                      </div>
-
-                                      <h4 className="text-center text-sm font-black text-white mb-0.5 line-clamp-1">{pick.influencer_name?.split(' ')[0]}</h4>
-                                      <p className="text-center text-[10px] text-gray-400 mb-2 line-clamp-1">@{pick.influencer_handle}</p>
-
-                                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-700">
-                                        <div className="text-center flex-1">
-                                          <p className="text-xs text-brand-400 font-bold">{pick.total_points || 0}</p>
-                                          <p className="text-[9px] text-gray-500">PTS</p>
-                                        </div>
-                                        <div className="w-px h-6 bg-gray-700"></div>
-                                        <div className="text-center flex-1">
-                                          <p className="text-xs text-yellow-400 font-bold">{parseFloat(pick.price || 15).toFixed(0)}</p>
-                                          <p className="text-[9px] text-gray-500">COST</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {isCaptain && (
-                                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-yellow-500 px-2 py-0.5 rounded-full shadow-soft">
-                                      <span className="text-xs font-black text-gray-900">2X</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Formation Label */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900/80 backdrop-blur px-4 py-2 rounded-full border border-gray-700">
-                    <span className="text-xs font-bold text-gray-400">2-1-2 FORMATION</span>
-                  </div>
-                </div>
-              )}
-
-              {/* List View */}
-              {squadViewMode === 'list' && (
-                <div className="grid grid-cols-1 gap-4">
-                {team.picks.map((pick: Pick) => {
-                  const rarity = getRarityInfo(pick.tier || pick.influencer_tier || 'C');
-                  const RarityIcon = rarity.icon;
-
-                  return (
-                    <div
-                      key={pick.id}
-                      className="card-hover bg-gradient-to-r from-gray-800 to-gray-800/50 p-6 border-2 border-gray-700 hover:border-brand-500/50 transition-all"
-                    >
-                      <div className="flex items-center gap-6">
-                        {/* Pick Number */}
-                        <div className="text-center">
-                          <div className="text-3xl font-black text-gray-600">#{index + 1}</div>
-                        </div>
-
-                        {/* Profile Image */}
-                        <div className="relative">
-                          <div className="w-20 h-20 rounded-full border-4 border-gray-700 overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800">
-                            {pick.profile_image_url ? (
-                              <img src={pick.profile_image_url} alt={pick.influencer_name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-4xl text-gray-500">
-                                <Users size={40} weight="bold" />
-                              </div>
-                            )}
-                          </div>
-                          <div className={`absolute -bottom-2 -right-2 ${rarity.badge} px-3 py-1 rounded-full flex items-center gap-1 shadow-soft`}>
-                            <RarityIcon size={16} weight="fill" className="text-white" />
-                            <span className="text-xs font-bold text-white">{pick.tier || pick.influencer_tier}</span>
-                          </div>
-                        </div>
-
-                        {/* Influencer Details */}
-                        <div className="flex-1">
-                          <h4 className="text-2xl font-bold text-white mb-1">{pick.influencer_name}</h4>
-                          <p className="text-gray-400 text-sm mb-2">@{pick.influencer_handle}</p>
-                          <div className={`inline-block ${rarity.badge} px-3 py-1 rounded-full`}>
-                            <span className="text-xs font-bold text-white">{rarity.label}</span>
-                          </div>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="text-center">
-                            <p className="text-xs text-gray-400 mb-1">Cost</p>
-                            <p className="text-2xl font-black text-yellow-400">{parseFloat(pick.price || 15).toFixed(0)} pts</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs text-gray-400 mb-1">Score</p>
-                            <p className="text-2xl font-black text-brand-400">{pick.total_points || 0}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            </div>
-
-            {/* Actions */}
-            <div className="mt-8 flex gap-4">
-              <button
-                onClick={() => setCurrentView('draft')}
-                className={`btn-primary flex-1 py-4 bg-gradient-to-r ${colorSchemes[teamColor as keyof typeof colorSchemes].gradient} hover:opacity-90 rounded-lg font-bold text-lg transition-all transform hover:scale-105 shadow-soft-lg`}
-              >
-                <span className="flex items-center gap-2 justify-center">
-                  <TrendUp size={24} weight="bold" />
-                  Adjust Lineup
-                </span>
-              </button>
-              <button
-                onClick={() => setCurrentView('leaderboard')}
-                className="btn-primary flex-1 py-4 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 rounded-lg font-bold text-lg transition-all transform hover:scale-105 shadow-soft-lg"
-              >
-                <span className="flex items-center gap-2 justify-center">
-                  <Trophy size={24} weight="bold" />
-                  Check Rankings
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Leaderboard View */}
-      {currentView === 'leaderboard' && (
-        <div className="max-w-[1400px] mx-auto px-6 pb-6">
-          <div className="card bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl p-8 shadow-soft-lg">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-lg">
-                  <Trophy size={32} weight="bold" className="text-gray-900" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="badge-primary text-xs px-2 py-0.5 rounded-full font-bold">
-                      {getQuarterFromDate(selectedContest?.start_date || '')}
-                    </span>
-                    <h2 className="text-3xl font-black text-white">Contest Leaderboard</h2>
-                  </div>
-                  <p className="text-gray-400 mt-1">Top CT Draft teams this month</p>
-                </div>
-              </div>
-              {team && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">Your Team</p>
-                  <p className="text-2xl font-black text-brand-400">#{team.rank || '–'}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Leaderboard Content */}
-            {leaderboard.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="mb-4">
-                  <Trophy size={64} weight="bold" className="text-gray-600 mx-auto" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-2">No teams yet</h3>
-                <p className="text-gray-400">Be the first to create a team!</p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {/* Top 3 Podium */}
-                {leaderboard.length >= 3 && (
-                  <div className="mb-12">
-                    <h3 className="text-xl font-bold text-white text-center mb-8 flex items-center justify-center gap-2">
-                      <Trophy size={24} weight="fill" className="text-yellow-400" />
-                      Top 3 Champions
-                    </h3>
-                    <div className="flex items-end justify-center gap-6 mb-8">
-                      {/* 2nd Place */}
-                      <div className="flex flex-col items-center flex-1 max-w-xs">
-                        <div className={`card w-full bg-gradient-to-br from-gray-400 to-gray-600 border-2 border-gray-400 p-6 shadow-soft-lg ${team?.id === leaderboard[1]?.id ? 'ring-4 ring-brand-400' : ''}`} style={{ height: '220px' }}>
-                          <div className="flex flex-col items-center h-full justify-between">
-                            <div className="text-6xl mb-3">
-                              <Medal size={64} weight="fill" className="text-white" />
-                            </div>
-                            <div className="text-center flex-1">
-                              <div className="text-sm text-gray-200 font-bold mb-2">#2</div>
-                              <h4 className="font-black text-white text-lg mb-2 line-clamp-1">{leaderboard[1]?.team_name}</h4>
-                              {team?.id === leaderboard[1]?.id && (
-                                <span className="badge-primary inline-block px-2 py-1 rounded-full text-xs font-bold mb-2">YOU</span>
-                              )}
-                            </div>
-                            <div className="text-center mt-auto">
-                              <p className="text-sm text-gray-200 mb-1">Score</p>
-                              <p className="text-3xl font-black text-white">{leaderboard[1]?.total_score}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full h-20 bg-gray-400/20 border-2 border-gray-400/30 border-t-0 rounded-b-lg flex items-center justify-center">
-                          <span className="text-gray-400 font-bold">SILVER</span>
-                        </div>
-                      </div>
-
-                      {/* 1st Place */}
-                      <div className="flex flex-col items-center flex-1 max-w-xs">
-                        <div className={`card w-full bg-gradient-to-br from-yellow-400 to-amber-600 border-2 border-yellow-400 p-6 shadow-soft-lg ${team?.id === leaderboard[0]?.id ? 'ring-4 ring-brand-400' : ''}`} style={{ height: '280px' }}>
-                          <div className="flex flex-col items-center h-full justify-between">
-                            <div className="text-7xl mb-3">
-                              <Trophy size={72} weight="fill" className="text-gray-900" />
-                            </div>
-                            <div className="text-center flex-1">
-                              <div className="text-sm text-amber-900 font-bold mb-2">#1</div>
-                              <h4 className="font-black text-gray-900 text-xl mb-2 line-clamp-1">{leaderboard[0]?.team_name}</h4>
-                              {team?.id === leaderboard[0]?.id && (
-                                <span className="badge-primary inline-block px-2 py-1 rounded-full text-xs font-bold mb-2">YOU</span>
-                              )}
-                              <div className="flex items-center justify-center gap-1 mt-2">
-                                <Crown size={20} weight="fill" className="text-amber-900" />
-                                <span className="text-xs font-black text-amber-900">CHAMPION</span>
-                              </div>
-                            </div>
-                            <div className="text-center mt-auto">
-                              <p className="text-sm text-amber-900 mb-1">Score</p>
-                              <p className="text-4xl font-black text-gray-900">{leaderboard[0]?.total_score}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full h-24 bg-yellow-400/20 border-2 border-yellow-400/30 border-t-0 rounded-b-lg flex items-center justify-center">
-                          <span className="text-yellow-400 font-bold">GOLD</span>
-                        </div>
-                      </div>
-
-                      {/* 3rd Place */}
-                      <div className="flex flex-col items-center flex-1 max-w-xs">
-                        <div className={`card w-full bg-gradient-to-br from-orange-600 to-amber-800 border-2 border-orange-600 p-6 shadow-soft-lg ${team?.id === leaderboard[2]?.id ? 'ring-4 ring-brand-400' : ''}`} style={{ height: '180px' }}>
-                          <div className="flex flex-col items-center h-full justify-between">
-                            <div className="text-5xl mb-3">
-                              <Medal size={56} weight="fill" className="text-white" />
-                            </div>
-                            <div className="text-center flex-1">
-                              <div className="text-sm text-orange-200 font-bold mb-2">#3</div>
-                              <h4 className="font-black text-white text-base mb-2 line-clamp-1">{leaderboard[2]?.team_name}</h4>
-                              {team?.id === leaderboard[2]?.id && (
-                                <span className="badge-primary inline-block px-2 py-1 rounded-full text-xs font-bold mb-2">YOU</span>
-                              )}
-                            </div>
-                            <div className="text-center mt-auto">
-                              <p className="text-sm text-orange-200 mb-1">Score</p>
-                              <p className="text-2xl font-black text-white">{leaderboard[2]?.total_score}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="w-full h-16 bg-orange-600/20 border-2 border-orange-600/30 border-t-0 rounded-b-lg flex items-center justify-center">
-                          <span className="text-orange-400 font-bold">BRONZE</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Rest of Leaderboard */}
-                {leaderboard.length > 3 && (
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-400 mb-4 flex items-center gap-2">
-                      <TrendUp size={20} weight="bold" />
-                      All Rankings
-                    </h3>
-                    <div className="space-y-3">
-                      {leaderboard.slice(3).map((entry, index) => {
-                        const isMyTeam = team?.id === entry.id;
-                        const actualRank = index + 4;
-
-                        return (
-                          <div
-                            key={entry.id}
-                            className={`card-hover flex items-center gap-6 p-5 border-2 transition-all ${
-                              isMyTeam
-                                ? 'bg-brand-500/10 border-brand-400 shadow-soft'
-                                : 'bg-gradient-to-r from-gray-800 to-gray-800/50 border-gray-700 hover:border-gray-600'
-                            }`}
-                          >
-                            {/* Rank */}
-                            <div className="w-12 text-center">
-                              <div className="text-2xl font-black text-gray-400">#{actualRank}</div>
-                            </div>
-
-                            {/* Team Name */}
-                            <div className="flex-1">
-                              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                {entry.team_name}
-                                {isMyTeam && (
-                                  <span className="badge-primary px-3 py-1 rounded-full text-xs font-bold">
-                                    YOU
-                                  </span>
-                                )}
-                              </h3>
-                            </div>
-
-                            {/* Score */}
-                            <div className="text-right">
-                              <p className="text-xs text-gray-400 mb-1">Total Score</p>
-                              <p className="text-2xl font-black text-brand-400">{entry.total_score}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Show first 3 normally if less than 3 entries */}
-                {leaderboard.length < 3 && leaderboard.length > 0 && (
-                  <div className="space-y-3">
-                    {leaderboard.map((entry) => {
-                      const isMyTeam = team?.id === entry.id;
-
-                      return (
-                        <div
-                          key={entry.id}
-                          className={`card-hover flex items-center gap-6 p-6 border-2 transition-all ${
-                            isMyTeam
-                              ? 'bg-brand-500/10 border-brand-400 shadow-soft'
-                              : 'bg-gradient-to-r from-gray-800 to-gray-800/50 border-gray-700 hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="w-16 text-center">
-                            <div className="text-3xl font-black text-gray-400">#{entry.rank}</div>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                              {entry.team_name}
-                              {isMyTeam && (
-                                <span className="badge-primary px-3 py-1 rounded-full text-xs font-bold">YOU</span>
-                              )}
-                            </h3>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-400 mb-1">Total Score</p>
-                            <p className="text-3xl font-black text-brand-400">{entry.total_score}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Back to Draft Button */}
-            {!team && (
-              <div className="mt-8 text-center">
-                <button
-                  onClick={() => setCurrentView('draft')}
-                  className="btn-primary px-8 py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-105 shadow-soft-lg"
-                >
-                  <span className="flex items-center gap-2">
-                    <Users size={24} weight="bold" />
-                    Create Your Team
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Leaderboard View - REMOVED: Use /contest/:id for leaderboard */}
 
       {/* Share Team Modal */}
       {showShareModal && team && team.picks && (
@@ -1987,6 +1294,129 @@ export default function LeagueUltra() {
           onComplete={handleCompleteOnboarding}
           onSkip={handleSkipOnboarding}
         />
+      )}
+
+      {/* Score Breakdown Modal */}
+      {team && (
+        <ScoreBreakdownModal
+          teamId={team.id}
+          isOpen={showScoreBreakdown}
+          onClose={() => setShowScoreBreakdown(false)}
+        />
+      )}
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={handleCancelPayment} />
+
+          {/* Modal */}
+          <div className="relative bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-800/50">
+              <h2 className="text-xl font-bold text-white">Confirm Entry</h2>
+              <button onClick={handleCancelPayment} className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <X size={24} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {entryStep === 'confirm' && (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CurrencyEth size={32} className="text-purple-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Pay Entry Fee</h3>
+                    <p className="text-gray-400">
+                      Enter <span className="text-white font-bold">{contestTypeFromUrl?.replace('_', ' ')}</span>
+                    </p>
+                  </div>
+
+                  {/* Team Summary */}
+                  <div className="bg-gray-800/50 rounded-xl p-4 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-400 text-sm">Your Team</span>
+                      <span className="text-white font-bold">{teamName}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-400 text-sm">Players</span>
+                      <span className="text-white">{selectedInfluencers.length} selected</span>
+                    </div>
+                    {hasCaptain && captainId && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">Captain</span>
+                        <span className="text-yellow-400 flex items-center gap-1">
+                          <Crown size={14} weight="fill" />
+                          {availableInfluencers.find(i => i.id === captainId)?.name || 'Selected'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Entry Fee */}
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Entry Fee</span>
+                      <span className="text-2xl font-bold text-purple-400">
+                        {parseFloat(contestEntryFee).toFixed(4)} ETH
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex items-start gap-2 text-left text-sm text-gray-400 mb-6 bg-gray-800/30 rounded-lg p-3">
+                    <Info size={16} className="mt-0.5 flex-shrink-0" />
+                    <p>
+                      Your entry fee goes into the prize pool. Top performers will win ETH prizes when the contest ends.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleConfirmPaidEntry}
+                    className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    <Wallet size={20} weight="fill" />
+                    Pay & Enter Contest
+                  </button>
+                </>
+              )}
+
+              {entryStep === 'pending' && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    {isWritePending ? 'Confirm in Wallet' : isConfirming ? 'Processing...' : 'Submitting...'}
+                  </h3>
+                  <p className="text-gray-400">
+                    {isWritePending
+                      ? 'Please confirm the transaction in your wallet'
+                      : isConfirming
+                      ? 'Waiting for blockchain confirmation...'
+                      : 'Preparing transaction...'}
+                  </p>
+                </div>
+              )}
+
+              {entryStep === 'success' && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle size={32} className="text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">You're In!</h3>
+                  <p className="text-gray-400 mb-4">
+                    Successfully entered the contest with team "{teamName}"
+                  </p>
+                  <p className="text-sm text-green-400">
+                    Good luck! Redirecting to contests...
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

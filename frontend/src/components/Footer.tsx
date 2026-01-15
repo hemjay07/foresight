@@ -78,18 +78,18 @@ const Footer = () => {
             <h4 className="font-semibold text-white mb-3">Product</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/draft" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  CT Draft
+                <Link to="/league" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                  League
                 </Link>
               </li>
               <li>
-                <Link to="/vote" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  CT Spotlight
+                <Link to="/compete" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                  Compete
                 </Link>
               </li>
               <li>
-                <Link to="/leaderboard" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  XP Leaderboard
+                <Link to="/intel" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                  Intel
                 </Link>
               </li>
               <li>
@@ -125,9 +125,14 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <Link to="/bug-bounty" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <a
+                  href="https://discord.gg/foresight"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-cyan-400 transition-colors"
+                >
                   Bug Bounty
-                </Link>
+                </a>
               </li>
               <li>
                 <a

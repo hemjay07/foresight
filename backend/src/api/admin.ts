@@ -1,8 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
+import { sendSuccess, sendError } from '../utils/response';
 import db from '../utils/db';
-import { triggerFantasyScoring, getCronJobsStatus } from '../services/cronJobs';
+import {
+  triggerFantasyScoring,
+  getCronJobsStatus,
+  triggerStartOfWeekSnapshot,
+  triggerEndOfWeekSnapshot,
+  triggerWeeklyScoring,
+  getSnapshotStatus,
+} from '../services/cronJobs';
 import twitterApiService from '../services/twitterApiService';
+import twitterApiIoService from '../services/twitterApiIoService';
+import weeklySnapshotService from '../services/weeklySnapshotService';
 
 const router = Router();
 
@@ -19,8 +29,7 @@ router.get('/stats', authenticate, async (req: Request, res: Response) => {
       db('influencers').where({ is_active: true }).count('* as count').first(),
     ]);
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       stats: {
         users: users?.count || 0,
         teams: teams?.count || 0,
@@ -29,10 +38,7 @@ router.get('/stats', authenticate, async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get stats',
-    });
+    sendError(res, 'Failed to get stats', 500);
   }
 });
 
@@ -43,16 +49,11 @@ router.get('/stats', authenticate, async (req: Request, res: Response) => {
 router.post('/trigger-scoring', authenticate, async (req: Request, res: Response) => {
   try {
     await triggerFantasyScoring();
-    res.json({
-      success: true,
+    sendSuccess(res, {
       message: 'Fantasy scoring cycle triggered successfully',
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to trigger scoring',
-      details: error.message,
-    });
+    sendError(res, 'Failed to trigger scoring', 500, error.message);
   }
 });
 
@@ -63,15 +64,9 @@ router.post('/trigger-scoring', authenticate, async (req: Request, res: Response
 router.get('/cron-status', authenticate, async (req: Request, res: Response) => {
   try {
     const jobs = getCronJobsStatus();
-    res.json({
-      success: true,
-      jobs,
-    });
+    sendSuccess(res, { jobs });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get cron status',
-    });
+    sendError(res, 'Failed to get cron status', 500);
   }
 });
 
@@ -84,24 +79,16 @@ router.post('/update-metrics', authenticate, async (req: Request, res: Response)
     const { limit = 50 } = req.body;
 
     if (!twitterApiService.isConfigured()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Twitter API not configured. Set TWITTER_BEARER_TOKEN in .env',
-      });
+      return sendError(res, 'Twitter API not configured. Set TWITTER_BEARER_TOKEN in .env', 400);
     }
 
     await twitterApiService.batchUpdateInfluencers(limit);
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       message: `Updated metrics for ${limit} influencers`,
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update metrics',
-      details: error.message,
-    });
+    sendError(res, 'Failed to update metrics', 500, error.message);
   }
 });
 
@@ -131,8 +118,7 @@ router.get('/metrics-status', authenticate, async (req: Request, res: Response) 
       .count('* as count')
       .first();
 
-    res.json({
-      success: true,
+    sendSuccess(res, {
       status: {
         apiConfigured: isConfigured,
         rateLimitInfo,
@@ -142,10 +128,7 @@ router.get('/metrics-status', authenticate, async (req: Request, res: Response) 
       },
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get metrics status',
-    });
+    sendError(res, 'Failed to get metrics status', 500);
   }
 });
 
@@ -166,15 +149,186 @@ router.get('/influencer-metrics/:id', authenticate, async (req: Request, res: Re
       .where('scraped_at', '>=', cutoffDate)
       .orderBy('scraped_at', 'asc');
 
-    res.json({
-      success: true,
-      metrics,
+    sendSuccess(res, { metrics });
+  } catch (error: any) {
+    sendError(res, 'Failed to get influencer metrics', 500);
+  }
+});
+
+// ============================================
+// WEEKLY SNAPSHOT ENDPOINTS (TwitterAPI.io)
+// ============================================
+
+/**
+ * @route GET /api/admin/snapshot-status
+ * @desc Get weekly snapshot status for current contest
+ */
+router.get('/snapshot-status', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { contestId, status } = await getSnapshotStatus();
+
+    // Also check if TwitterAPI.io is configured
+    const apiConfigured = twitterApiIoService.isConfigured();
+
+    sendSuccess(res, {
+      contestId,
+      apiConfigured,
+      status,
     });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get influencer metrics',
+    sendError(res, 'Failed to get snapshot status', 500, error.message);
+  }
+});
+
+/**
+ * @route POST /api/admin/trigger-start-snapshot
+ * @desc Manually trigger start-of-week snapshot capture
+ */
+router.post('/trigger-start-snapshot', authenticate, async (req: Request, res: Response) => {
+  try {
+    const result = await triggerStartOfWeekSnapshot();
+
+    sendSuccess(res, {
+      message: 'Start-of-week snapshot capture completed',
+      result,
     });
+  } catch (error: any) {
+    sendError(res, 'Failed to trigger start snapshot', 500, error.message);
+  }
+});
+
+/**
+ * @route POST /api/admin/trigger-end-snapshot
+ * @desc Manually trigger end-of-week snapshot capture
+ */
+router.post('/trigger-end-snapshot', authenticate, async (req: Request, res: Response) => {
+  try {
+    const result = await triggerEndOfWeekSnapshot();
+
+    sendSuccess(res, {
+      message: 'End-of-week snapshot capture completed',
+      result,
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to trigger end snapshot', 500, error.message);
+  }
+});
+
+/**
+ * @route POST /api/admin/trigger-weekly-scoring
+ * @desc Manually trigger weekly scoring cycle
+ */
+router.post('/trigger-weekly-scoring', authenticate, async (req: Request, res: Response) => {
+  try {
+    const result = await triggerWeeklyScoring();
+
+    sendSuccess(res, {
+      message: 'Weekly scoring cycle completed',
+      result,
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to trigger weekly scoring', 500, error.message);
+  }
+});
+
+/**
+ * @route GET /api/admin/weekly-deltas/:contestId
+ * @desc Get weekly delta calculations for a contest (preview before scoring)
+ */
+router.get('/weekly-deltas/:contestId', authenticate, async (req: Request, res: Response) => {
+  try {
+    const contestId = parseInt(req.params.contestId);
+
+    if (isNaN(contestId)) {
+      return sendError(res, 'Invalid contest ID', 400);
+    }
+
+    const deltas = await weeklySnapshotService.calculateWeeklyDeltas(contestId);
+
+    // Sort by engagement (most active influencers first)
+    deltas.sort((a, b) => b.avgEngagementPerTweet - a.avgEngagementPerTweet);
+
+    sendSuccess(res, {
+      contestId,
+      totalInfluencers: deltas.length,
+      completeData: deltas.filter(d => d.isComplete).length,
+      deltas,
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to calculate weekly deltas', 500, error.message);
+  }
+});
+
+/**
+ * @route GET /api/admin/api-fetch-logs
+ * @desc Get recent API fetch logs for monitoring/debugging
+ */
+router.get('/api-fetch-logs', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { limit = 100, success } = req.query;
+
+    let query = db('api_fetch_logs')
+      .orderBy('created_at', 'desc')
+      .limit(Number(limit));
+
+    if (success !== undefined) {
+      query = query.where('success', success === 'true');
+    }
+
+    const logs = await query;
+
+    // Also get summary stats
+    const stats = await db('api_fetch_logs')
+      .select(
+        db.raw('COUNT(*) as total'),
+        db.raw('SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful'),
+        db.raw('SUM(CASE WHEN NOT success THEN 1 ELSE 0 END) as failed'),
+        db.raw('SUM(estimated_credits) as total_credits')
+      )
+      .where('created_at', '>=', db.raw("NOW() - INTERVAL '7 days'"))
+      .first();
+
+    sendSuccess(res, {
+      stats: {
+        last7Days: stats,
+      },
+      logs,
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to get API fetch logs', 500, error.message);
+  }
+});
+
+/**
+ * @route POST /api/admin/test-twitterapi-io
+ * @desc Test TwitterAPI.io connection with a single handle
+ */
+router.post('/test-twitterapi-io', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { handle = 'VitalikButerin' } = req.body;
+
+    if (!twitterApiIoService.isConfigured()) {
+      return sendError(res, 'TwitterAPI.io not configured. Set TWITTER_API_IO_KEY in .env', 400);
+    }
+
+    // Fetch profile
+    const profileResult = await twitterApiIoService.getUserProfile(handle);
+
+    if (!profileResult.success || !profileResult.data) {
+      return sendError(res, 'Failed to fetch profile', 400, profileResult.error);
+    }
+
+    // Fetch recent tweets
+    const tweetsResult = await twitterApiIoService.getUserTweets(handle, 5);
+
+    sendSuccess(res, {
+      handle,
+      profile: profileResult.data,
+      tweets: tweetsResult.data || [],
+      apiCalls: 2,
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to test TwitterAPI.io', 500, error.message);
   }
 });
 

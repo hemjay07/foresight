@@ -4,19 +4,90 @@ import {
   checkRankingAchievements,
   checkXPAchievements,
 } from './achievementService';
+import weeklySnapshotService, { InfluencerDelta } from './weeklySnapshotService';
+import foresightScoreService from './foresightScoreService';
 
 /**
- * Fantasy League Scoring Service
- * Calculates metrics-based scores for CT Draft teams
+ * Fantasy League Scoring Service V2
+ * Calculates performance-based scores for CT Draft teams
  *
- * Daily Scoring Formula:
- * - Base: base_price (tier-based pricing)
- * - Follower bonus: (follower_count / 1M) * 5 points
- * - Tweet activity: daily_tweets * 2 points
- * - Engagement: (likes + retweets + replies) * 0.01 points
- * - Engagement rate multiplier: (1 + engagement_rate / 100)
- * - Captain gets 2x multiplier (FPL-style)
+ * SCORING PHILOSOPHY:
+ * - Zero base score from tier - tier only affects draft price
+ * - All points earned through actual performance
+ * - Normalized for account size using rates and square roots
+ * - Rewards exceptional viral moments
+ * - Captain bonus is ×1.5, not ×2
+ *
+ * SCORING FORMULA:
+ * Weekly Score = Activity + Engagement + Growth + Viral + Spotlight
+ *
+ * ACTIVITY (0-35 pts):
+ *   = min(35, tweets_this_week × 1.5)
+ *
+ * ENGAGEMENT (0-60 pts):
+ *   Quality = sqrt(avg_likes + avg_retweets×2 + avg_replies×3) × 1.5
+ *   Volume = min(1.0, tweets_analyzed / 10)
+ *   = min(60, Quality × Volume)
+ *
+ * GROWTH (0-40 pts):
+ *   Absolute = min(20, followers_gained / 2000)
+ *   Rate = min(20, growth_rate_percent × 5)
+ *   = min(40, Absolute + Rate)
+ *
+ * VIRAL (0-25 pts):
+ *   10K-49K engagement: +4 pts per tweet
+ *   50K-99K: +7 pts per tweet
+ *   100K+: +12 pts per tweet
+ *   Max 3 viral tweets count
+ *
+ * CAPTAIN: ×1.5 multiplier on base score
+ * SPOTLIGHT: +12 (1st) / +8 (2nd) / +4 (3rd) flat points
  */
+
+// Scoring configuration V2
+const SCORING_CONFIG = {
+  // Activity scoring
+  activity: {
+    pointsPerTweet: 1.5,
+    cap: 35,
+  },
+
+  // Engagement scoring
+  engagement: {
+    likesWeight: 1,
+    retweetsWeight: 2,
+    repliesWeight: 3,
+    qualityMultiplier: 1.5,
+    minTweetsForFullScore: 10,
+    cap: 60,
+  },
+
+  // Growth scoring
+  growth: {
+    absoluteDivisor: 2000, // 1 pt per 2K followers
+    absoluteCap: 20,
+    rateMultiplier: 5, // 5 pts per 1% growth
+    rateCap: 20,
+    totalCap: 40,
+  },
+
+  // Viral scoring
+  viral: {
+    thresholds: [
+      { min: 10000, max: 49999, points: 4 },
+      { min: 50000, max: 99999, points: 7 },
+      { min: 100000, max: Infinity, points: 12 },
+    ],
+    maxTweets: 3,
+    cap: 25,
+  },
+
+  // Captain multiplier (1.5x, not 2x)
+  captainMultiplier: 1.5,
+
+  // Spotlight bonuses (flat points, not percentage)
+  spotlightBonuses: [12, 8, 4], // 1st, 2nd, 3rd place
+};
 
 interface Influencer {
   id: number;
@@ -68,7 +139,8 @@ async function getLatestMetrics(influencerId: number): Promise<InfluencerMetrics
 
 /**
  * Calculate daily score for a single influencer based on Twitter metrics
- * Uses real-time Twitter data from influencer_metrics table
+ * LEGACY: Uses real-time Twitter data from influencer_metrics table
+ * @deprecated Use calculateInfluencerWeeklyScore for new weekly delta-based scoring
  */
 export function calculateInfluencerDailyScore(
   influencer: Influencer,
@@ -106,6 +178,322 @@ export function calculateInfluencerDailyScore(
 
   // Round to 2 decimals
   return Math.round(totalScore * 100) / 100;
+}
+
+/**
+ * Score breakdown interface for detailed reporting
+ */
+export interface ScoreBreakdown {
+  activityScore: number;
+  engagementScore: number;
+  growthScore: number;
+  viralScore: number;
+  baseTotal: number;
+  captainMultiplier: number;
+  spotlightBonus: number;
+  finalScore: number;
+  details: {
+    tweetsThisWeek: number;
+    avgLikes: number;
+    avgRetweets: number;
+    avgReplies: number;
+    tweetsAnalyzed: number;
+    followerGrowth: number;
+    growthRatePercent: number;
+    viralTweets: number;
+  };
+}
+
+/**
+ * Calculate weekly score for an influencer based on delta metrics (V2 Formula)
+ * Uses pure performance-based scoring - no base score from tier
+ *
+ * @param delta - The weekly delta metrics for the influencer
+ * @param startFollowers - Starting follower count for growth rate calculation
+ * @returns Score breakdown with all components
+ */
+export function calculateInfluencerWeeklyScore(
+  delta: InfluencerDelta,
+  startFollowers?: number
+): ScoreBreakdown {
+  const cfg = SCORING_CONFIG;
+
+  // ===== ACTIVITY SCORE (0-35 pts) =====
+  // 1.5 pts per tweet, capped at 35
+  const rawActivityScore = delta.tweetsThisWeek * cfg.activity.pointsPerTweet;
+  const activityScore = Math.min(rawActivityScore, cfg.activity.cap);
+
+  // ===== ENGAGEMENT SCORE (0-60 pts) =====
+  // Quality = sqrt(weighted_engagement) × 1.5
+  // Volume multiplier = min(1.0, tweets_analyzed / 10)
+  const avgLikes = delta.tweetsAnalyzed > 0 ? delta.totalLikes / delta.tweetsAnalyzed : 0;
+  const avgRetweets = delta.tweetsAnalyzed > 0 ? delta.totalRetweets / delta.tweetsAnalyzed : 0;
+  const avgReplies = delta.tweetsAnalyzed > 0 ? delta.totalReplies / delta.tweetsAnalyzed : 0;
+
+  const weightedEngagement =
+    avgLikes * cfg.engagement.likesWeight +
+    avgRetweets * cfg.engagement.retweetsWeight +
+    avgReplies * cfg.engagement.repliesWeight;
+
+  const engagementQuality = Math.sqrt(weightedEngagement) * cfg.engagement.qualityMultiplier;
+  const volumeMultiplier = Math.min(1.0, delta.tweetsAnalyzed / cfg.engagement.minTweetsForFullScore);
+  const rawEngagementScore = engagementQuality * volumeMultiplier;
+  const engagementScore = Math.min(rawEngagementScore, cfg.engagement.cap);
+
+  // ===== GROWTH SCORE (0-40 pts) =====
+  // Absolute: 1 pt per 2K followers (cap 20)
+  // Rate: 5 pts per 1% growth (cap 20)
+  const absoluteGrowth = Math.min(
+    delta.followerGrowth / cfg.growth.absoluteDivisor,
+    cfg.growth.absoluteCap
+  );
+
+  // Calculate growth rate if we have starting followers
+  let growthRatePercent = 0;
+  if (startFollowers && startFollowers > 0) {
+    growthRatePercent = (delta.followerGrowth / startFollowers) * 100;
+  }
+  const rateGrowth = Math.min(
+    growthRatePercent * cfg.growth.rateMultiplier,
+    cfg.growth.rateCap
+  );
+
+  const rawGrowthScore = absoluteGrowth + rateGrowth;
+  const growthScore = Math.min(rawGrowthScore, cfg.growth.totalCap);
+
+  // ===== VIRAL SCORE (0-25 pts) =====
+  // Check for viral tweets (would need individual tweet data)
+  // For now, estimate based on max engagement
+  let viralScore = 0;
+  let viralTweets = 0;
+
+  // Estimate viral tweets from average engagement
+  // If avg engagement is very high, assume some viral tweets
+  const avgTotalEngagement = avgLikes + avgRetweets + avgReplies;
+  if (avgTotalEngagement >= 100000 / (delta.tweetsAnalyzed || 1)) {
+    // Very high average suggests viral content
+    viralTweets = Math.min(3, Math.floor(avgTotalEngagement / 10000));
+    for (let i = 0; i < viralTweets && i < cfg.viral.maxTweets; i++) {
+      const threshold = cfg.viral.thresholds.find(
+        t => avgTotalEngagement >= t.min && avgTotalEngagement <= t.max
+      );
+      if (threshold) {
+        viralScore += threshold.points;
+      }
+    }
+    viralScore = Math.min(viralScore, cfg.viral.cap);
+  }
+
+  // ===== TOTALS =====
+  const baseTotal = activityScore + engagementScore + growthScore + viralScore;
+
+  return {
+    activityScore: Math.round(activityScore * 10) / 10,
+    engagementScore: Math.round(engagementScore * 10) / 10,
+    growthScore: Math.round(growthScore * 10) / 10,
+    viralScore: Math.round(viralScore * 10) / 10,
+    baseTotal: Math.round(baseTotal * 10) / 10,
+    captainMultiplier: 1.0, // Will be set by caller
+    spotlightBonus: 0, // Will be set by caller
+    finalScore: Math.round(baseTotal * 10) / 10,
+    details: {
+      tweetsThisWeek: delta.tweetsThisWeek,
+      avgLikes: Math.round(avgLikes),
+      avgRetweets: Math.round(avgRetweets),
+      avgReplies: Math.round(avgReplies),
+      tweetsAnalyzed: delta.tweetsAnalyzed,
+      followerGrowth: delta.followerGrowth,
+      growthRatePercent: Math.round(growthRatePercent * 100) / 100,
+      viralTweets,
+    },
+  };
+}
+
+/**
+ * Calculate weekly scores for all teams using V2 performance-based scoring
+ * Uses TwitterAPI.io weekly snapshots with no base tier scores
+ */
+export async function calculateWeeklyContestScores(contestId: number): Promise<{
+  teamsScored: number;
+  influencersScored: number;
+  errors: string[];
+}> {
+  console.log('\n╔════════════════════════════════════════════╗');
+  console.log(`║  SCORING V2: Contest ${contestId}                    ║`);
+  console.log('╠════════════════════════════════════════════╣');
+  console.log('║  Formula: Activity + Engage + Growth + Viral ║');
+  console.log('║  Captain: ×1.5 | Spotlight: +12/+8/+4 pts   ║');
+  console.log('╚════════════════════════════════════════════╝\n');
+
+  const errors: string[] = [];
+
+  try {
+    // 1. Get weekly deltas for all influencers
+    const deltas = await weeklySnapshotService.calculateWeeklyDeltas(contestId);
+    const deltaMap = new Map(deltas.map(d => [d.influencerId, d]));
+
+    // Also get start snapshots for growth rate calculation
+    const startSnapshots = await db('weekly_snapshots')
+      .where({ contest_id: contestId, snapshot_type: 'start', is_valid: true })
+      .select('influencer_id', 'follower_count');
+    const startFollowersMap = new Map(startSnapshots.map(s => [s.influencer_id, Number(s.follower_count)]));
+
+    console.log(`📊 Loaded deltas for ${deltas.length} influencers`);
+
+    // Check for incomplete data
+    const incompleteCount = deltas.filter(d => !d.isComplete).length;
+    if (incompleteCount > 0) {
+      console.warn(`⚠️  ${incompleteCount} influencers have incomplete snapshots`);
+    }
+
+    // 2. Get all teams with their picks
+    const teamsWithInfluencers = await getTeamsWithInfluencers(contestId);
+    console.log(`👥 Found ${teamsWithInfluencers.length} teams to score\n`);
+
+    // 3. Get spotlight bonuses (top 3 voted influencers) - NOW FLAT POINTS
+    const topVotedInfluencers = await db('influencer_weekly_votes')
+      .where('contest_id', contestId)
+      .orderBy('weighted_score', 'desc')
+      .limit(3)
+      .select('influencer_id', 'weighted_score', 'vote_count');
+
+    const spotlightBonuses: Record<number, number> = {};
+    topVotedInfluencers.forEach((inf, idx) => {
+      spotlightBonuses[inf.influencer_id] = SCORING_CONFIG.spotlightBonuses[idx] || 0;
+    });
+
+    if (Object.keys(spotlightBonuses).length > 0) {
+      console.log('🎯 Spotlight Bonuses (flat points):');
+      topVotedInfluencers.forEach((inf, idx) => {
+        const bonus = spotlightBonuses[inf.influencer_id];
+        console.log(`   ${idx + 1}. Influencer #${inf.influencer_id}: +${bonus} pts (${inf.vote_count} votes)`);
+      });
+      console.log('');
+    }
+
+    // 4. Calculate scores for each team
+    let influencersScored = 0;
+
+    for (const team of teamsWithInfluencers) {
+      let teamTotalScore = 0;
+      let teamSpotlightBonus = 0;
+
+      console.log(`┌─────────────────────────────────────────────┐`);
+      console.log(`│ 📊 Team: "${team.team_name}"`);
+      console.log(`├─────────────────────────────────────────────┤`);
+      console.log(`│ Influencer      │ Act │ Eng │ Grw │ Vir │ Tot │`);
+      console.log(`├─────────────────┼─────┼─────┼─────┼─────┼─────┤`);
+
+      for (const influencer of team.influencers) {
+        const delta = deltaMap.get(influencer.id);
+
+        if (!delta) {
+          console.log(`│ ⚠️  @${influencer.twitter_handle.padEnd(12)} │  -  │  -  │  -  │  -  │  0  │`);
+          errors.push(`No delta data for @${influencer.twitter_handle} in team "${team.team_name}"`);
+          continue;
+        }
+
+        // Get starting followers for growth rate calculation
+        const startFollowers = startFollowersMap.get(influencer.id);
+
+        // Calculate weekly score using V2 formula
+        const scoreResult = calculateInfluencerWeeklyScore(delta, startFollowers);
+
+        // Apply captain multiplier (×1.5, not ×2)
+        const isCaptain = influencer.is_captain;
+        let influencerFinalScore = scoreResult.baseTotal;
+        if (isCaptain) {
+          influencerFinalScore *= SCORING_CONFIG.captainMultiplier;
+        }
+
+        // Apply spotlight bonus (flat points, not percentage)
+        let spotlightBonus = 0;
+        if (spotlightBonuses[influencer.id]) {
+          spotlightBonus = spotlightBonuses[influencer.id];
+          influencerFinalScore += spotlightBonus;
+          teamSpotlightBonus += spotlightBonus;
+        }
+
+        // Update team_picks with detailed score breakdown
+        await db('team_picks')
+          .where({
+            team_id: team.id,
+            influencer_id: influencer.id,
+          })
+          .update({
+            daily_points: Math.round(scoreResult.baseTotal), // Base score before captain
+            total_points: Math.round(influencerFinalScore), // Final score with all multipliers
+            activity_score: scoreResult.activityScore,
+            engagement_score: scoreResult.engagementScore,
+            growth_score: scoreResult.growthScore,
+            viral_score: scoreResult.viralScore,
+            captain_bonus: isCaptain ? scoreResult.baseTotal * 0.5 : 0, // The extra 50%
+            spotlight_bonus: spotlightBonus,
+            score_details: JSON.stringify(scoreResult.details),
+            updated_at: db.fn.now(),
+          });
+
+        teamTotalScore += influencerFinalScore;
+        influencersScored++;
+
+        // Log score breakdown in table format
+        const captainMark = isCaptain ? '⭐' : '  ';
+        const name = influencer.display_name.substring(0, 12).padEnd(12);
+        const act = scoreResult.activityScore.toFixed(0).padStart(3);
+        const eng = scoreResult.engagementScore.toFixed(0).padStart(3);
+        const grw = scoreResult.growthScore.toFixed(0).padStart(3);
+        const vir = scoreResult.viralScore.toFixed(0).padStart(3);
+        const tot = influencerFinalScore.toFixed(0).padStart(3);
+        const captainNote = isCaptain ? ` (×1.5)` : '';
+        const spotNote = spotlightBonus > 0 ? ` (+${spotlightBonus})` : '';
+
+        console.log(`│${captainMark}${name} │ ${act} │ ${eng} │ ${grw} │ ${vir} │ ${tot} │${captainNote}${spotNote}`);
+      }
+
+      // Round final team score
+      const roundedScore = Math.round(teamTotalScore);
+
+      // Calculate score change
+      const scoreChange = roundedScore - (team.current_score || 0);
+
+      // Update team score
+      await db('user_teams')
+        .where('id', team.id)
+        .update({
+          previous_score: team.current_score || 0,
+          current_score: roundedScore,
+          total_score: roundedScore,
+          score_change: scoreChange,
+          spotlight_bonus: Math.round(teamSpotlightBonus),
+          last_score_update: db.fn.now(),
+          updated_at: db.fn.now(),
+        });
+
+      console.log(`├─────────────────┴─────┴─────┴─────┴─────┴─────┤`);
+      console.log(`│ TEAM TOTAL: ${roundedScore} pts (${scoreChange >= 0 ? '+' : ''}${scoreChange} change)`);
+      if (teamSpotlightBonus > 0) {
+        console.log(`│ Includes +${teamSpotlightBonus} spotlight bonus`);
+      }
+      console.log(`└─────────────────────────────────────────────────┘\n`);
+    }
+
+    console.log('╔════════════════════════════════════════════╗');
+    console.log('║  ✅ SCORING COMPLETE                       ║');
+    console.log(`║  Teams: ${teamsWithInfluencers.length.toString().padEnd(35)}║`);
+    console.log(`║  Influencers scored: ${influencersScored.toString().padEnd(22)}║`);
+    console.log(`║  Errors: ${errors.length.toString().padEnd(34)}║`);
+    console.log('╚════════════════════════════════════════════╝\n');
+
+    return {
+      teamsScored: teamsWithInfluencers.length,
+      influencersScored,
+      errors,
+    };
+
+  } catch (error) {
+    console.error('❌ Weekly scoring failed:', error);
+    throw error;
+  }
 }
 
 /**
@@ -328,11 +716,21 @@ export async function updateLeaderboardCache(contestId: number): Promise<void> {
 }
 
 /**
- * Award performance XP to all teams at end of contest
+ * Award performance XP and Foresight Score to all teams at end of contest
  */
 export async function awardPerformanceXP(contestId: number): Promise<void> {
   try {
-    console.log('Awarding performance XP...');
+    console.log('Awarding performance XP and Foresight Score...');
+
+    // Get contest details for metadata
+    const contest = await db('fantasy_contests').where('id', contestId).first();
+
+    // Get total player count for percentile calculation
+    const totalPlayers = await db('user_teams')
+      .where('contest_id', contestId)
+      .count('* as count')
+      .first();
+    const playerCount = parseInt(totalPlayers?.count as string) || 0;
 
     // Get all teams with their ranks
     const teams = await db('user_teams')
@@ -355,15 +753,51 @@ export async function awardPerformanceXP(contestId: number): Promise<void> {
 
       console.log(`  ${team.team_name} (Rank #${team.rank}): +${xpReward} XP`);
 
+      // Award Foresight Score based on placement
+      const fsReason = getFsReasonForRank(team.rank, playerCount);
+      if (fsReason) {
+        await foresightScoreService.earnFs({
+          userId: team.user_id,
+          reason: fsReason,
+          category: 'fantasy',
+          sourceType: 'contest_result',
+          sourceId: contestId.toString(),
+          metadata: {
+            rank: team.rank,
+            totalPlayers: playerCount,
+            score: team.total_score,
+            contestKey: contest?.contest_key
+          }
+        });
+        console.log(`  ${team.team_name}: +FS for ${fsReason}`);
+      }
+
       // Check and award achievements based on rank
       await checkPerformanceAchievements(team.user_id, team.rank, team.total_score);
     }
 
-    console.log('✅ Performance XP awarded');
+    console.log('✅ Performance XP and FS awarded');
   } catch (error) {
     console.error('❌ Failed to award performance XP:', error);
     throw error;
   }
+}
+
+/**
+ * Get the FS earning reason based on rank and percentile
+ */
+function getFsReasonForRank(rank: number, totalPlayers: number): string | null {
+  // Calculate percentile (lower is better)
+  const percentile = (rank / totalPlayers) * 100;
+
+  if (rank === 1) return 'contest_1st_place';
+  if (rank === 2) return 'contest_2nd_place';
+  if (rank === 3) return 'contest_3rd_place';
+  if (percentile <= 10) return 'contest_top_10_pct';
+  if (percentile <= 25) return 'contest_top_25_pct';
+  if (percentile <= 50) return 'contest_top_50_pct';
+
+  return null; // No FS for bottom 50%
 }
 
 /**

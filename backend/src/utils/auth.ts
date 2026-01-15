@@ -2,7 +2,15 @@ import jwt, { Secret } from 'jsonwebtoken';
 import { SiweMessage } from 'siwe';
 import crypto from 'crypto';
 
-const JWT_SECRET: Secret = process.env.JWT_SECRET || 'default-secret-change-in-production';
+// Require JWT_SECRET - fail fast if not set
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    'FATAL: JWT_SECRET environment variable is not set. ' +
+    'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+  );
+}
+
+const JWT_SECRET: Secret = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const REFRESH_TOKEN_EXPIRES_IN = '30d';
 
@@ -10,6 +18,7 @@ const REFRESH_TOKEN_EXPIRES_IN = '30d';
 export interface JWTPayload {
   userId: string;
   walletAddress: string;
+  role?: string;
   iat?: number;
   exp?: number;
 }

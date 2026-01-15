@@ -57,7 +57,7 @@ router.post(
         metadata: metadata ? JSON.stringify(metadata) : null,
         user_id: userId,
         wallet_address: walletAddress,
-        session_id: req.body.session_id || req.sessionID,
+        session_id: req.body.session_id || (req as any).sessionID || null,
         url,
         method,
         status_code,

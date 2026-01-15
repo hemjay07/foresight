@@ -1,0 +1,21 @@
+Name,Status,Priority,Category,Due Date,Time Estimate (hrs),Notes
+Add TWITTER_API_IO_KEY to .env,To Do,P0,Technical,2025-12-21,0.1,Make API key permanent
+Refresh Twitter data,To Do,P0,Technical,2025-12-21,0.5,Data is 2 weeks old
+Create fresh contest (Dec 21-28),To Do,P0,Technical,2025-12-21,0.1,SQL command ready
+Clean up stale contests,To Do,P0,Technical,2025-12-21,0.1,Mark old as completed
+Test full user flow,To Do,P0,Technical,2025-12-21,0.5,Connect → Draft → Score
+Set up Notion workspace,To Do,P0,Admin,2025-12-21,0.5,Import these CSVs
+Record 2-min Loom demo,To Do,P0,Content,2025-12-22,1,Script in INFLUENCER_PIPELINE.md
+Take product screenshots,To Do,P1,Content,2025-12-22,0.25,Draft / Leaderboard / Profile
+Test mobile experience,To Do,P1,Technical,2025-12-22,0.25,Basic check only
+Research 50 influencers via Grok,To Do,P0,Outreach,2025-12-23,2,Use GROK_PROMPTS.md
+Score and tier influencers,To Do,P1,Outreach,2025-12-23,1,Top 30 selection
+Document personalization hooks,To Do,P1,Outreach,2025-12-23,1,For DM customization
+Send 10 DMs to A-tier,Backlog,P0,Outreach,2025-12-24,0.5,Highest value targets
+Send 10 DMs to B-tier,Backlog,P0,Outreach,2025-12-25,0.5,Medium targets
+Send 10 DMs to C-tier,Backlog,P0,Outreach,2025-12-26,0.5,Volume targets
+Follow up on non-responders,Backlog,P1,Outreach,2025-12-27,0.5,Day 4 follow-up
+Update MONETIZATION_STRATEGY.md,Backlog,P1,Documentation,2025-12-28,0.25,Fix 80/20 to 85/15
+Deploy CTDraftPrizedV2 contract,Backlog,P2,Technical,,2,For paid contests
+Create Daily Flash contest,Backlog,P2,Technical,,0.5,Test daily format
+Add username editing feature,Backlog,P2,Technical,,2,UX improvement

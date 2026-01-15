@@ -32,7 +32,7 @@ export function getAuthToken(): string | null {
 interface RequestOptions {
   method?: string;
   headers?: Record<string, string>;
-  body?: any;
+  body?: Record<string, unknown> | unknown[];
   requiresAuth?: boolean;
 }
 

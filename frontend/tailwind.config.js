@@ -6,96 +6,157 @@ export default {
   ],
   theme: {
     extend: {
-      // Professional font stack
+      // Typography - Bold, Sharp, Electric
       fontFamily: {
-        sans: ['Lexend', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Lexend', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+        display: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'monospace'],
       },
 
-      // Sophisticated color palette (inspired by Linear, Stripe, Vercel)
+      // Primary - Gold/Amber (Winning, Wealth, Premium)
       colors: {
-        // Primary brand colors - muted and professional
-        brand: {
-          50: '#f0f4ff',
-          100: '#e0e9ff',
-          200: '#c7d7fe',
-          300: '#a4bcfd',
-          400: '#8098f9',
-          500: '#6172f3',
-          600: '#4c5de7',
-          700: '#3e4ac4',
-          800: '#35409e',
-          900: '#2f3a7d',
+        gold: {
+          50: '#FFFBEB',
+          100: '#FEF3C7',
+          200: '#FDE68A',
+          300: '#FCD34D',
+          400: '#FBBF24',
+          500: '#F59E0B',  // Primary
+          600: '#D97706',  // Primary Hover
+          700: '#B45309',
+          800: '#92400E',
+          900: '#78350F',
+          950: '#451A03',
         },
 
-        // Neutral grays - carefully calibrated
+        // Secondary - Electric Cyan (Energy, Links, Accents)
+        cyan: {
+          50: '#ECFEFF',
+          100: '#CFFAFE',
+          200: '#A5F3FC',
+          300: '#67E8F9',
+          400: '#22D3EE',
+          500: '#06B6D4',  // Secondary
+          600: '#0891B2',
+          700: '#0E7490',
+          800: '#155E75',
+          900: '#164E63',
+          950: '#083344',
+        },
+
+        // Neutral - Rich Blacks (Command Center Dark Theme)
         gray: {
-          50: '#fafafa',
-          100: '#f5f5f5',
-          200: '#e5e5e5',
-          300: '#d4d4d4',
-          400: '#a3a3a3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
-          950: '#0a0a0a',
+          50: '#FAFAFA',
+          100: '#F4F4F5',
+          200: '#E4E4E7',
+          300: '#D4D4D8',
+          400: '#A1A1AA',
+          500: '#71717A',
+          600: '#52525B',
+          700: '#3F3F46',
+          800: '#27272A',  // Card backgrounds
+          900: '#18181B',  // Surface
+          950: '#09090B',  // Base background
         },
 
-        // Accent colors - purposeful, not random
-        accent: {
-          purple: {
-            DEFAULT: '#8b5cf6',
-            light: '#a78bfa',
-            dark: '#7c3aed',
-          },
-          blue: {
-            DEFAULT: '#3b82f6',
-            light: '#60a5fa',
-            dark: '#2563eb',
-          },
-          green: {
-            DEFAULT: '#10b981',
-            light: '#34d399',
-            dark: '#059669',
-          },
-          amber: {
-            DEFAULT: '#f59e0b',
-            light: '#fbbf24',
-            dark: '#d97706',
-          },
-          red: {
-            DEFAULT: '#ef4444',
-            light: '#f87171',
-            dark: '#dc2626',
-          },
+        // Semantic Colors
+        emerald: {
+          50: '#ECFDF5',
+          100: '#D1FAE5',
+          200: '#A7F3D0',
+          300: '#6EE7B7',
+          400: '#34D399',
+          500: '#10B981',  // Success
+          600: '#059669',
+          700: '#047857',
+          800: '#065F46',
+          900: '#064E3B',
         },
 
-        // Semantic colors
-        success: '#10b981',
-        warning: '#f59e0b',
-        error: '#ef4444',
-        info: '#3b82f6',
+        rose: {
+          50: '#FFF1F2',
+          100: '#FFE4E6',
+          200: '#FECDD3',
+          300: '#FDA4AF',
+          400: '#FB7185',
+          500: '#F43F5E',  // Error
+          600: '#E11D48',
+          700: '#BE123C',
+          800: '#9F1239',
+          900: '#881337',
+        },
+
+        sky: {
+          50: '#F0F9FF',
+          100: '#E0F2FE',
+          200: '#BAE6FD',
+          300: '#7DD3FC',
+          400: '#38BDF8',
+          500: '#0EA5E9',  // Info
+          600: '#0284C7',
+          700: '#0369A1',
+          800: '#075985',
+          900: '#0C4A6E',
+        },
+
+        // Semantic shortcuts
+        success: {
+          light: '#34D399',
+          DEFAULT: '#10B981',
+          dark: '#059669',
+        },
+        warning: {
+          light: '#FCD34D',
+          DEFAULT: '#FBBF24',
+          dark: '#F59E0B',
+        },
+        error: {
+          light: '#FB7185',
+          DEFAULT: '#F43F5E',
+          dark: '#E11D48',
+        },
+        info: {
+          light: '#7DD3FC',
+          DEFAULT: '#0EA5E9',
+          dark: '#0284C7',
+        },
       },
 
-      // Professional typography scale
+      // Typography Scale
       fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em' }],
-        'sm': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.005em' }],
-        'base': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0' }],
-        'lg': ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '-0.01em' }],
-        'xl': ['1.25rem', { lineHeight: '1.875rem', letterSpacing: '-0.01em' }],
-        '2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.015em' }],
-        '3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.02em' }],
-        '4xl': ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.025em' }],
-        '5xl': ['3rem', { lineHeight: '3.5rem', letterSpacing: '-0.03em' }],
-        '6xl': ['3.75rem', { lineHeight: '4rem', letterSpacing: '-0.035em' }],
+        'micro': ['0.625rem', { lineHeight: '1.3', fontWeight: '500' }],      // 10px
+        'caption': ['0.75rem', { lineHeight: '1.4', fontWeight: '400' }],     // 12px
+        'body-sm': ['0.875rem', { lineHeight: '1.5', fontWeight: '400' }],    // 14px
+        'body': ['1rem', { lineHeight: '1.6', fontWeight: '400' }],           // 16px
+        'body-lg': ['1.125rem', { lineHeight: '1.6', fontWeight: '400' }],    // 18px
+        'h4': ['1.125rem', { lineHeight: '1.4', fontWeight: '600' }],         // 18px
+        'h3': ['1.375rem', { lineHeight: '1.3', fontWeight: '600' }],         // 22px
+        'h2': ['1.75rem', { lineHeight: '1.25', fontWeight: '600' }],         // 28px
+        'h1': ['2.25rem', { lineHeight: '1.2', fontWeight: '600' }],          // 36px
+        'display': ['3rem', { lineHeight: '1.15', fontWeight: '700' }],       // 48px
+        'hero': ['4rem', { lineHeight: '1.1', fontWeight: '700' }],           // 64px
       },
 
-      // Consistent spacing system
+      // Spacing Scale (8px base)
       spacing: {
+        '0.5': '2px',
+        '1': '4px',
+        '2': '8px',
+        '3': '12px',
+        '4': '16px',
+        '5': '20px',
+        '6': '24px',
+        '7': '28px',
+        '8': '32px',
+        '9': '36px',
+        '10': '40px',
+        '11': '44px',
+        '12': '48px',
+        '14': '56px',
+        '16': '64px',
+        '20': '80px',
+        '24': '96px',
+        '32': '128px',
         '18': '4.5rem',
         '88': '22rem',
         '100': '25rem',
@@ -103,25 +164,61 @@ export default {
         '128': '32rem',
       },
 
-      // Professional shadows
-      boxShadow: {
-        'soft': '0 1px 3px 0 rgba(0, 0, 0, 0.08)',
-        'soft-lg': '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
-        'soft-xl': '0 10px 15px -3px rgba(0, 0, 0, 0.08)',
-        'soft-2xl': '0 20px 25px -5px rgba(0, 0, 0, 0.08)',
-        'border': '0 0 0 1px rgba(0, 0, 0, 0.05)',
-        'glow': '0 0 20px rgba(97, 114, 243, 0.15)',
-        'glow-lg': '0 0 30px rgba(97, 114, 243, 0.2)',
+      // Border Radius
+      borderRadius: {
+        'none': '0px',
+        'sm': '4px',
+        'DEFAULT': '6px',
+        'md': '8px',
+        'lg': '12px',
+        'xl': '16px',
+        '2xl': '24px',
+        'full': '9999px',
       },
 
-      // Subtle, purposeful animations
+      // Shadows (Command Center style)
+      boxShadow: {
+        'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        'lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+        'xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        // Special glows
+        'gold': '0 0 20px rgba(245, 158, 11, 0.25), 0 0 40px rgba(245, 158, 11, 0.1)',
+        'gold-intense': '0 0 30px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.2)',
+        'cyan': '0 0 20px rgba(6, 182, 212, 0.25), 0 0 40px rgba(6, 182, 212, 0.1)',
+        'success': '0 0 20px rgba(16, 185, 129, 0.25), 0 0 40px rgba(16, 185, 129, 0.1)',
+      },
+
+      // Transitions
+      transitionDuration: {
+        'fast': '100ms',
+        'base': '200ms',
+        'slow': '300ms',
+        'slower': '500ms',
+      },
+
+      // Z-Index Scale
+      zIndex: {
+        '0': '0',
+        '10': '10',    // Elevated cards, dropdowns
+        '20': '20',    // Sticky headers
+        '30': '30',    // Fixed navigation
+        '40': '40',    // Overlays, backdrops
+        '50': '50',    // Modals, dialogs
+        '60': '60',    // Popovers, tooltips
+        '70': '70',    // Notifications, toasts
+        '100': '100',  // Maximum (dev tools, debug)
+      },
+
+      // Animations
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',
         'fade-in-up': 'fadeInUp 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
         'slide-in': 'slideIn 0.3s ease-out',
         'shimmer': 'shimmer 2s linear infinite',
-        'bounce-slow': 'bounceSlow 3s ease-in-out infinite',
+        'pulse-gold': 'pulseGold 2s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
       },
 
       keyframes: {
@@ -130,56 +227,41 @@ export default {
           '100%': { opacity: '1' },
         },
         fadeInUp: {
-          '0%': {
-            opacity: '0',
-            transform: 'translateY(10px)',
-          },
-          '100%': {
-            opacity: '1',
-            transform: 'translateY(0)',
-          },
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         scaleIn: {
-          '0%': {
-            opacity: '0',
-            transform: 'scale(0.95)',
-          },
-          '100%': {
-            opacity: '1',
-            transform: 'scale(1)',
-          },
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
         },
         slideIn: {
-          '0%': {
-            opacity: '0',
-            transform: 'translateX(-10px)',
-          },
-          '100%': {
-            opacity: '1',
-            transform: 'translateX(0)',
-          },
+          '0%': { opacity: '0', transform: 'translateX(-10px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
         },
         shimmer: {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
         },
-        bounceSlow: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+        pulseGold: {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(245, 158, 11, 0.25)' },
+          '50%': { boxShadow: '0 0 40px rgba(245, 158, 11, 0.5)' },
+        },
+        glow: {
+          '0%': { opacity: '0.5' },
+          '100%': { opacity: '1' },
         },
       },
 
-      // Border radius scale
-      borderRadius: {
-        'sm': '0.25rem',
-        'DEFAULT': '0.375rem',
-        'md': '0.5rem',
-        'lg': '0.75rem',
-        'xl': '1rem',
-        '2xl': '1.5rem',
+      // Breakpoints
+      screens: {
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
       },
 
-      // Max width constraints
+      // Max widths
       maxWidth: {
         'miniapp': '1280px',
         '8xl': '88rem',

@@ -1,0 +1,19 @@
+Task,Done,Category,Priority,Notes
+Add TWITTER_API_IO_KEY to .env,No,Technical,Must Have,Make permanent
+Refresh Twitter data (< 7 days old),No,Technical,Must Have,Run admin endpoint
+Create current week contest,No,Technical,Must Have,SQL ready
+Test full user flow,No,Technical,Must Have,Connect → Draft → Score
+Verify leaderboard shows real data,No,Technical,Must Have,Non-zero scores
+No critical bugs in demo,No,Technical,Must Have,Manual testing
+Record 2-min Loom demo,No,Content,Must Have,Script in docs
+Take product screenshots,No,Content,Must Have,3-5 key screens
+Prepare DM templates,No,Content,Must Have,Customize from pipeline doc
+Research 30 influencers,No,Outreach,Must Have,Use Grok
+Score and tier all contacts,No,Outreach,Must Have,A/B/C tiers
+Set up tracking in Notion,No,Outreach,Must Have,This import
+Update private league split in docs,No,Documentation,Should Have,85/15 not 80/20
+Test mobile experience,No,Technical,Should Have,Basic check
+Create one-pager PDF,No,Content,Should Have,For serious partners
+Deploy V2 contract,No,Technical,Nice to Have,For paid contests
+Username editing feature,No,Technical,Nice to Have,UX improvement
+Toast notifications,No,Technical,Nice to Have,Polish

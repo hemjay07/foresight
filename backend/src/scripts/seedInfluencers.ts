@@ -1,115 +1,123 @@
 /**
  * Seed Influencers
  * Populates the database with 50 tracked CT accounts
+ * Updated: Dec 24, 2025 based on Grok research
  */
 
 import db from '../utils/db';
 
 interface Influencer {
-  twitter_id: string;
-  handle: string;
-  name: string;
+  twitter_handle: string;
+  display_name: string;
   tier: 'S' | 'A' | 'B' | 'C';
   base_price: number;
   follower_count?: number;
 }
 
-// 50 Top Crypto Twitter Influencers
+// 50 Top Crypto Twitter Influencers (Updated Dec 24, 2025 based on Grok research)
 const influencers: Influencer[] = [
-  // S-Tier (45 points) - Mega influencers, 1M+ followers
-  { twitter_id: '902926941413453824', handle: 'cz_binance', name: 'CZ', tier: 'S', base_price: 45, follower_count: 8500000 },
-  { twitter_id: '295218901', handle: 'VitalikButerin', name: 'Vitalik Buterin', tier: 'S', base_price: 45, follower_count: 5200000 },
-  { twitter_id: '537009957', handle: 'balajis', name: 'Balaji Srinivasan', tier: 'S', base_price: 45, follower_count: 950000 },
-  { twitter_id: '1419423948', handle: 'APompliano', name: 'Anthony Pompliano', tier: 'S', base_price: 45, follower_count: 1800000 },
-  { twitter_id: '6253282', handle: 'elonmusk', name: 'Elon Musk', tier: 'S', base_price: 45, follower_count: 170000000 },
-  { twitter_id: '2312333412', handle: 'barton_options', name: 'Ansem', tier: 'S', base_price: 45, follower_count: 580000 },
-  { twitter_id: '1549144881', handle: 'brian_armstrong', name: 'Brian Armstrong', tier: 'S', base_price: 45, follower_count: 1100000 },
-  { twitter_id: '3300605768', handle: 'cobie', name: 'Cobie', tier: 'S', base_price: 45, follower_count: 820000 },
-  { twitter_id: '961445378', handle: 'SBF_FTX', name: 'SBF', tier: 'S', base_price: 45, follower_count: 1500000 },
-  { twitter_id: '783214', handle: 'naval', name: 'Naval Ravikant', tier: 'S', base_price: 45, follower_count: 2100000 },
+  // S-Tier (28 points) - Mega influencers
+  { twitter_handle: 'cz_binance', display_name: 'CZ', tier: 'S', base_price: 28, follower_count: 10600000 },
+  { twitter_handle: 'VitalikButerin', display_name: 'Vitalik Buterin', tier: 'S', base_price: 28, follower_count: 5900000 },
+  { twitter_handle: 'balajis', display_name: 'Balaji Srinivasan', tier: 'S', base_price: 28, follower_count: 1200000 },
+  { twitter_handle: 'APompliano', display_name: 'Anthony Pompliano', tier: 'S', base_price: 28, follower_count: 1800000 },
+  { twitter_handle: 'elonmusk', display_name: 'Elon Musk', tier: 'S', base_price: 28, follower_count: 230000000 },
+  { twitter_handle: 'blknoiz06', display_name: 'Ansem', tier: 'S', base_price: 28, follower_count: 580000 },
+  { twitter_handle: 'brian_armstrong', display_name: 'Brian Armstrong', tier: 'S', base_price: 28, follower_count: 1700000 },
+  { twitter_handle: 'cobie', display_name: 'Cobie', tier: 'S', base_price: 28, follower_count: 560000 },
+  { twitter_handle: 'naval', display_name: 'Naval Ravikant', tier: 'S', base_price: 28, follower_count: 3000000 },
+  { twitter_handle: 'CryptoCred', display_name: 'Cred', tier: 'S', base_price: 28, follower_count: 732000 },
 
-  // A-Tier (35 points) - Major influencers, 500K-1M followers
-  { twitter_id: '1362726038', handle: 'layaheilpern', name: 'Laya Heilpern', tier: 'A', base_price: 35, follower_count: 620000 },
-  { twitter_id: '1274011694326657026', handle: 'inversebrah', name: 'InverseBrah', tier: 'A', base_price: 35, follower_count: 480000 },
-  { twitter_id: '1569347623', handle: 'sassal0x', name: 'sassal', tier: 'A', base_price: 35, follower_count: 710000 },
-  { twitter_id: '1390440723290222594', handle: 'DefiIgnas', name: 'DeFi Ignas', tier: 'A', base_price: 35, follower_count: 540000 },
-  { twitter_id: '1322695475871318017', handle: 'CryptoCobain', name: 'Crypto Cobain', tier: 'A', base_price: 35, follower_count: 650000 },
-  { twitter_id: '884984080882573312', handle: 'AltcoinGordon', name: 'Altcoin Gordon', tier: 'A', base_price: 35, follower_count: 590000 },
-  { twitter_id: '1073248908018880512', handle: 'GiganticRebirth', name: 'GCR', tier: 'A', base_price: 35, follower_count: 520000 },
-  { twitter_id: '15504735', handle: 'WhalePanda', name: 'WhalePanda', tier: 'A', base_price: 35, follower_count: 480000 },
-  { twitter_id: '987321458', handle: 'CryptoWendyO', name: 'Crypto Wendy O', tier: 'A', base_price: 35, follower_count: 670000 },
-  { twitter_id: '1587501922517606400', handle: 'rektcapital', name: 'Rekt Capital', tier: 'A', base_price: 35, follower_count: 580000 },
-  { twitter_id: '701847669', handle: 'IvanOnTech', name: 'Ivan on Tech', tier: 'A', base_price: 35, follower_count: 690000 },
-  { twitter_id: '3284168592', handle: 'CryptosRUs', name: 'George (CryptosRUs)', tier: 'A', base_price: 35, follower_count: 530000 },
-  { twitter_id: '1347956961513402369', handle: 'ThinkingUSD', name: 'ThinkingCrypto', tier: 'A', base_price: 35, follower_count: 510000 },
-  { twitter_id: '984009074892496896', handle: 'AltcoinPsycho', name: 'Altcoin Psycho', tier: 'A', base_price: 35, follower_count: 560000 },
-  { twitter_id: '1264567890123456789', handle: 'thedefiedge', name: 'The DeFi Edge', tier: 'A', base_price: 35, follower_count: 490000 },
+  // A-Tier (22 points) - Major influencers
+  { twitter_handle: 'inversebrah', display_name: 'InverseBrah', tier: 'A', base_price: 22, follower_count: 480000 },
+  { twitter_handle: 'sassal0x', display_name: 'sassal', tier: 'A', base_price: 22, follower_count: 710000 },
+  { twitter_handle: 'DefiIgnas', display_name: 'DeFi Ignas', tier: 'A', base_price: 22, follower_count: 540000 },
+  { twitter_handle: 'AltcoinGordon', display_name: 'Altcoin Gordon', tier: 'A', base_price: 22, follower_count: 590000 },
+  { twitter_handle: 'GCRClassic', display_name: 'GCR', tier: 'A', base_price: 22, follower_count: 520000 },
+  { twitter_handle: 'WhalePanda', display_name: 'WhalePanda', tier: 'A', base_price: 22, follower_count: 480000 },
+  { twitter_handle: 'CryptoWendyO', display_name: 'Crypto Wendy O', tier: 'A', base_price: 22, follower_count: 670000 },
+  { twitter_handle: 'rektcapital', display_name: 'Rekt Capital', tier: 'A', base_price: 22, follower_count: 580000 },
+  { twitter_handle: 'IvanOnTech', display_name: 'Ivan on Tech', tier: 'A', base_price: 22, follower_count: 690000 },
+  { twitter_handle: 'CryptosRUs', display_name: 'George (CryptosRUs)', tier: 'A', base_price: 22, follower_count: 530000 },
+  { twitter_handle: 'ThinkingUSD', display_name: 'ThinkingCrypto', tier: 'A', base_price: 22, follower_count: 510000 },
+  { twitter_handle: 'AltcoinPsycho', display_name: 'Altcoin Psycho', tier: 'A', base_price: 22, follower_count: 560000 },
+  { twitter_handle: 'thedefiedge', display_name: 'The DeFi Edge', tier: 'A', base_price: 22, follower_count: 490000 },
+  // Moved up from B-tier based on Grok research
+  { twitter_handle: 'CryptoDonAlt', display_name: 'Crypto Don Alt', tier: 'A', base_price: 22, follower_count: 703000 },
+  { twitter_handle: 'TraderMayne', display_name: 'Trader Mayne', tier: 'A', base_price: 22, follower_count: 558000 },
+  { twitter_handle: 'CryptoKaleo', display_name: 'Kaleo', tier: 'A', base_price: 22, follower_count: 728000 },
+  { twitter_handle: 'CryptoRover', display_name: 'Crypto Rover', tier: 'A', base_price: 22, follower_count: 1000000 },
 
-  // B-Tier (25 points) - Established voices, 100K-500K followers
-  { twitter_id: '1346536722', handle: 'JackTheRippler', name: 'Jack the Rippler', tier: 'B', base_price: 25, follower_count: 380000 },
-  { twitter_id: '1487234567890123456', handle: 'Route2FI', name: 'Route2FI', tier: 'B', base_price: 25, follower_count: 320000 },
-  { twitter_id: '2876543210987654321', handle: 'CryptoHayes', name: 'Arthur Hayes', tier: 'B', base_price: 25, follower_count: 420000 },
-  { twitter_id: '1234567891234567890', handle: 'DeFi_Dad', name: 'DeFi Dad', tier: 'B', base_price: 25, follower_count: 290000 },
-  { twitter_id: '9876543219876543210', handle: 'MessariCrypto', name: 'Messari', tier: 'B', base_price: 25, follower_count: 350000 },
-  { twitter_id: '1122334455667788990', handle: 'econoar', name: 'Ryan Sean Adams', tier: 'B', base_price: 25, follower_count: 310000 },
-  { twitter_id: '2233445566778899001', handle: 'TrustlessState', name: 'Trustless State', tier: 'B', base_price: 25, follower_count: 270000 },
-  { twitter_id: '3344556677889900112', handle: 'CroissantEth', name: 'Croissant', tier: 'B', base_price: 25, follower_count: 340000 },
-  { twitter_id: '4455667788990011223', handle: 'CryptoCred', name: 'Cred', tier: 'B', base_price: 25, follower_count: 280000 },
-  { twitter_id: '5566778899001122334', handle: 'EmperorBTC', name: 'Emperor', tier: 'B', base_price: 25, follower_count: 360000 },
-  { twitter_id: '6677889900112233445', handle: 'TraderMayne', name: 'Trader Mayne', tier: 'B', base_price: 25, follower_count: 240000 },
-  { twitter_id: '7788990011223344556', handle: 'CryptoDonAlt', name: 'Crypto Don Alt', tier: 'B', base_price: 25, follower_count: 330000 },
-  { twitter_id: '8899001122334455667', handle: 'VentureCoinist', name: 'Venture Coinist', tier: 'B', base_price: 25, follower_count: 260000 },
-  { twitter_id: '9900112233445566778', handle: 'notthreadguy', name: 'Thread Guy', tier: 'B', base_price: 25, follower_count: 300000 },
-  { twitter_id: '1011223344556677889', handle: 'CryptoKaleo', name: 'Kaleo', tier: 'B', base_price: 25, follower_count: 370000 },
+  // B-Tier (18 points) - Established voices
+  { twitter_handle: 'Route2FI', display_name: 'Route2FI', tier: 'B', base_price: 18, follower_count: 302000 },
+  { twitter_handle: 'CryptoHayes', display_name: 'Arthur Hayes', tier: 'B', base_price: 18, follower_count: 420000 },
+  { twitter_handle: 'DeFi_Dad', display_name: 'DeFi Dad', tier: 'B', base_price: 18, follower_count: 177000 },
+  { twitter_handle: 'MessariCrypto', display_name: 'Messari', tier: 'B', base_price: 18, follower_count: 350000 },
+  { twitter_handle: 'RyanSAdams', display_name: 'Ryan Sean Adams', tier: 'B', base_price: 18, follower_count: 273000 },
+  { twitter_handle: 'TrustlessState', display_name: 'David Hoffman', tier: 'B', base_price: 18, follower_count: 252000 },
+  { twitter_handle: 'CroissantEth', display_name: 'Croissant', tier: 'B', base_price: 18, follower_count: 115000 },
+  { twitter_handle: 'EmperorBTC', display_name: 'Emperor', tier: 'B', base_price: 18, follower_count: 442000 },
+  { twitter_handle: 'VentureCoinist', display_name: 'Luke Martin', tier: 'B', base_price: 18, follower_count: 330000 },
+  { twitter_handle: 'CredibleCrypto', display_name: 'Credible Crypto', tier: 'B', base_price: 18, follower_count: 485000 },
+  { twitter_handle: 'lightcrypto', display_name: 'Light', tier: 'B', base_price: 18, follower_count: 186000 },
+  { twitter_handle: 'waleswoosh', display_name: 'Waleswoosh', tier: 'B', base_price: 18, follower_count: 171000 },
 
-  // C-Tier (15 points) - Rising stars, <100K followers
-  { twitter_id: '1122334455667788991', handle: 'trendingalpha', name: 'Trending Alpha', tier: 'C', base_price: 15, follower_count: 85000 },
-  { twitter_id: '2233445566778899002', handle: 'thedefiant_io', name: 'The Defiant', tier: 'C', base_price: 15, follower_count: 92000 },
-  { twitter_id: '3344556677889900113', handle: 'cdixon', name: 'Chris Dixon', tier: 'C', base_price: 15, follower_count: 78000 },
-  { twitter_id: '4455667788990011224', handle: 'hasufl', name: 'Hasu', tier: 'C', base_price: 15, follower_count: 95000 },
-  { twitter_id: '5566778899001122335', handle: 'niccarter', name: 'Nic Carter', tier: 'C', base_price: 15, follower_count: 88000 },
-  { twitter_id: '6677889900112233446', handle: 'laurashin', name: 'Laura Shin', tier: 'C', base_price: 15, follower_count: 91000 },
-  { twitter_id: '7788990011223344557', handle: 'rleshner', name: 'Robert Leshner', tier: 'C', base_price: 15, follower_count: 72000 },
-  { twitter_id: '8899001122334455668', handle: 'stani', name: 'Stani Kulechov', tier: 'C', base_price: 15, follower_count: 83000 },
-  { twitter_id: '9900112233445566779', handle: 'kaiynne', name: 'Kain Warwick', tier: 'C', base_price: 15, follower_count: 79000 },
-  { twitter_id: '1011223344556677890', handle: 'ameensol', name: 'Ameen Soleimani', tier: 'C', base_price: 15, follower_count: 68000 },
+  // C-Tier (12 points) - Lottery tickets: DeFi founders & rising stars
+  { twitter_handle: 'cdixon', display_name: 'Chris Dixon', tier: 'C', base_price: 12, follower_count: 896000 },
+  { twitter_handle: 'hasufl', display_name: 'Hasu', tier: 'C', base_price: 12, follower_count: 250000 },
+  { twitter_handle: 'nic__carter', display_name: 'Nic Carter', tier: 'C', base_price: 12, follower_count: 380000 },
+  { twitter_handle: 'laurashin', display_name: 'Laura Shin', tier: 'C', base_price: 12, follower_count: 281000 },
+  { twitter_handle: 'rleshner', display_name: 'Robert Leshner', tier: 'C', base_price: 12, follower_count: 139000 },
+  { twitter_handle: 'StaniKulechov', display_name: 'Stani Kulechov', tier: 'C', base_price: 12, follower_count: 281000 },
+  { twitter_handle: 'kaiynne', display_name: 'Kain Warwick', tier: 'C', base_price: 12, follower_count: 145000 },
+  { twitter_handle: 'ameensol', display_name: 'Ameen Soleimani', tier: 'C', base_price: 12, follower_count: 47000 },
+  { twitter_handle: 'banditxbt', display_name: 'Bandit', tier: 'C', base_price: 12, follower_count: 46000 },
+  { twitter_handle: 'DegenSpartan', display_name: 'Degen Spartan', tier: 'C', base_price: 12, follower_count: 520000 },
 ];
 
 async function seedInfluencers() {
   try {
     console.log('========================================');
-    console.log('Starting Influencer Seed');
+    console.log('Starting Influencer Seed (Full Sync)');
     console.log('========================================\n');
 
     let inserted = 0;
-    let skipped = 0;
+    let updated = 0;
 
     for (const influencer of influencers) {
       try {
         const result = await db.raw(
-          `INSERT INTO influencers (twitter_id, handle, name, tier, base_price, follower_count)
+          `INSERT INTO influencers (twitter_handle, display_name, tier, base_price, price, follower_count)
            VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT (twitter_id) DO NOTHING
-           RETURNING id`,
+           ON CONFLICT (twitter_handle) DO UPDATE SET
+             display_name = EXCLUDED.display_name,
+             tier = EXCLUDED.tier,
+             base_price = EXCLUDED.base_price,
+             price = EXCLUDED.price,
+             follower_count = EXCLUDED.follower_count,
+             updated_at = NOW()
+           RETURNING id, (xmax = 0) as is_insert`,
           [
-            influencer.twitter_id,
-            influencer.handle,
-            influencer.name,
+            influencer.twitter_handle,
+            influencer.display_name,
             influencer.tier,
             influencer.base_price,
+            influencer.base_price, // price = base_price initially
             influencer.follower_count || 0,
           ]
         );
 
-        if (result.rowCount && result.rowCount > 0) {
-          inserted++;
-          console.log(`✅ Added: @${influencer.handle.padEnd(20)} | ${influencer.tier}-Tier | ${influencer.base_price} pts`);
-        } else {
-          skipped++;
-          console.log(`⏭️  Skipped: @${influencer.handle.padEnd(20)} (already exists)`);
+        if (result.rows && result.rows.length > 0) {
+          if (result.rows[0].is_insert) {
+            inserted++;
+            console.log(`✅ Added:   @${influencer.twitter_handle.padEnd(20)} | ${influencer.tier}-Tier | ${influencer.base_price} pts`);
+          } else {
+            updated++;
+            console.log(`🔄 Updated: @${influencer.twitter_handle.padEnd(20)} | ${influencer.tier}-Tier | ${influencer.base_price} pts`);
+          }
         }
       } catch (error) {
-        console.error(`❌ Error adding @${influencer.handle}:`, error);
+        console.error(`❌ Error syncing @${influencer.twitter_handle}:`, error);
       }
     }
 
@@ -117,7 +125,7 @@ async function seedInfluencers() {
     console.log('Seed Summary');
     console.log('========================================');
     console.log(`✅ Inserted: ${inserted}`);
-    console.log(`⏭️  Skipped:  ${skipped}`);
+    console.log(`🔄 Updated:  ${updated}`);
     console.log(`📊 Total:    ${influencers.length}`);
     console.log('========================================\n');
 
