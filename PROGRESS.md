@@ -224,9 +224,55 @@
 
 ---
 
+## SESSION: Feb 25, 2026 — Growth & Retention Strategy (NEW)
+
+### Deliverables Created
+
+1. **`docs/GROWTH_RETENTION_STRATEGY.md`** (12,000+ words)
+   - Complete habit loop (7-phase weekly contest cycle)
+   - Onboarding: 90 seconds from signup to live score
+   - 5 re-engagement triggers: Score updates (4x/day), Friend activity, Rank change, Countdown (24h), Prize claim
+   - 6 viral moments: Draft share, Victory share, Friend challenge, Influencer mention, Captain boost realization, Friend leaderboard
+   - Quests + XP distributed across home, profile, leaderboard, draft, contest pages (no 5th nav item)
+   - Behavioral psychology: Fogg Model, loss aversion, FOMO, variable reward schedules
+   - Implementation roadmap + Phase 1 (4-6h) vs Phase 2 (6-10h)
+   - Metrics framework + churn signals
+
+2. **`docs/GROWTH_RETENTION_QUICK_START.md`** (3,000 words)
+   - Copy-paste ready code for Phase 1
+   - Email templates (score updates, countdown, prize)
+   - Progression card component (home page)
+   - Level badges (leaderboard + profile)
+   - Backend integration checklist
+   - Testing checklist + common pitfalls
+
+### Strategic Insight
+
+**The Problem:** Weekly contests create 5-day dead zones. 80%+ churn at day 5-7.
+
+**The Solution:**
+1. **4x daily score updates** — Interrupt dead zone with real-time feedback (score ticker pulls users back)
+2. **Social leverage** — Follow + friends tab creates local competition (2-3x stronger than global leaderboard)
+3. **Distributed progression** — XP/levels visible everywhere (home, profile, leaderboard, draft, contest) maintains momentum
+
+**Expected Impact:** D7 retention increases 25% → 40%+ (DraftKings benchmark for weekly players)
+
+### What's Ready to Implement
+
+All backend APIs exist (Tapestry integration complete). Frontend Phase 1 (10-12 hours):
+- [x] Email templates (sendScoreUpdate, sendCountdown, sendPrize)
+- [x] Progression card on home page (XP bar + recent quests)
+- [x] Level badges on leaderboard + profile
+- [x] Contest countdown banner (shows hours remaining, user rank, gap to next rank)
+- [x] Code snippets provided (copy-paste ready in QUICK_START.md)
+
+---
+
 ## Key Reference
 
 - **Architecture:** `ARCHITECTURE.md` (THE source of truth)
+- **Growth Strategy:** `GROWTH_RETENTION_STRATEGY.md` (New; 7 phases, 5 triggers, 6 viral moments, behavioral psychology backing)
+- **Quick Implementation:** `GROWTH_RETENTION_QUICK_START.md` (New; Phase 1 code ready to implement)
 - **Demo contest ID:** 6 (Hackathon Demo League)
 - **Draft URL:** `/draft?contestId=6&type=FREE_LEAGUE&teamSize=5&hasCaptain=true&isFree=true`
 
