@@ -375,15 +375,15 @@ export default function Compete() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Row 1: Title + Main Tabs in one line */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Row 1: Title + Main Tabs + Contest Filter (when on contests tab) */}
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center shrink-0">
             <Trophy size={16} weight="fill" className="text-gray-950" />
           </div>
           <h1 className="text-lg font-bold text-white">Compete</h1>
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 items-center flex-wrap">
           <button
             onClick={() => setMainTab('rankings')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -411,6 +411,34 @@ export default function Compete() {
               </span>
             )}
           </button>
+
+          {/* Contest Filter Pills — only show when on contests tab */}
+          {mainTab === 'contests' && (
+            <div className="flex gap-1.5 ml-auto">
+              {[
+                { key: 'all' as ContestFilter, label: 'All', icon: Trophy },
+                { key: 'free' as ContestFilter, label: 'Free', icon: Gift },
+                { key: 'weekly' as ContestFilter, label: 'Weekly', icon: Calendar },
+                { key: 'daily' as ContestFilter, label: 'Daily', icon: Lightning },
+              ].map((filter) => {
+                const Icon = filter.icon;
+                return (
+                  <button
+                    key={filter.key}
+                    onClick={() => setContestFilter(filter.key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                      contestFilter === filter.key
+                        ? 'bg-white/10 text-white border border-white/20'
+                        : 'bg-gray-800/50 text-gray-400 border border-transparent hover:bg-gray-800'
+                    }`}
+                  >
+                    <Icon size={13} weight={contestFilter === filter.key ? 'fill' : 'regular'} />
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -775,58 +803,23 @@ export default function Compete() {
       {/* Contests Tab */}
       {mainTab === 'contests' && (
         <div className="space-y-4">
-          {/* Filter Pills */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {[
-              { key: 'all' as ContestFilter, label: 'All', icon: Trophy },
-              { key: 'free' as ContestFilter, label: 'Free', icon: Gift },
-              { key: 'weekly' as ContestFilter, label: 'Weekly', icon: Calendar },
-              { key: 'daily' as ContestFilter, label: 'Daily', icon: Lightning },
-            ].map((filter) => {
-              const Icon = filter.icon;
-              return (
-                <button
-                  key={filter.key}
-                  onClick={() => setContestFilter(filter.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                    contestFilter === filter.key
-                      ? 'bg-white/10 text-white border border-white/20'
-                      : 'bg-gray-800/50 text-gray-400 border border-transparent hover:bg-gray-800'
-                  }`}
-                >
-                  <Icon size={14} weight={contestFilter === filter.key ? 'fill' : 'regular'} />
-                  {filter.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* My Entries Section */}
+          {/* My Entries Section — Compact Horizontal Strip */}
           {myEntries.length > 0 && (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Star size={18} weight="fill" className="text-green-400" />
-                  <span className="font-semibold text-white">Your Active Entries</span>
-                </div>
-                <span className="text-sm text-green-400">{myEntries.length} entries</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {myEntries.slice(0, 3).map((entry) => (
-                  <button
-                    key={entry.contestId}
-                    onClick={() => navigate(`/contest/${entry.contestId}`)}
-                    className="flex-shrink-0 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-left hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="text-sm font-medium text-white">{entry.contestName}</div>
-                    <div className="text-xs text-gray-400 flex items-center gap-2">
-                      <span>{entry.rank ? `#${entry.rank}` : 'Pending'}</span>
-                      <span className="text-gray-600">|</span>
-                      <span>{entry.score > 0 ? `${entry.score.toFixed(1)} pts` : '-'}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Your Entries</span>
+              <span className="text-xs text-gray-500">({myEntries.length})</span>
+              {myEntries.map((entry) => (
+                <button
+                  key={entry.contestId}
+                  onClick={() => navigate(`/contest/${entry.contestId}`)}
+                  className="px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs hover:bg-gray-700 transition-colors whitespace-nowrap"
+                >
+                  <span className="text-white font-medium">{entry.contestName}</span>
+                  <span className="text-gray-500 ml-1">
+                    {entry.rank ? `#${entry.rank}` : 'Pending'} • {entry.score > 0 ? `${entry.score.toFixed(0)}pts` : '-'}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
 
@@ -839,14 +832,14 @@ export default function Compete() {
             </div>
           )}
 
-          {/* ── Signature Leagues (pinned at top) ─────────────────────────── */}
+          {/* ── Signature Leagues (pinned at top, full width) ─────────────────────────── */}
           {!loading && signatureContests.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkle size={16} weight="fill" className="text-gold-400" />
                 <span className="text-sm font-bold text-gold-400 uppercase tracking-wide">Signature Leagues</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {signatureContests.map((contest) => {
                   const hasEntered = enteredContestIds.has(contest.id);
                   const creatorInitials = contest.creatorHandle
@@ -925,23 +918,23 @@ export default function Compete() {
                         {/* Stats */}
                         <div className="grid grid-cols-4 gap-2 mb-4">
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-emerald-400">
+                            <div className={`text-sm font-semibold ${contest.isFree ? 'text-emerald-400' : 'text-white'}`}>
                               {contest.isFree ? 'FREE' : contest.entryFeeFormatted}
                             </div>
                             <div className="text-[10px] text-gray-500">Entry</div>
                           </div>
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-emerald-400">
+                            <div className="text-sm font-semibold text-white">
                               ${(contest.prizePool * solPrice).toFixed(2)}
                             </div>
                             <div className="text-[10px] text-gray-500 font-mono">{contest.prizePoolFormatted}</div>
                           </div>
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-white">{contest.playerCount}</div>
+                            <div className="text-sm font-semibold text-white">{contest.playerCount}</div>
                             <div className="text-[10px] text-gray-500">Players</div>
                           </div>
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-white flex items-center justify-center gap-1">
+                            <div className="text-sm font-semibold text-white flex items-center justify-center gap-1">
                               <Clock size={12} />
                               {getTimeRemaining(contest.lockTime)}
                             </div>
@@ -962,7 +955,7 @@ export default function Compete() {
                         ) : (
                           <button
                             onClick={() => handleEnterContest(contest)}
-                            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:opacity-90 text-gray-950 font-bold flex items-center justify-center gap-2 transition-opacity"
+                            className="w-full py-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-gray-950 font-bold flex items-center justify-center gap-2 transition-colors"
                           >
                             <Crown size={16} weight="fill" />
                             Join {contest.creatorHandle ? `@${contest.creatorHandle}'s League` : 'Signature League'}
@@ -979,12 +972,6 @@ export default function Compete() {
           {/* ── Regular Contests ──────────────────────────────────────────── */}
           {!loading && (signatureContests.length > 0 || filteredContests.length > 0) && (
             <div>
-              {signatureContests.length > 0 && (
-                <div className="flex items-center gap-2 mb-3">
-                  <Trophy size={14} className="text-gray-500" />
-                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">All Contests</span>
-                </div>
-              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredContests.map((contest) => {
                   const config = CONTEST_CONFIG[contest.typeCode] || CONTEST_CONFIG.WEEKLY_STARTER;
@@ -1030,23 +1017,23 @@ export default function Compete() {
 
                         <div className="grid grid-cols-4 gap-2 mb-4">
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className={`text-sm font-bold ${config.color}`}>
+                            <div className={`text-sm font-semibold ${contest.isFree ? 'text-emerald-400' : 'text-white'}`}>
                               {contest.isFree ? 'FREE' : contest.entryFeeFormatted}
                             </div>
                             <div className="text-[10px] text-gray-500">Entry</div>
                           </div>
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-emerald-400">
+                            <div className="text-sm font-semibold text-white">
                               ${(contest.prizePool * solPrice).toFixed(2)}
                             </div>
                             <div className="text-[10px] text-gray-500 font-mono">{contest.prizePoolFormatted}</div>
                           </div>
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-white">{contest.playerCount}</div>
+                            <div className="text-sm font-semibold text-white">{contest.playerCount}</div>
                             <div className="text-[10px] text-gray-500">Players</div>
                           </div>
                           <div className="text-center p-2 rounded-lg bg-black/20">
-                            <div className="text-sm font-bold text-white flex items-center justify-center gap-1">
+                            <div className="text-sm font-semibold text-white flex items-center justify-center gap-1">
                               <Clock size={12} />
                               {getTimeRemaining(contest.lockTime)}
                             </div>
@@ -1066,7 +1053,7 @@ export default function Compete() {
                         ) : (
                           <button
                             onClick={() => handleEnterContest(contest)}
-                            className={`w-full py-2 rounded-lg bg-gradient-to-r ${config.gradient} text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity`}
+                            className="w-full py-2 rounded-lg bg-gold-500 hover:bg-gold-400 text-gray-950 font-semibold flex items-center justify-center gap-2 transition-colors"
                           >
                             {contest.isFree ? (
                               <>
