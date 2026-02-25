@@ -8,7 +8,139 @@
 
 ---
 
-## SESSION: Feb 25, 2026 — Intel Page Features Implementation (NEW)
+## SESSION: Feb 25, 2026 — CT Feed Intelligence Architecture Analysis (NEW)
+
+### Deliverables Created
+
+**3 Data-Driven Intelligence Architecture Documents:**
+
+1. **`docs/CT_FEED_INTELLIGENCE_ANALYSIS.md`** (15K words, comprehensive)
+   - Answers all 6 strategic questions from data science perspective
+   - Question 1: Diversity algorithm — recommends hybrid time-decay + relative-virality approach
+   - Question 2: Relative vs absolute virality — recommends 3-section strategy (Viral Now, Emerging Movers, Topic)
+   - Question 3: 5 intelligence categories — prioritizes 3 for MVP, defers 2 to Phase 2
+   - Question 4: Early virality detection with 4h refresh — velocity estimation formula provided
+   - Question 5: Content quality vs market efficiency — hybrid engagement × content signal approach
+   - Question 6: Grok/AI integration — recommends POST-MVP (Phase 2), provides cost-benefit analysis
+   - Complete implementation formulas with code examples
+   - Appendix: Formula reference guide for developers
+
+2. **`docs/CT_FEED_IMPLEMENTATION_CHECKLIST.md`** (5K words, copy-paste ready)
+   - Phase 1 (2.5h): Add 4 formulas to ctFeedService.ts + 3 API endpoints
+   - Phase 2 (2.5h): Build 3-section Intelligence Feed UI component
+   - Phase 3 (30m): Database migrations (add relative_virality, velocity_score, is_breakout, topic columns)
+   - Testing checklist (11 unit tests + manual UI verification)
+   - Deployment + rollback procedures
+   - Success criteria (all testable)
+
+3. **Supporting Analysis**
+   - Complete decision matrix: Why each metric for which section
+   - Implementation priority breakdown (MVP vs Phase 2 vs Phase 3)
+   - Psychological justification (Fogg Model, S-curve adoption)
+   - Cost-benefit for Grok integration ($450-1500/mo, should wait until Phase 2)
+
+### Key Strategic Decisions (LOCKED)
+
+**Build MVP with 3-Section Intelligence Feed (5.5 hours):**
+1. **Viral Right Now** (6h recency) — raw engagement + time decay — shows what's trending NOW
+2. **Emerging Movers** (high relative ratio) — identifies underrated accounts — fantasy value signal
+3. **Topic of Week** (keyword-based) — shows CT conversation trends — helps players identify which topics matter
+
+**NOT building for MVP (Phase 2):**
+- Consistent Scorers (requires 4+ weeks historical data)
+- Rising Stars discovery (requires out-of-game pipeline)
+- Grok AI analysis (too expensive pre-revenue, Phase 2 add-on)
+
+### Formulas Provided (Ready to Implement)
+
+**1. Relative Virality Score** (fantasy game fundamental)
+```
+score = (likes×1 + retweets×3 + replies×2 + quotes×4 + views×0.001 + bookmarks×2) / sqrt(followerCount)
+```
+Why: A tweet with 500 likes from a 10K-follower account is MORE impressive than Elon's 70K (fantasy-relevant)
+
+**2. Velocity Score** (early breakout detection)
+```
+engagementPerHour = engagement / max(hoursOld, 0.25)
+timeMultiplier = (1.5 if <2h) OR (1.0 if 2-6h) OR (0.7 if >6h)
+velocity = engagementPerHour × timeMultiplier
+```
+Why: Detects tweets gaining fast in early hours (predicts sustained engagement)
+
+**3. Time Decay** (surface recent signals)
+```
+decayedScore = absoluteEngagement × 0.9^hoursOld
+```
+Why: Yesterday's viral tweets are less "trending NOW"
+
+**4. Topic Detection** (keyword-based for MVP)
+```
+topicKeywords = {BTC: 1.5x, ETH: 1.4x, DeFi: 1.3x, Regulatory: 1.8x, Memes: 0.8x}
+score = if matches then engagement × topic_weight else engagement
+```
+Why: CT cares about specific topics; weighting reflects market attention
+
+### Backend Implementation (Copy-Paste Ready)
+
+All code provided in checklist:
+- 4 new service functions (calculateRelativeVirality, calculateVelocityScore, isBreakout, detectTopic)
+- 3 new API endpoints (/viral-now, /emerging, /topic)
+- TypeScript types + interfaces
+- Test cases (5 unit tests)
+
+### Frontend Implementation (Copy-Paste Ready)
+
+All code provided in checklist:
+- CTIntelligenceFeed component (3-section layout, auto-refresh 1 min)
+- TweetRow subcomponent (avatar, engagement, link to Twitter)
+- Topic selector (dropdown to filter by BTC/ETH/DeFi/etc)
+- Mobile-responsive (375px+ tested)
+
+### Database Migrations
+
+New columns to add to ct_tweets:
+- relative_virality (decimal)
+- velocity_score (decimal)
+- is_breakout (boolean)
+- topic (string)
+- Indexes on all 4 for performance
+
+### Timeline & Effort
+
+- **Total MVP:** 5.5 hours
+- **Backend formulas + APIs:** 2.5h
+- **Frontend component + page:** 2.5h
+- **Migrations + testing:** 30m
+- **Target completion:** Feb 26-27, 2026
+
+### Why This Approach Wins for Fantasy Sports
+
+1. **Relative virality identifies rising stars** — "Who can I draft cheap but will score big this week?"
+2. **Velocity detects topic hotness** — "What are people actually talking about today?"
+3. **Time decay surfaces fresh signals** — "What's happening NOW, not yesterday?"
+4. **3-section UX is clear** — Users understand what each section is for, act on it
+
+### Success Metrics (Post-Launch)
+
+- Daily feed users (target: 60% of drafters)
+- Average session time (target: 2-3 min)
+- Click-through to Twitter (high engagement = useful signal)
+- Conversion: Feed user → Drafter (target: 40%)
+- Which section drives most engagement (data for Phase 2)
+
+### Status
+
+✅ All strategic questions answered
+✅ All formulas provided with code
+✅ Implementation checklist complete
+✅ Both backend + frontend code ready to copy-paste
+✅ Database schema defined
+✅ Testing checklist provided
+✅ Ready to build starting Feb 26
+
+---
+
+## SESSION: Feb 25, 2026 — Intel Page Features Implementation
 
 ### Deliverables Created
 
