@@ -52,7 +52,7 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800/80 border border-gray-700 text-xs text-gray-400 hover:border-gray-600 hover:text-gray-200 transition-colors"
               >
-                <img src="https://www.usetapestry.dev/favicon.ico" alt="Tapestry" className="w-3.5 h-3.5 rounded-sm" />
+                <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="Tapestry" className="w-3.5 h-3.5 rounded-sm invert opacity-70" />
                 Powered by Tapestry Protocol
               </a>
             </div>
@@ -107,7 +107,7 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
                 <span>No deposit required</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <img src="https://www.usetapestry.dev/favicon.ico" alt="Tapestry" className="w-3.5 h-3.5 rounded-sm shrink-0" />
+                <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="Tapestry" className="w-3.5 h-3.5 rounded-sm invert opacity-50 shrink-0" />
                 <span className="text-gray-400">Teams on Tapestry</span>
               </div>
             </div>
@@ -128,9 +128,9 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
               className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors group"
             >
               <img
-                src="https://www.usetapestry.dev/favicon.ico"
+                src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png"
                 alt="Tapestry"
-                className="w-4 h-4 rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
+                className="w-4 h-4 rounded-sm invert opacity-60 group-hover:opacity-90 transition-opacity"
               />
               <span>Teams sealed on-chain · Tapestry Protocol</span>
             </a>

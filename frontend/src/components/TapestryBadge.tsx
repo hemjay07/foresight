@@ -9,7 +9,7 @@
 
 import { CheckCircle, ArrowSquareOut } from '@phosphor-icons/react';
 
-const TAPESTRY_FAVICON = 'https://www.usetapestry.dev/favicon.ico';
+const TAPESTRY_ICON = 'https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png';
 
 interface TapestryBadgeProps {
   variant?: 'inline' | 'card' | 'confirmation';
@@ -30,7 +30,7 @@ export default function TapestryBadge({
     if (!isConnected) return null;
     return (
       <span className={`inline-flex items-center gap-1 text-xs text-gray-400 ${className}`}>
-        <img src={TAPESTRY_FAVICON} alt="" className="w-3 h-3 rounded-sm opacity-70" />
+        <img src={TAPESTRY_ICON} alt="" className="w-3 h-3 rounded-sm invert opacity-50" />
         On Tapestry
       </span>
     );
@@ -59,7 +59,7 @@ export default function TapestryBadge({
     } ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <img src={TAPESTRY_FAVICON} alt="Tapestry" className="w-5 h-5 rounded-sm" />
+          <img src={TAPESTRY_ICON} alt="Tapestry" className="w-5 h-5 rounded-sm invert opacity-70" />
           <h3 className="font-semibold text-white">Tapestry Protocol</h3>
         </div>
         {isConnected && (

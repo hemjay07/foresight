@@ -7,7 +7,7 @@
 
 import { CheckCircle, ArrowSquareOut, Lock } from '@phosphor-icons/react';
 
-const TAPESTRY_FAVICON = 'https://www.usetapestry.dev/favicon.ico';
+const TAPESTRY_ICON = 'https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png';
 
 interface DraftReceiptProps {
   entryId?: number | string;
@@ -38,7 +38,7 @@ export default function DraftReceipt({
     <div className={`rounded-xl border border-gold-500/30 bg-gold-500/5 overflow-hidden ${className}`}>
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gold-500/20 bg-gold-500/10">
-        <img src={TAPESTRY_FAVICON} alt="Tapestry" className="w-4 h-4 rounded-sm" />
+        <img src={TAPESTRY_ICON} alt="Tapestry" className="w-4 h-4 rounded-sm invert opacity-80" />
         <span className="text-sm font-semibold text-gold-400">Team Locked on Solana</span>
         <Lock size={12} className="text-gold-500/50 ml-auto" />
       </div>
@@ -85,7 +85,7 @@ export default function DraftReceipt({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
         >
-          <img src={TAPESTRY_FAVICON} alt="" className="w-3 h-3 rounded-sm opacity-60" />
+          <img src={TAPESTRY_ICON} alt="" className="w-3 h-3 rounded-sm invert opacity-50 hover:opacity-80 transition-opacity" />
           Tapestry <ArrowSquareOut size={10} />
         </a>
       </div>
