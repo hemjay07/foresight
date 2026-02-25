@@ -1,7 +1,7 @@
 /**
  * Draft Page - Clean formation-based team builder
  * Key features:
- * - Prominent captain slot with 1.5x bonus
+ * - Prominent captain slot with 2.0x bonus
  * - Clear budget visualization
  * - Tier-grouped influencer selection
  * - Responsive layout
@@ -17,6 +17,7 @@ import {
 import FormationTeam from '../components/draft/FormationTeam';
 import InfluencerGrid from '../components/draft/InfluencerGrid';
 import TapestryBadge from '../components/TapestryBadge';
+import DraftReceipt from '../components/DraftReceipt';
 import ShareTeamCard from '../components/ShareTeamCard';
 import { useToast } from '../contexts/ToastContext';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -97,6 +98,7 @@ export default function Draft() {
   const [existingTeam, setExistingTeam] = useState<ExistingTeam | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [tapestryPublished, setTapestryPublished] = useState(false);
+  const [submittedEntryId, setSubmittedEntryId] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [solPrice, setSolPrice] = useState<number>(145);
 
@@ -370,6 +372,7 @@ export default function Draft() {
 
       if (res.data.success) {
         setTapestryPublished(res.data.tapestry?.published || false);
+        setSubmittedEntryId(res.data.entry?.id ?? null);
         setShowSuccess(true);
         showToast(existingTeam ? 'Team updated!' : 'Team entered!', 'success');
       }
@@ -443,7 +446,12 @@ export default function Draft() {
           />
 
           {tapestryPublished && (
-            <TapestryBadge variant="confirmation" className="mb-3" />
+            <DraftReceipt
+              entryId={submittedEntryId ?? undefined}
+              captainHandle={selectedPicks.find(p => p.id === captainId)?.handle ?? null}
+              teamSize={selectedPicks.length}
+              className="mb-3"
+            />
           )}
 
           {/* Secondary: View Contest */}
