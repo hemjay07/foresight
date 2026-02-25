@@ -94,84 +94,100 @@ interface HighlightCardProps {
   accent?: 'orange' | 'cyan';
 }
 
+// Tier top-border color for viral cards
+const TWEET_CARD_TOP: Record<string, string> = {
+  S: 'border-t-amber-400',
+  A: 'border-t-cyan-400',
+  B: 'border-t-emerald-400',
+  C: 'border-t-gray-600',
+};
+
 function HighlightCard({
   tweet, onTeam, scouted, scouting, draftCount, onScout,
   engagementLabel, tierStyle, formatNumber, accent = 'orange',
 }: HighlightCardProps) {
-  const accentRing = onTeam
-    ? 'bg-gold-500/5 border-gold-500/30'
-    : accent === 'cyan'
-    ? 'bg-cyan-500/5 border-cyan-500/20'
-    : 'bg-gray-900/50 border-gray-800';
+  const tierTop = TWEET_CARD_TOP[tweet.influencer.tier] ?? 'border-t-gray-700';
+  const cardBase = onTeam
+    ? 'bg-amber-500/5 border-amber-500/25'
+    : 'bg-gray-900/60 border-gray-800 hover:border-gray-700';
 
   return (
-    <div className={`p-3 rounded-xl border transition-all ${accentRing}`}>
-      <div className="flex items-center gap-2 mb-2">
-        {tweet.influencer.avatar ? (
-          <img src={tweet.influencer.avatar} alt="" className="w-6 h-6 rounded-full" />
-        ) : (
-          <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center">
-            <TwitterLogo size={12} className="text-gray-500" />
+    <div className={`rounded-xl border border-t-2 transition-all overflow-hidden ${tierTop} ${cardBase}`}>
+      <div className="p-3">
+        {/* Avatar · handle · tier badge */}
+        <div className="flex items-center gap-2 mb-2.5">
+          {tweet.influencer.avatar ? (
+            <img src={tweet.influencer.avatar} alt="" className="w-7 h-7 rounded-full flex-shrink-0" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+              <TwitterLogo size={12} className="text-gray-500" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-semibold text-white truncate block">
+              @{tweet.influencer.handle}
+            </span>
           </div>
-        )}
-        <span className="text-xs font-medium text-white truncate flex-1">
-          @{tweet.influencer.handle}
-        </span>
-        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tierStyle.bg} ${tierStyle.text}`}>
-          {tweet.influencer.tier}
-        </span>
-        {draftCount > 0 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap">
-            🏆 {draftCount}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${tierStyle.bg} ${tierStyle.text}`}>
+            {tweet.influencer.tier}
           </span>
-        )}
-        {onTeam && <Trophy size={12} weight="fill" className="text-gold-400" />}
-      </div>
-      <p className="text-xs text-gray-400 line-clamp-2 mb-2">{tweet.text}</p>
+          {draftCount > 0 && (
+            <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap flex-shrink-0">
+              🏆{draftCount}
+            </span>
+          )}
+          {onTeam && <Trophy size={11} weight="fill" className="text-amber-400 flex-shrink-0" />}
+        </div>
 
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-[10px] text-gray-500">
-          <span className="flex items-center gap-0.5">
-            <Heart size={10} /> {formatNumber(tweet.likes)}
-          </span>
-          <span className="flex items-center gap-0.5">
-            <Repeat size={10} /> {formatNumber(tweet.retweets)}
+        {/* Tweet text */}
+        <p className="text-xs text-gray-300 line-clamp-2 mb-2.5 leading-relaxed">{tweet.text}</p>
+
+        {/* Stats row */}
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-3 text-[10px] text-gray-500">
+            <span className="flex items-center gap-0.5">
+              <Heart size={10} className="text-rose-400/60" /> {formatNumber(tweet.likes)}
+            </span>
+            <span className="flex items-center gap-0.5">
+              <Repeat size={10} className="text-emerald-400/60" /> {formatNumber(tweet.retweets)}
+            </span>
+          </div>
+          <span className={`text-[10px] font-bold font-mono ${tierStyle.text}`}>
+            {engagementLabel}
           </span>
         </div>
-        <span className="text-[10px] text-emerald-400 font-bold font-mono">
-          {engagementLabel} eng
-        </span>
-      </div>
 
-      <div className="flex items-center gap-2">
-        {!onTeam && (
-          <button
-            onClick={onScout}
-            disabled={scouting}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
-              scouted
-                ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
-                : 'bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-400'
-            }`}
+        {/* Actions */}
+        <div className="flex items-center gap-1.5">
+          {!onTeam && (
+            <button
+              onClick={onScout}
+              disabled={scouting}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
+                scouted
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                  : 'bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-400'
+              }`}
+            >
+              {scouting ? (
+                <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+              ) : scouted ? (
+                <><Check size={10} weight="bold" />Scouted</>
+              ) : (
+                <><Binoculars size={10} />Scout ${tweet.influencer.price}</>
+              )}
+            </button>
+          )}
+          <a
+            href={tweet.twitterUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-800/80 hover:bg-gray-700 rounded-lg text-[10px] text-gray-400 transition-colors ${onTeam ? 'flex-1' : ''}`}
           >
-            {scouting ? (
-              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-            ) : scouted ? (
-              <><Check size={10} weight="bold" />Scouted</>
-            ) : (
-              <><Binoculars size={10} />Scout ${tweet.influencer.price}</>
-            )}
-          </button>
-        )}
-        <a
-          href={tweet.twitterUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-[10px] text-gray-400 transition-colors ${onTeam ? 'flex-1' : ''}`}
-        >
-          <TwitterLogo size={10} weight="fill" />
-          Open
-        </a>
+            <TwitterLogo size={10} weight="fill" className="text-[#1DA1F2]" />
+            Open
+          </a>
+        </div>
       </div>
     </div>
   );
