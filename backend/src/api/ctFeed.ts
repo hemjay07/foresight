@@ -59,10 +59,10 @@ router.get('/highlights', async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
     const timeframe = (req.query.timeframe as string) || '24h';
 
-    if (!['24h', '7d', '30d'].includes(timeframe)) {
+    if (!['1h', '24h', '7d', '30d'].includes(timeframe)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid timeframe. Use 24h, 7d, or 30d',
+        error: 'Invalid timeframe. Use 1h, 24h, 7d, or 30d',
       });
     }
 

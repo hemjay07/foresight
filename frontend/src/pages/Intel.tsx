@@ -61,6 +61,7 @@ interface Tweet {
   replies: number;
   views: number;
   engagementScore: number;
+  relativeScore?: number;
   twitterUrl: string;
   influencer: Influencer;
 }
@@ -78,6 +79,103 @@ const TIER_COLORS: Record<string, { text: string; bg: string; border: string }> 
   B: { text: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/40' },
   C: { text: 'text-gray-400', bg: 'bg-gray-500/20', border: 'border-gray-500/40' },
 };
+
+// Reusable card for Viral / Emerging sections
+interface HighlightCardProps {
+  tweet: Tweet;
+  onTeam: boolean;
+  scouted: boolean;
+  scouting: boolean;
+  draftCount: number;
+  onScout: () => void;
+  engagementLabel: string;
+  tierStyle: { text: string; bg: string; border: string };
+  formatNumber: (n: number) => string;
+  accent?: 'orange' | 'cyan';
+}
+
+function HighlightCard({
+  tweet, onTeam, scouted, scouting, draftCount, onScout,
+  engagementLabel, tierStyle, formatNumber, accent = 'orange',
+}: HighlightCardProps) {
+  const accentRing = onTeam
+    ? 'bg-gold-500/5 border-gold-500/30'
+    : accent === 'cyan'
+    ? 'bg-cyan-500/5 border-cyan-500/20'
+    : 'bg-gray-900/50 border-gray-800';
+
+  return (
+    <div className={`p-3 rounded-xl border transition-all ${accentRing}`}>
+      <div className="flex items-center gap-2 mb-2">
+        {tweet.influencer.avatar ? (
+          <img src={tweet.influencer.avatar} alt="" className="w-6 h-6 rounded-full" />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center">
+            <TwitterLogo size={12} className="text-gray-500" />
+          </div>
+        )}
+        <span className="text-xs font-medium text-white truncate flex-1">
+          @{tweet.influencer.handle}
+        </span>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tierStyle.bg} ${tierStyle.text}`}>
+          {tweet.influencer.tier}
+        </span>
+        {draftCount > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap">
+            🏆 {draftCount}
+          </span>
+        )}
+        {onTeam && <Trophy size={12} weight="fill" className="text-gold-400" />}
+      </div>
+      <p className="text-xs text-gray-400 line-clamp-2 mb-2">{tweet.text}</p>
+
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 text-[10px] text-gray-500">
+          <span className="flex items-center gap-0.5">
+            <Heart size={10} /> {formatNumber(tweet.likes)}
+          </span>
+          <span className="flex items-center gap-0.5">
+            <Repeat size={10} /> {formatNumber(tweet.retweets)}
+          </span>
+        </div>
+        <span className="text-[10px] text-emerald-400 font-bold font-mono">
+          {engagementLabel} eng
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {!onTeam && (
+          <button
+            onClick={onScout}
+            disabled={scouting}
+            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
+              scouted
+                ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                : 'bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-400'
+            }`}
+          >
+            {scouting ? (
+              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+            ) : scouted ? (
+              <><Check size={10} weight="bold" />Scouted</>
+            ) : (
+              <><Binoculars size={10} />Scout ${tweet.influencer.price}</>
+            )}
+          </button>
+        )}
+        <a
+          href={tweet.twitterUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-[10px] text-gray-400 transition-colors ${onTeam ? 'flex-1' : ''}`}
+        >
+          <TwitterLogo size={10} weight="fill" />
+          Open
+        </a>
+      </div>
+    </div>
+  );
+}
 
 export default function Intel() {
   const { isConnected } = useAuth();
@@ -103,6 +201,7 @@ export default function Intel() {
   // Data
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [highlights, setHighlights] = useState<Tweet[]>([]);
+  const [emerging, setEmerging] = useState<Tweet[]>([]);
   const [teamInfluencerIds, setTeamInfluencerIds] = useState<number[]>([]);
   const [hasTeam, setHasTeam] = useState(false);
   const [scoutedIds, setScoutedIds] = useState<number[]>([]);
@@ -238,9 +337,13 @@ export default function Intel() {
 
     try {
       const feedTimeframe = timeFilter === '1h' ? '1h' : timeFilter === 'all' ? '30d' : timeFilter;
-      const [feedRes, highlightsRes] = await Promise.all([
+      const [feedRes, highlightsRes, emergingRes] = await Promise.all([
         axios.get(`${API_URL}/api/ct-feed?limit=50&timeframe=${feedTimeframe}`),
         axios.get(`${API_URL}/api/ct-feed/highlights?limit=6&timeframe=${feedTimeframe}`),
+        // Emerging movers: 1h breakouts with relative virality (different from all-day highlights)
+        feedTimeframe !== '1h'
+          ? axios.get(`${API_URL}/api/ct-feed/highlights?limit=6&timeframe=1h`).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
       if (feedRes.data.success) {
@@ -248,6 +351,12 @@ export default function Intel() {
       }
       if (highlightsRes.data.success) {
         setHighlights(highlightsRes.data.data.tweets || []);
+      }
+      if (emergingRes?.data?.success) {
+        // Filter out tweets already in highlights to avoid duplicates
+        const highlightIds = new Set(highlightsRes.data.data.tweets?.map((t: Tweet) => t.id) || []);
+        const emergingTweets = emergingRes.data.data.tweets?.filter((t: Tweet) => !highlightIds.has(t.id)) || [];
+        setEmerging(emergingTweets);
       }
     } catch (err) {
       console.error('Error fetching feed:', err);
@@ -293,9 +402,11 @@ export default function Intel() {
   const isOnTeam = (influencerId: number) => teamInfluencerIds.includes(influencerId);
   const isScouted = (influencerId: number) => scoutedIds.includes(influencerId);
 
-  const estimatePoints = (tweet: Tweet): number => {
-    const raw = tweet.likes + tweet.retweets * 2 + tweet.replies;
-    return Math.min(99, Math.round(Math.sqrt(raw) / 2));
+  // Real engagement score from DB — formatted for display
+  const engagementLabel = (tweet: Tweet): string => {
+    const score = tweet.engagementScore;
+    if (!score || score === 0) return '—';
+    return formatNumber(score);
   };
 
   const filteredTweets = getFilteredTweets();
@@ -513,100 +624,53 @@ export default function Intel() {
                     <div className="flex items-center gap-2 mb-3">
                       <Fire size={18} weight="fill" className="text-orange-400" />
                       <span className="text-sm font-semibold text-white">Viral Right Now</span>
-                      <span className="text-xs text-gray-500">Top engagement in {timeFilter === '1h' ? 'last hour' : timeFilter}</span>
+                      <span className="text-xs text-gray-500">
+                        Diverse top picks · {timeFilter === '1h' ? 'last hour' : timeFilter}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {highlights.slice(0, 6).map((tweet) => {
-                        const tierStyle = getTierStyle(tweet.influencer.tier);
-                        const onTeam = isOnTeam(tweet.influencer.id);
+                      {highlights.slice(0, 6).map((tweet) => (
+                        <HighlightCard
+                          key={tweet.id}
+                          tweet={tweet}
+                          onTeam={isOnTeam(tweet.influencer.id)}
+                          scouted={isScouted(tweet.influencer.id)}
+                          scouting={scoutingId === tweet.influencer.id}
+                          draftCount={communityPicks[tweet.influencer.id] || 0}
+                          onScout={() => toggleScout(tweet.influencer.id, tweet.influencer.name)}
+                          engagementLabel={engagementLabel(tweet)}
+                          tierStyle={getTierStyle(tweet.influencer.tier)}
+                          formatNumber={formatNumber}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                        return (
-                          <div
-                            key={tweet.id}
-                            className={`p-3 rounded-xl border transition-all ${
-                              onTeam
-                                ? 'bg-gold-500/5 border-gold-500/30'
-                                : 'bg-gray-900/50 border-gray-800'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              {tweet.influencer.avatar ? (
-                                <img src={tweet.influencer.avatar} alt="" className="w-6 h-6 rounded-full" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center">
-                                  <TwitterLogo size={12} className="text-gray-500" />
-                                </div>
-                              )}
-                              <span className="text-xs font-medium text-white truncate flex-1">
-                                @{tweet.influencer.handle}
-                              </span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tierStyle.bg} ${tierStyle.text}`}>
-                                {tweet.influencer.tier}
-                              </span>
-                              {communityPicks[tweet.influencer.id] > 0 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap">
-                                  🏆 {communityPicks[tweet.influencer.id]}
-                                </span>
-                              )}
-                              {onTeam && (
-                                <Trophy size={12} weight="fill" className="text-gold-400" />
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-400 line-clamp-2 mb-2">{tweet.text}</p>
-
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                                <span className="flex items-center gap-0.5">
-                                  <Heart size={10} /> {formatNumber(tweet.likes)}
-                                </span>
-                                <span className="flex items-center gap-0.5">
-                                  <Repeat size={10} /> {formatNumber(tweet.retweets)}
-                                </span>
-                              </div>
-                              <span className="text-[10px] text-emerald-400 font-bold">
-                                +{estimatePoints(tweet)} pts
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {!onTeam && (
-                                <button
-                                  onClick={() => toggleScout(tweet.influencer.id, tweet.influencer.name)}
-                                  disabled={scoutingId === tweet.influencer.id}
-                                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
-                                    isScouted(tweet.influencer.id)
-                                      ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
-                                      : 'bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-400'
-                                  }`}
-                                >
-                                  {scoutingId === tweet.influencer.id ? (
-                                    <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                                  ) : isScouted(tweet.influencer.id) ? (
-                                    <>
-                                      <Check size={10} weight="bold" />
-                                      Scouted
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Binoculars size={10} />
-                                      Scout ${tweet.influencer.price}
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                              <a
-                                href={tweet.twitterUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-[10px] text-gray-400 transition-colors ${onTeam ? 'flex-1' : ''}`}
-                              >
-                                <TwitterLogo size={10} weight="fill" />
-                                Open
-                              </a>
-                            </div>
-                          </div>
-                        );
-                      })}
+                {/* Emerging Movers — last-hour breakouts (relative virality) */}
+                {emerging.length > 0 && tierFilter === 'all' && timeFilter !== '1h' && (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendUp size={18} weight="fill" className="text-cyan-400" />
+                      <span className="text-sm font-semibold text-white">Emerging Movers</span>
+                      <span className="text-xs text-gray-500">Breaking out in the last hour · relative to audience</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {emerging.slice(0, 6).map((tweet) => (
+                        <HighlightCard
+                          key={tweet.id}
+                          tweet={tweet}
+                          onTeam={isOnTeam(tweet.influencer.id)}
+                          scouted={isScouted(tweet.influencer.id)}
+                          scouting={scoutingId === tweet.influencer.id}
+                          draftCount={communityPicks[tweet.influencer.id] || 0}
+                          onScout={() => toggleScout(tweet.influencer.id, tweet.influencer.name)}
+                          engagementLabel={engagementLabel(tweet)}
+                          tierStyle={getTierStyle(tweet.influencer.tier)}
+                          formatNumber={formatNumber}
+                          accent="cyan"
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -703,7 +767,7 @@ export default function Intel() {
                                 {onTeam ? (
                                   <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
                                     <Lightning size={12} weight="fill" />
-                                    +{estimatePoints(tweet)} pts earned
+                                    {tweet.engagementScore > 0 ? `${formatNumber(tweet.engagementScore)} score` : 'On your team'}
                                   </span>
                                 ) : (
                                   <button

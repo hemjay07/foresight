@@ -229,23 +229,35 @@ export async function getFeed(options: FeedOptions): Promise<FeedResult> {
 }
 
 /**
- * Get top viral tweets (highlights)
+ * Get top viral tweets (highlights) — diverse, relative-virality ranked.
+ *
+ * Two problems solved vs naive sort-by-engagement:
+ * 1. Account diversity: cap at 1 tweet per influencer so one prolific account
+ *    (e.g. @elonmusk) can't dominate all 6 slots.
+ * 2. Relative virality: score = engagement_score / sqrt(follower_count + 1)
+ *    This surfaces tweets that are viral *for that account's reach*, not just
+ *    tweets from the accounts with the most followers. A 10K-follower account
+ *    with 800 likes scores higher relative to their audience than Elon's
+ *    70K likes on a 170M-follower account.
  */
 export async function getHighlights(
-  limit: number = 5,
+  limit: number = 6,
   timeframe: string = '24h'
 ): Promise<HighlightsResult> {
   const cappedLimit = Math.min(limit, 20);
 
-  // Calculate time cutoff
   let hoursBack = 24;
+  if (timeframe === '1h') hoursBack = 1;
   if (timeframe === '7d') hoursBack = 168;
-  if (timeframe === '30d') hoursBack = 720;
+  if (timeframe === 'all') hoursBack = 720;
 
   const cutoffDate = new Date();
   cutoffDate.setHours(cutoffDate.getHours() - hoursBack);
 
   try {
+    // Fetch more candidates than needed so per-account dedup still fills slots
+    const candidateLimit = cappedLimit * 8;
+
     const rows = await db('ct_tweets as t')
       .join('influencers as i', 't.influencer_id', 'i.id')
       .select(
@@ -266,13 +278,33 @@ export async function getHighlights(
         'i.avatar_url',
         'i.tier',
         'i.price',
-        'i.total_points'
+        'i.total_points',
+        'i.follower_count',
+        // Relative virality: engagement normalised by account reach
+        db.raw(`
+          ROUND(
+            (t.engagement_score::float / SQRT(GREATEST(i.follower_count, 1000)::float))
+            ::numeric, 4
+          ) AS relative_score
+        `)
       )
       .where('t.created_at', '>=', cutoffDate)
-      .orderBy('t.engagement_score', 'desc')
-      .limit(cappedLimit);
+      .whereRaw("t.text !~ '抽選|リポスト|フォロー.*無料|follow.*retweet.*win'")
+      .andWhere(function () {
+        this.where('t.engagement_score', '>', 0).orWhere('t.views', '>', 1000);
+      })
+      .orderBy('relative_score', 'desc')
+      .limit(candidateLimit);
 
-    const tweets: Tweet[] = rows.map((row) => ({
+    // Deduplicate: max 1 tweet per influencer (pick highest relative_score one)
+    const seenInfluencers = new Set<number>();
+    const diverse = rows.filter((row: any) => {
+      if (seenInfluencers.has(row.influencer_id)) return false;
+      seenInfluencers.add(row.influencer_id);
+      return true;
+    }).slice(0, cappedLimit);
+
+    const tweets: Tweet[] = diverse.map((row: any) => ({
       id: row.id,
       tweetId: row.tweet_id,
       text: row.text,
@@ -284,6 +316,7 @@ export async function getHighlights(
       views: row.views,
       bookmarks: row.bookmarks,
       engagementScore: Number(row.engagement_score),
+      relativeScore: parseFloat(row.relative_score) || 0,
       twitterUrl: `https://twitter.com/${row.twitter_handle}/status/${row.tweet_id}`,
       influencer: {
         id: row.influencer_id,
