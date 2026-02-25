@@ -28,7 +28,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // ============ LANDING PAGE ============
 
-function LandingPage({ isConnected, login, xp }: { isConnected: boolean; login: () => void; xp: number }) {
+function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: boolean; login: () => void; xp: number; teamsOnChain: number | null }) {
   const xpInfo = xp > 0 ? getXPLevel(xp) : null;
   return (
     <div className="max-w-6xl mx-auto">
@@ -219,7 +219,11 @@ function LandingPage({ isConnected, login, xp }: { isConnected: boolean; login: 
               <CheckCircle size={20} weight="fill" className="text-gold-400" />
             </div>
             <h3 className="font-semibold text-white mb-1 text-sm">On-chain Teams</h3>
-            <p className="text-xs text-gray-500">Draft teams stored as immutable content on Tapestry</p>
+            <p className="text-xs text-gray-500">
+              {teamsOnChain != null && teamsOnChain > 0
+                ? `${teamsOnChain.toLocaleString()} teams stored as immutable content on Tapestry`
+                : 'Draft teams stored as immutable content on Tapestry'}
+            </p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
             <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center mx-auto mb-3">
@@ -279,6 +283,7 @@ function LandingPage({ isConnected, login, xp }: { isConnected: boolean; login: 
 export default function Home() {
   const { isConnected, login } = useAuth();
   const [xp, setXp] = useState(0);
+  const [teamsOnChain, setTeamsOnChain] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -289,5 +294,18 @@ export default function Home() {
       .catch(() => {});
   }, [isConnected]);
 
-  return <LandingPage isConnected={isConnected} login={login} xp={xp} />;
+  useEffect(() => {
+    // Fetch total teams stored on-chain from the active free league player count
+    axios.get(`${API_URL}/api/v2/contests?status=open&limit=1`)
+      .then(r => {
+        const contests = r.data?.contests || r.data?.data || [];
+        const freeLeague = contests.find((c: any) => c.isFree || c.is_free) || contests[0];
+        if (freeLeague?.playerCount ?? freeLeague?.player_count) {
+          setTeamsOnChain(freeLeague.playerCount ?? freeLeague.player_count);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return <LandingPage isConnected={isConnected} login={login} xp={xp} teamsOnChain={teamsOnChain} />;
 }
