@@ -136,11 +136,17 @@ export async function getFeed(options: FeedOptions): Promise<FeedResult> {
   const cappedLimit = Math.min(limit, 50);
 
   try {
-    // Get total count
-    const countResult = await db('ct_tweets').count('* as count').first();
+    // Get total count (excluding spam)
+    const countResult = await db('ct_tweets')
+      .whereRaw("text !~ '抽選|リポスト|フォロー.*無料|follow.*retweet.*win'")
+      .andWhere(function() {
+        this.where('engagement_score', '>', 0).orWhere('views', '>', 1000);
+      })
+      .count('* as count')
+      .first();
     const total = Number(countResult?.count) || 0;
 
-    // Get tweets with influencer data
+    // Get tweets with influencer data (quality filtered)
     const rows = await db('ct_tweets as t')
       .join('influencers as i', 't.influencer_id', 'i.id')
       .select(
@@ -163,6 +169,10 @@ export async function getFeed(options: FeedOptions): Promise<FeedResult> {
         'i.price',
         'i.total_points'
       )
+      .whereRaw("t.text !~ '抽選|リポスト|フォロー.*無料|follow.*retweet.*win'")
+      .andWhere(function() {
+        this.where('t.engagement_score', '>', 0).orWhere('t.views', '>', 1000);
+      })
       .orderBy('t.engagement_score', 'desc')
       .limit(cappedLimit)
       .offset(offset);

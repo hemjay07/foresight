@@ -82,8 +82,15 @@ export function usePrivyAuth() {
         setSyncError('rate_limited');
       } else {
         setSyncError('network_error');
+        // Auto-retry once after 4s — recovers from brief backend restart/hiccup
+        hasAttemptedAuth.current = false;
+        setTimeout(() => {
+          if (!localStorage.getItem('authToken')) {
+            syncWithBackend();
+          }
+        }, 4000);
       }
-      hasAttemptedAuth.current = false; // Allow retry on next trigger
+      hasAttemptedAuth.current = false;
     }
   }, [getAccessToken]);
 

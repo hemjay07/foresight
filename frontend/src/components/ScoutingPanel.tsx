@@ -18,6 +18,7 @@ interface Scout {
   captainId: number | null;
   captainHandle: string | null;
   score: number | null;
+  contestName?: string | null;
 }
 
 interface ScoutingPanelProps {
@@ -28,6 +29,7 @@ interface ScoutingPanelProps {
 export default function ScoutingPanel({ contestId, className = '' }: ScoutingPanelProps) {
   const [scouts, setScouts] = useState<Scout[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [fromPreviousContest, setFromPreviousContest] = useState(false);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
@@ -45,6 +47,7 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
       .then((res) => {
         setScouts(res.data.scouts || []);
         setMessage(res.data.message || null);
+        setFromPreviousContest(res.data.fromPreviousContest || false);
       })
       .catch(() => {
         setScouts([]);
@@ -78,7 +81,7 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
       >
         <div className="flex items-center gap-2">
           <Binoculars size={16} className="text-cyan-400" weight="fill" />
-          <span className="text-sm font-semibold text-white">Scouts Report</span>
+          <span className="text-sm font-semibold text-white">Rival Picks</span>
           {hasMostDrafted && (
             <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded-full">
               {scouts.length} follow{scouts.length !== 1 ? 's' : ''} entered
@@ -106,14 +109,23 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
             <div className="px-4 py-4 text-center">
               <Users size={24} className="mx-auto mb-2 text-gray-600" />
               <p className="text-sm text-gray-500">
-                {message || 'None of your follows have entered yet.'}
+                No rivals to spy on yet.
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                Follow players on the leaderboard to see their picks here.
+                Follow other players on the{' '}
+                <a href="/compete?tab=rankings" className="text-cyan-500 hover:text-cyan-400">leaderboard</a>
+                {' '}to see who they're drafting.
               </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-700/40">
+              {/* Previous contest note */}
+              {fromPreviousContest && (
+                <div className="px-4 py-2 bg-gray-700/30 flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400">Showing picks from previous contests — your follows haven't entered this one yet</span>
+                </div>
+              )}
+
               {/* Trending pick callout */}
               {trendingCaptain && trendingCount > 1 && (
                 <div className="px-4 py-2 bg-gold-500/5 flex items-center gap-2">
@@ -126,8 +138,8 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
               )}
 
               {/* Scout rows */}
-              {scouts.map((scout) => (
-                <div key={scout.tapestryUserId} className="px-4 py-2.5 flex items-center gap-3">
+              {scouts.map((scout, i) => (
+                <div key={scout.tapestryUserId || scout.username || i} className="px-4 py-2.5 flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 flex items-center justify-center shrink-0">
                     <span className="text-[10px] font-bold text-cyan-400">
                       {(scout.username || '?')[0].toUpperCase()}
@@ -139,6 +151,9 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
                       {scout.teamIds?.length || 0} picks
                       {scout.captainHandle && (
                         <> · <Crown size={9} className="inline text-gold-400" weight="fill" /> @{scout.captainHandle}</>
+                      )}
+                      {scout.contestName && (
+                        <> · {scout.contestName}</>
                       )}
                     </p>
                   </div>

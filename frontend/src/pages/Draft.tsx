@@ -104,6 +104,7 @@ export default function Draft() {
   const [submittedEntryId, setSubmittedEntryId] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [solPrice, setSolPrice] = useState<number>(145);
+  const [transferStatus, setTransferStatus] = useState<{ remaining: number; allowed: number; level: string } | null>(null);
 
   // Computed
   const usedBudget = useMemo(
@@ -193,11 +194,20 @@ export default function Draft() {
       });
       if (res.data.entry) {
         setExistingTeam(res.data.entry);
-        // Load existing picks
-        const teamIds = res.data.entry.teamIds || res.data.entry.team_ids || [];
         const captain = res.data.entry.captainId || res.data.entry.captain_id;
         setCaptainId(captain);
-        // Will match with influencers after they load
+        // Fetch transfer status now that we know user has an existing entry
+        axios.get(`${API_URL}/api/v2/contests/${contestId}/transfer-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(r => {
+          if (r.data.success) {
+            setTransferStatus({
+              remaining: r.data.data.transfersRemaining,
+              allowed: r.data.data.transfersAllowed,
+              level: r.data.data.level,
+            });
+          }
+        }).catch(() => {});
       }
     } catch (err) {
       // No existing team - that's fine
@@ -379,6 +389,10 @@ export default function Draft() {
         setSubmittedEntryId(res.data.entry?.id ?? null);
         setShowSuccess(true);
         showToast(existingTeam ? 'Team updated!' : 'Team entered!', 'success');
+        // Update transfer status from response
+        if (res.data.transfersRemaining !== undefined) {
+          setTransferStatus(prev => prev ? { ...prev, remaining: res.data.transfersRemaining } : null);
+        }
       }
     } catch (err) {
       console.error('Submit failed:', err);
@@ -538,6 +552,22 @@ export default function Draft() {
               teamSize={teamSize}
             />
 
+            {/* Mobile Transfer Status */}
+            {existingTeam && transferStatus && timeUntilLock !== 'LOCKED' && (
+              <div className={`mt-4 px-3 py-2 rounded-lg flex items-center justify-between text-xs ${
+                transferStatus.remaining > 0
+                  ? 'bg-gray-800/50 border border-gray-700/50'
+                  : 'bg-rose-500/5 border border-rose-500/20'
+              }`}>
+                <span className="text-gray-400">Transfers this week</span>
+                <span className={`font-medium ${transferStatus.remaining > 0 ? 'text-gray-200' : 'text-rose-400'}`}>
+                  {transferStatus.remaining > 0
+                    ? `${transferStatus.remaining} remaining`
+                    : 'Limit reached · earn XP for more'}
+                </span>
+              </div>
+            )}
+
             {/* Mobile Submit Button */}
             <div className="mt-4">
               {isConnected && canSubmit && (
@@ -599,8 +629,26 @@ export default function Draft() {
               teamSize={teamSize}
             />
 
+            {/* Transfer status — shown when user has an existing entry */}
+            {existingTeam && transferStatus && timeUntilLock !== 'LOCKED' && (
+              <div className={`mt-4 px-3 py-2 rounded-lg flex items-center justify-between text-xs ${
+                transferStatus.remaining > 0
+                  ? 'bg-gray-800/50 border border-gray-700/50'
+                  : 'bg-rose-500/5 border border-rose-500/20'
+              }`}>
+                <span className="text-gray-400">
+                  Transfers this week
+                </span>
+                <span className={`font-medium ${transferStatus.remaining > 0 ? 'text-gray-200' : 'text-rose-400'}`}>
+                  {transferStatus.remaining > 0
+                    ? `${transferStatus.remaining} remaining`
+                    : 'Limit reached · earn XP for more'}
+                </span>
+              </div>
+            )}
+
             {/* Submit Button */}
-            <div className="mt-4">
+            <div className="mt-3">
               {!isConnected ? (
                 <div className="p-4 bg-gray-800/50 rounded-lg text-center">
                   <p className="text-gray-400 text-sm mb-2">Sign in to submit your team</p>

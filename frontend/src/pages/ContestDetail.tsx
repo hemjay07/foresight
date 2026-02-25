@@ -414,7 +414,7 @@ export default function ContestDetail() {
         </button>
 
         {/* Contest Header */}
-        <div className={`rounded-2xl border border-gray-700 bg-gradient-to-br ${config.bgGradient} p-6 mb-6`}>
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className={`p-4 rounded-xl bg-gradient-to-br ${config.gradient}`}>
@@ -554,20 +554,22 @@ export default function ContestDetail() {
             )}
           </div>
         ) : contest.status === 'open' ? (
-          <div className={`bg-gradient-to-r ${config.gradient} rounded-xl p-4 mb-6 flex items-center justify-between`}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Play size={24} weight="fill" className="text-white" />
+              <div className={`p-2 rounded-lg bg-gradient-to-br ${config.gradient}`}>
+                <Play size={18} weight="fill" className="text-white" />
+              </div>
               <div>
                 <p className="font-bold text-white">Ready to compete?</p>
-                <p className="text-sm text-white/80">Draft your team and enter the contest!</p>
+                <p className="text-sm text-gray-400">Draft your team and enter the contest!</p>
               </div>
             </div>
             <button
               onClick={handleEnterContest}
-              className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+              className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-gray-950 rounded-lg font-bold transition-colors flex items-center gap-2 text-sm"
             >
               {contest.isFree ? 'Enter Free' : `Enter (${contest.entryFeeFormatted})`}
-              <CaretRight size={20} weight="bold" />
+              <CaretRight size={16} weight="bold" />
             </button>
           </div>
         ) : (
@@ -584,25 +586,25 @@ export default function ContestDetail() {
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab('leaderboard')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-colors text-sm ${
               activeTab === 'leaderboard'
-                ? `bg-gradient-to-r ${config.gradient} text-white`
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                ? 'bg-gold-500/10 text-gold-400 border border-gold-500/30'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-transparent'
             }`}
           >
-            <ChartLineUp size={20} />
+            <ChartLineUp size={18} />
             Leaderboard ({entries.length})
           </button>
           {myEntry && (
             <button
               onClick={() => setActiveTab('myteam')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold transition-colors text-sm ${
                 activeTab === 'myteam'
-                  ? `bg-gradient-to-r ${config.gradient} text-white`
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  ? 'bg-gold-500/10 text-gold-400 border border-gold-500/30'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-transparent'
               }`}
             >
-              <Star size={20} />
+              <Star size={18} />
               My Team
             </button>
           )}

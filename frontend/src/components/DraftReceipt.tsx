@@ -77,7 +77,7 @@ export default function DraftReceipt({
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-700/40 bg-gray-800/30">
         <div className="flex items-center gap-1.5">
           <CheckCircle size={13} weight="fill" className="text-emerald-400" />
-          <span className="text-xs text-gray-400">Immutable · cannot be altered</span>
+          <span className="text-xs text-gray-400">Sealed on Solana at contest lock</span>
         </div>
         <a
           href="https://www.usetapestry.dev"

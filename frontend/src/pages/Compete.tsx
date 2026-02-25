@@ -148,6 +148,9 @@ export default function Compete() {
   // Data states
   const [fsLeaders, setFsLeaders] = useState<FsLeaderEntry[]>([]);
   const [fsTotal, setFsTotal] = useState(0);
+  const [fsHasMore, setFsHasMore] = useState(false);
+  const [fsOffset, setFsOffset] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [fantasyLeaders, setFantasyLeaders] = useState<FantasyLeaderTeam[]>([]);
   const [xpLeaders, setXpLeaders] = useState<XPLeaderUser[]>([]);
   const [userPosition, setUserPosition] = useState<{ rank: number; percentile: number } | null>(null);
@@ -175,14 +178,15 @@ export default function Compete() {
     setSearchParams(params, { replace: true });
   }, [mainTab, rankingsSubTab]);
 
-  // Fetch data when tabs change
+  // Fetch data when tabs change (also re-fetch when auth resolves after reload)
   useEffect(() => {
     if (mainTab === 'rankings') {
-      fetchRankingsData();
+      setFsOffset(0);
+      fetchRankingsData(0);
     } else {
       fetchContestsData();
     }
-  }, [mainTab, rankingsSubTab, fsTimeframe]);
+  }, [mainTab, rankingsSubTab, fsTimeframe, isConnected]);
 
   // Fetch who we follow (for friends tab + follow buttons)
   useEffect(() => {
@@ -225,28 +229,24 @@ export default function Compete() {
       .catch(() => {});
   }, [fsLeaders]);
 
-  const fetchRankingsData = async () => {
+  const FS_PAGE_SIZE = 25;
+
+  const fetchRankingsData = async (offset = 0) => {
     try {
-      setLoading(true);
+      if (offset === 0) setLoading(true);
+      else setLoadingMore(true);
 
       if (rankingsSubTab === 'fs') {
-        // For "friends" tab, fetch all-time data then filter client-side
+        // Always fetch all-time data; friends filtering done client-side in filteredFsLeaders memo
         const actualTimeframe = fsTimeframe === 'friends' ? 'all_time' : fsTimeframe;
         const response = await axios.get(`${API_URL}/api/v2/fs/leaderboard`, {
-          params: { type: actualTimeframe, limit: 50 },
+          params: { type: actualTimeframe, limit: FS_PAGE_SIZE, offset },
         });
         if (response.data.success) {
-          let entries = response.data.data.entries || [];
-          // If friends filter, filter to only followed users
-          if (fsTimeframe === 'friends') {
-            entries = entries.filter((e: FsLeaderEntry) =>
-              e.tapestryUserId && followingIds.has(e.tapestryUserId)
-            );
-            // Re-rank
-            entries = entries.map((e: FsLeaderEntry, idx: number) => ({ ...e, rank: idx + 1 }));
-          }
-          setFsLeaders(entries);
-          setFsTotal(fsTimeframe === 'friends' ? entries.length : (response.data.data.total || 0));
+          const entries = response.data.data.entries || [];
+          setFsLeaders(prev => offset === 0 ? entries : [...prev, ...entries]);
+          setFsTotal(response.data.data.total || entries.length);
+          setFsHasMore(response.data.data.hasMore ?? false);
         }
 
         // Get user position (not for friends tab)
@@ -279,7 +279,14 @@ export default function Compete() {
       console.error('Error fetching rankings:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  };
+
+  const loadMoreRankings = () => {
+    const nextOffset = fsOffset + FS_PAGE_SIZE;
+    setFsOffset(nextOffset);
+    fetchRankingsData(nextOffset);
   };
 
   const fetchContestsData = async () => {
@@ -332,12 +339,19 @@ export default function Compete() {
 
   const enteredContestIds = useMemo(() => new Set(myEntries.map(e => e.contestId)), [myEntries]);
 
-  const filteredFsLeaders = useMemo(() =>
-    searchQuery.trim()
-      ? fsLeaders.filter(e => (e.username || '').toLowerCase().includes(searchQuery.toLowerCase()))
-      : fsLeaders,
-    [fsLeaders, searchQuery]
-  );
+  const filteredFsLeaders = useMemo(() => {
+    // Step 1: friends filter (reactive to followingIds — avoids race condition on load)
+    let result = fsTimeframe === 'friends'
+      ? fsLeaders
+          .filter(e => e.tapestryUserId && followingIds.has(e.tapestryUserId))
+          .map((e, idx) => ({ ...e, rank: idx + 1 }))
+      : fsLeaders;
+    // Step 2: search filter
+    if (searchQuery.trim()) {
+      result = result.filter(e => (e.username || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return result;
+  }, [fsLeaders, searchQuery, fsTimeframe, followingIds]);
 
   // Helpers
   const getRankDisplay = (rank: number) => {
@@ -506,8 +520,16 @@ export default function Compete() {
                 placeholder="Search players..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-7 pr-3 py-1.5 text-xs bg-gray-800/50 border border-gray-700/50 rounded-lg text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-600 w-36 focus:w-44 transition-all"
+                className="pl-7 pr-6 py-1.5 text-xs bg-gray-800/50 border border-gray-700/50 rounded-lg text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-600 w-36 focus:w-44 transition-all"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
 
@@ -534,7 +556,11 @@ export default function Compete() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500">{fsTotal.toLocaleString()} players</span>
+                  <span className="text-sm text-gray-500">
+                    {fsTimeframe === 'friends'
+                      ? `${filteredFsLeaders.length} friend${filteredFsLeaders.length !== 1 ? 's' : ''}`
+                      : `${fsTotal.toLocaleString()} players`}
+                  </span>
                   <span className="flex items-center gap-1.5 text-xs text-emerald-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Live
@@ -620,18 +646,15 @@ export default function Compete() {
                                 variant="minimal"
                               />
                             </span>
-                            {/* On-chain: icon-only dot, tooltip explains */}
-                            {entry.tapestryUserId && (() => {
-                              const repTier = getReputationTier(rank, fsTotal);
-                              return (
-                                <span
-                                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-800 ${repTier.color}`}
-                                  title={`${repTier.label} · Verified on Tapestry Protocol`}
-                                >
-                                  <CheckCircle size={10} weight="fill" />
-                                </span>
-                              );
-                            })()}
+                            {/* On-chain dot: cyan = profile verified on Tapestry */}
+                            {entry.tapestryUserId && (
+                              <span
+                                className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-800 text-cyan-400"
+                                title="Profile verified on-chain via Tapestry Protocol"
+                              >
+                                <CheckCircle size={10} weight="fill" />
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -640,7 +663,12 @@ export default function Compete() {
                           <div className="hidden sm:block shrink-0">
                             <FollowButton
                               targetProfileId={entry.tapestryUserId}
-                              initialFollowing={followStates[entry.tapestryUserId] || false}
+                              targetUsername={entry.username}
+                              initialFollowing={
+                                followStates[entry.tapestryUserId] !== undefined
+                                  ? followStates[entry.tapestryUserId]
+                                  : followingIds.has(entry.tapestryUserId)
+                              }
                               size="sm"
                               onFollowChange={(following) => {
                                 setFollowStates((prev) => ({ ...prev, [entry.tapestryUserId!]: following }));
@@ -670,7 +698,7 @@ export default function Compete() {
                   );
                 })}
 
-                {fsLeaders.length === 0 && fsTimeframe === 'friends' && (
+                {filteredFsLeaders.length === 0 && fsTimeframe === 'friends' && !searchQuery && (
                   <div className="p-12 text-center">
                     <Users size={40} className="mx-auto mb-3 text-gray-600" />
                     <h3 className="text-lg font-semibold text-white mb-2">No friends yet</h3>
@@ -684,26 +712,56 @@ export default function Compete() {
                   </div>
                 )}
 
-                {fsLeaders.length === 0 && fsTimeframe !== 'friends' && (
+                {filteredFsLeaders.length === 0 && fsTimeframe !== 'friends' && !searchQuery && (
                   <div className="p-12 text-center">
                     <Sparkle size={40} className="mx-auto mb-3 text-gray-600" />
                     <p className="text-gray-400">No rankings yet</p>
                   </div>
                 )}
+
+                {filteredFsLeaders.length === 0 && searchQuery && (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-500 text-sm">No players matching "{searchQuery}"</p>
+                  </div>
+                )}
               </div>
+
+              {/* Load More — only for non-friends, non-search views */}
+              {fsHasMore && fsTimeframe !== 'friends' && !searchQuery && (
+                <div className="px-4 py-3 border-t border-gray-800 flex items-center justify-center">
+                  <button
+                    onClick={loadMoreRankings}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        Load more players
+                        <span className="text-xs text-gray-600">({fsTotal - fsLeaders.length} remaining)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
               {/* Tapestry verification footer */}
               {fsLeaders.length > 0 && (
-                <div className="px-4 py-2 border-t border-gray-800 flex items-center justify-between">
-                  <p className="text-[10px] text-gray-600 flex items-center gap-1">
+                <div className="px-4 py-2.5 border-t border-gray-800 flex items-center justify-between gap-4">
+                  <p className="text-[10px] text-gray-600 flex items-center gap-1.5">
                     <Sparkle size={10} weight="fill" className="text-gold-400/50" />
                     All scores verified on Solana via Tapestry Protocol
                   </p>
-                  {fsTotal > 0 && (
-                    <span className="text-[10px] text-gray-600">
-                      {fsTotal.toLocaleString()} profiles on-chain
+                  <span className="text-[10px] text-gray-600 flex items-center gap-1 shrink-0">
+                    <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-800 text-cyan-400">
+                      <CheckCircle size={9} weight="fill" />
                     </span>
-                  )}
+                    = profile on-chain
+                  </span>
                 </div>
               )}
             </div>
@@ -802,24 +860,85 @@ export default function Compete() {
 
       {/* Contests Tab */}
       {mainTab === 'contests' && (
-        <div className="space-y-4">
-          {/* My Entries Section — Compact Horizontal Strip */}
-          {myEntries.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap mb-4">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Your Entries</span>
-              <span className="text-xs text-gray-500">({myEntries.length})</span>
-              {myEntries.map((entry) => (
-                <button
-                  key={entry.contestId}
-                  onClick={() => navigate(`/contest/${entry.contestId}`)}
-                  className="px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs hover:bg-gray-700 transition-colors whitespace-nowrap"
-                >
-                  <span className="text-white font-medium">{entry.contestName}</span>
-                  <span className="text-gray-500 ml-1">
-                    {entry.rank ? `#${entry.rank}` : 'Pending'} • {entry.score > 0 ? `${entry.score.toFixed(0)}pts` : '-'}
-                  </span>
-                </button>
-              ))}
+        <div className="space-y-5">
+
+          {/* ── My Active Contests ─────────────────────────────────────────── */}
+          {!loading && myEntries.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ChartLineUp size={15} weight="fill" className="text-gold-400" />
+                <span className="text-sm font-bold text-white">My Active Contests</span>
+                <span className="text-xs text-gray-500 font-medium">({myEntries.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {myEntries.map((entry) => {
+                  const cfg = CONTEST_CONFIG[entry.typeCode] || CONTEST_CONFIG.WEEKLY_STARTER;
+                  const EntryIcon = cfg.icon;
+                  const getRankColor = (r: number | null) => {
+                    if (!r) return 'text-gray-400';
+                    if (r === 1) return 'text-gold-400';
+                    if (r === 2) return 'text-cyan-400';
+                    if (r === 3) return 'text-emerald-400';
+                    return 'text-white';
+                  };
+                  return (
+                    <button
+                      key={entry.contestId}
+                      onClick={() => navigate(`/contest/${entry.contestId}`)}
+                      className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-gold-500/40 hover:bg-gray-800/60 transition-all text-left group"
+                    >
+                      <div className={`p-2.5 rounded-lg bg-gradient-to-br ${cfg.gradient} shrink-0`}>
+                        <EntryIcon size={16} weight="fill" className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-white text-sm truncate leading-tight">
+                          {entry.contestName}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {entry.rank ? (
+                            <span className={`text-sm font-bold ${getRankColor(entry.rank)}`}>
+                              #{entry.rank}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">Pending</span>
+                          )}
+                          {entry.score > 0 && (
+                            <span className="text-xs text-gray-500">{entry.score.toFixed(0)} pts</span>
+                          )}
+                          {entry.status === 'finalized' && (
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                              FINAL
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <CaretRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Start Here callout (new users only) ────────────────────────── */}
+          {!loading && isConnected && myEntries.length === 0 && startHereContestId && (
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+              <div className="p-2.5 rounded-lg bg-emerald-500/20 shrink-0">
+                <Gift size={20} weight="fill" className="text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white text-sm">New here? Start with the Free League</p>
+                <p className="text-xs text-gray-400 mt-0.5">No entry fee · Draft 5 CT influencers · Win real prizes</p>
+              </div>
+              <button
+                onClick={() => {
+                  const freeContest = filteredContests.find(c => c.isFree);
+                  if (freeContest) handleEnterContest(freeContest);
+                }}
+                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm transition-colors whitespace-nowrap shrink-0"
+              >
+                Enter Free →
+              </button>
             </div>
           )}
 
@@ -832,9 +951,109 @@ export default function Compete() {
             </div>
           )}
 
-          {/* ── Signature Leagues (pinned at top, full width) ─────────────────────────── */}
+          {/* ── Regular Contests ──────────────────────────────────────────── */}
+          {!loading && filteredContests.length > 0 && (
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredContests.map((contest) => {
+                  const config = CONTEST_CONFIG[contest.typeCode] || CONTEST_CONFIG.WEEKLY_STARTER;
+                  const Icon = config.icon;
+                  const hasEntered = enteredContestIds.has(contest.id);
+
+                  return (
+                    <div
+                      key={contest.id}
+                      className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 hover:bg-gray-800/80 transition-all group"
+                    >
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg bg-gradient-to-br ${config.gradient}`}>
+                              <Icon size={18} weight="fill" className="text-white" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-white">{contest.name || contest.typeName}</h4>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-xs ${config.color}`}>{contest.typeName}</span>
+                                {contest.isFree && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
+                                    FREE
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {hasEntered && (
+                            <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">
+                              ENTERED
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 mb-4">
+                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
+                            <div className={`text-sm font-semibold ${contest.isFree ? 'text-emerald-400' : 'text-white'}`}>
+                              {contest.isFree ? 'FREE' : contest.entryFeeFormatted}
+                            </div>
+                            <div className="text-[10px] text-gray-500">Entry</div>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
+                            <div className="text-sm font-semibold text-white">
+                              ${(contest.prizePool * solPrice).toFixed(2)}
+                            </div>
+                            <div className="text-[10px] text-gray-500 font-mono">{contest.prizePoolFormatted}</div>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
+                            <div className="text-sm font-semibold text-white">{contest.playerCount}</div>
+                            <div className="text-[10px] text-gray-500">Players</div>
+                          </div>
+                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
+                            <div className="text-sm font-semibold text-white flex items-center justify-center gap-1">
+                              <Clock size={12} />
+                              {getTimeRemaining(contest.lockTime)}
+                            </div>
+                            <div className="text-[10px] text-gray-500">Left</div>
+                          </div>
+                        </div>
+
+                        {hasEntered ? (
+                          <button
+                            onClick={() => navigate(`/contest/${contest.id}`)}
+                            className="w-full py-2 rounded-lg bg-gray-700 text-white font-medium flex items-center justify-center gap-2 hover:bg-gray-600 transition-colors"
+                          >
+                            <ChartLineUp size={16} />
+                            View Entry
+                            <CaretRight size={14} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleEnterContest(contest)}
+                            className="w-full py-2 rounded-lg bg-gold-500 hover:bg-gold-400 text-gray-950 font-semibold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            {contest.isFree ? (
+                              <>
+                                <Gift size={16} weight="fill" />
+                                Enter Free
+                              </>
+                            ) : (
+                              <>
+                                <Wallet size={16} weight="fill" />
+                                Enter ({contest.entryFeeFormatted})
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Signature Leagues (at bottom — don't dominate) ────────────── */}
           {!loading && signatureContests.length > 0 && (
-            <div className="mb-6">
+            <div className="mt-2">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkle size={16} weight="fill" className="text-gold-400" />
                 <span className="text-sm font-bold text-gold-400 uppercase tracking-wide">Signature Leagues</span>
@@ -956,111 +1175,6 @@ export default function Compete() {
                           >
                             <Crown size={16} weight="fill" />
                             Join {contest.creatorHandle ? `@${contest.creatorHandle}'s League` : 'Signature League'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── Regular Contests ──────────────────────────────────────────── */}
-          {!loading && (signatureContests.length > 0 || filteredContests.length > 0) && (
-            <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredContests.map((contest) => {
-                  const config = CONTEST_CONFIG[contest.typeCode] || CONTEST_CONFIG.WEEKLY_STARTER;
-                  const Icon = config.icon;
-                  const hasEntered = enteredContestIds.has(contest.id);
-
-                  return (
-                    <div
-                      key={contest.id}
-                      className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 hover:bg-gray-800/80 transition-all group"
-                    >
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg bg-gradient-to-br ${config.gradient}`}>
-                              <Icon size={18} weight="fill" className="text-white" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-white">{contest.name || contest.typeName}</h4>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-xs ${config.color}`}>{contest.typeName}</span>
-                                {contest.isFree && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
-                                    FREE
-                                  </span>
-                                )}
-                                {contest.id === startHereContestId && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-400">
-                                    ⭐ Start here
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {hasEntered && (
-                            <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">
-                              ENTERED
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-2 mb-4">
-                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
-                            <div className={`text-sm font-semibold ${contest.isFree ? 'text-emerald-400' : 'text-white'}`}>
-                              {contest.isFree ? 'FREE' : contest.entryFeeFormatted}
-                            </div>
-                            <div className="text-[10px] text-gray-500">Entry</div>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
-                            <div className="text-sm font-semibold text-white">
-                              ${(contest.prizePool * solPrice).toFixed(2)}
-                            </div>
-                            <div className="text-[10px] text-gray-500 font-mono">{contest.prizePoolFormatted}</div>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
-                            <div className="text-sm font-semibold text-white">{contest.playerCount}</div>
-                            <div className="text-[10px] text-gray-500">Players</div>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-gray-800/60">
-                            <div className="text-sm font-semibold text-white flex items-center justify-center gap-1">
-                              <Clock size={12} />
-                              {getTimeRemaining(contest.lockTime)}
-                            </div>
-                            <div className="text-[10px] text-gray-500">Left</div>
-                          </div>
-                        </div>
-
-                        {hasEntered ? (
-                          <button
-                            onClick={() => navigate(`/contest/${contest.id}`)}
-                            className="w-full py-2 rounded-lg bg-gray-700 text-white font-medium flex items-center justify-center gap-2 hover:bg-gray-600 transition-colors"
-                          >
-                            <ChartLineUp size={16} />
-                            View Entry
-                            <CaretRight size={14} />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleEnterContest(contest)}
-                            className="w-full py-2 rounded-lg bg-gold-500 hover:bg-gold-400 text-gray-950 font-semibold flex items-center justify-center gap-2 transition-colors"
-                          >
-                            {contest.isFree ? (
-                              <>
-                                <Gift size={16} weight="fill" />
-                                Enter Free
-                              </>
-                            ) : (
-                              <>
-                                <Wallet size={16} weight="fill" />
-                                Enter ({contest.entryFeeFormatted})
-                              </>
-                            )}
                           </button>
                         )}
                       </div>

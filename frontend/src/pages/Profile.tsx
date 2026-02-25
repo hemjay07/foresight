@@ -9,7 +9,7 @@ import axios from 'axios';
 import {
   Users, Trophy, Crown, Sparkle, Star, Fire, TrendUp,
   CheckCircle, Lock, Lightning, Medal, Gear, PencilSimple,
-  Check, X, CaretRight, ChartBar, GameController, Share,
+  Check, X, CaretRight, ArrowRight, ChartBar, GameController, Share,
   Copy, UserCircle, Target, Binoculars, Trash, TwitterLogo,
 } from '@phosphor-icons/react';
 import ForesightScoreDisplay from '../components/ForesightScoreDisplay';
@@ -23,7 +23,47 @@ import { useAuth } from '../hooks/useAuth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-type ProfileTab = 'overview' | 'teams' | 'watchlist' | 'stats';
+type ProfileTab = 'overview' | 'teams' | 'watchlist' | 'stats' | 'history';
+
+interface HistoryPick {
+  id: number;
+  name: string;
+  handle: string;
+  tier: string;
+  avatarUrl: string | null;
+  price: number;
+  isCaptain: boolean;
+  points: number;
+  effectivePoints: number;
+}
+
+interface HistoryEntry {
+  contestId: number;
+  contestName: string;
+  contestType: string;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+  score: number;
+  rank: number | null;
+  totalPlayers: number | null;
+  prizeWon: number;
+  claimed: boolean;
+  scoreBreakdown: { activity: number; engagement: number; growth: number; viral: number };
+  picks: HistoryPick[];
+  tapestryVerified: boolean;
+  onChainId: string;
+  enteredAt: string;
+}
+
+interface CareerStats {
+  totalContests: number;
+  wins: number;
+  topThree: number;
+  avgScore: number;
+  bestScore: number;
+  bestRank: number | null;
+}
 
 interface Pick {
   id: number;
@@ -100,9 +140,15 @@ export default function Profile() {
   });
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const [tapestryStatus, setTapestryStatus] = useState<{ connected: boolean; tapestryUserId: string | null }>({ connected: false, tapestryUserId: null });
+  const [tapestryStatus, setTapestryStatus] = useState<{ connected: boolean; tapestryUserId: string | null; walletAddress: string | null }>({ connected: false, tapestryUserId: null, walletAddress: null });
   const [socialCounts, setSocialCounts] = useState<{ followers: number; following: number }>({ followers: 0, following: 0 });
   const [tapestryContent, setTapestryContent] = useState<Array<{ id: string; properties: Record<string, string>; likeCount: number; commentCount: number }>>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [careerStats, setCareerStats] = useState<CareerStats | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [expandedEntry, setExpandedEntry] = useState<number | null>(null);
 
   useEffect(() => {
     setSearchParams({ tab: activeTab }, { replace: true });
@@ -167,14 +213,23 @@ export default function Profile() {
         .then((res) => {
           if (res.data?.data) {
             const tId = res.data.data.tapestryUserId;
+            // wallet_address from our DB has correct case; Tapestry API lowercases it
+            const wa = res.data.data.walletAddress;
+            // Only use as SSE link if it's a real Solana address (base58, not 0x...)
+            const isSolana = wa && !wa.startsWith('0x') && wa.length >= 32 && wa.length <= 44;
             setTapestryStatus({
               connected: res.data.data.connected,
               tapestryUserId: tId,
+              walletAddress: isSolana ? wa : null,
             });
             // If connected, fetch social counts + content from Tapestry
             if (tId) {
+              // Followers from Tapestry, Following from local DB (source of truth)
               axios.get(`${API_URL}/api/tapestry/social-counts/${tId}`, { headers })
-                .then((r) => { if (r.data?.data) setSocialCounts(r.data.data); })
+                .then((r) => { if (r.data?.data) setSocialCounts(prev => ({ ...prev, followers: r.data.data.followers ?? 0 })); })
+                .catch(() => {});
+              axios.get(`${API_URL}/api/tapestry/my-following`, { headers })
+                .then((r) => { if (r.data?.data?.following) setSocialCounts(prev => ({ ...prev, following: r.data.data.following.length })); })
                 .catch(() => {});
               axios.get(`${API_URL}/api/tapestry/content/${tId}`, { headers })
                 .then((r) => { if (r.data?.data?.content) setTapestryContent(r.data.data.content); })
@@ -187,6 +242,32 @@ export default function Profile() {
       console.error('Error fetching user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async (offset = 0) => {
+    try {
+      setHistoryLoading(true);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      const res = await axios.get(`${API_URL}/api/v2/me/history?limit=20&offset=${offset}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success && res.data?.data) {
+        const d = res.data.data;
+        if (offset === 0) {
+          setHistory(d.history);
+        } else {
+          setHistory(prev => [...prev, ...d.history]);
+        }
+        setCareerStats(d.careerStats);
+        setHistoryTotal(d.total);
+        setHistoryLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -258,11 +339,18 @@ export default function Profile() {
     total_points: pick.total_points || 0,
   }));
 
+  useEffect(() => {
+    if (activeTab === 'history' && !historyLoaded && !historyLoading && isConnected) {
+      fetchHistory(0);
+    }
+  }, [activeTab, isConnected]);
+
   const tabs: { id: ProfileTab; label: string; icon: React.ElementType; count?: number }[] = [
     { id: 'overview', label: 'Overview', icon: UserCircle },
     { id: 'teams', label: 'Teams', icon: Trophy },
+    { id: 'history', label: 'History', icon: ChartBar },
     { id: 'watchlist', label: 'Watchlist', icon: Binoculars, count: watchlist.length },
-    { id: 'stats', label: 'Stats', icon: ChartBar },
+    { id: 'stats', label: 'Stats', icon: Star },
   ];
 
   if (!isConnected) {
@@ -605,92 +693,85 @@ export default function Profile() {
             </Link>
           </div>
 
-          {/* Tapestry Social Graph */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-gold-500/20 flex items-center justify-center">
-                  <Lightning size={20} weight="fill" className="text-gold-400" />
-                </div>
+          {/* Tapestry On-Chain Identity */}
+          <div className="border border-gray-800 rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 bg-gray-900/80 border-b border-gray-800">
+              <div className="flex items-center gap-3">
+                <img src="/tapestry-icon.png" alt="Tapestry" className="w-6 h-6 invert opacity-80" />
                 <div>
-                  <h3 className="font-semibold text-white">Tapestry Social Graph</h3>
-                  <p className="text-xs text-gray-500">On-chain social identity powered by Tapestry Protocol</p>
+                  <h3 className="font-semibold text-white text-sm">Tapestry Protocol</h3>
+                  <p className="text-xs text-gray-500">Your on-chain identity &amp; history on Solana</p>
                 </div>
               </div>
-              {tapestryStatus.connected && (
-                <span className="flex items-center gap-1 text-xs bg-gold-500/10 text-gold-400 px-2 py-1 rounded-full">
-                  <CheckCircle size={12} weight="fill" />
-                  On-chain
+              {tapestryStatus.connected ? (
+                <span className="flex items-center gap-1.5 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live on Solana
                 </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-gray-500 px-2 py-1">Not connected</span>
               )}
             </div>
 
             {tapestryStatus.connected ? (
-              <div className="space-y-4">
-                {/* Social Counts */}
+              <div className="p-5 space-y-5">
+                {/* Stats Row */}
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-white">{socialCounts.followers}</div>
-                    <div className="text-xs text-gray-500">Followers</div>
+                  <div className="bg-gray-800/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-white">{socialCounts.followers}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Followers</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-white">{socialCounts.following}</div>
-                    <div className="text-xs text-gray-500">Following</div>
+                  <div className="bg-gray-800/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-white">{socialCounts.following}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Following</div>
                   </div>
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-gold-400">
-                      {tapestryContent.filter(i => i.properties.type === 'draft_team').length}
+                  <div className="bg-gray-800/40 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-gold-400">
+                      {tapestryContent.filter(i => i.properties?.type === 'draft_team').length}
                     </div>
-                    <div className="text-xs text-gray-500">Teams on Solana</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Teams on-chain</div>
                   </div>
                 </div>
 
-                {/* On-chain Content */}
-                {tapestryContent.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-2">Stored on Tapestry</h4>
-                    <div className="space-y-2">
-                      {tapestryContent.slice(0, 5).map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-2.5 bg-gray-800/30 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              item.properties.type === 'draft_team' ? 'bg-gold-500' : 'bg-cyan-500'
-                            }`} />
-                            <span className="text-sm text-white">
-                              {item.properties.type === 'draft_team' ? 'Draft Team' : 'Contest Score'}
-                            </span>
-                            {item.properties.contest_id && (
-                              <span className="text-xs text-gray-500">Contest #{item.properties.contest_id}</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
-                            {item.likeCount > 0 && <span>{item.likeCount} likes</span>}
-                            {item.commentCount > 0 && <span>{item.commentCount} comments</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* On-chain record count */}
+                <div className="bg-gray-800/20 rounded-lg p-4 text-sm text-gray-400 leading-relaxed">
+                  {tapestryContent.filter(i => i.properties?.type === 'draft_team').length > 0 ? (
+                    <>
+                      Your{' '}
+                      <span className="text-white font-medium">
+                        {tapestryContent.filter(i => i.properties?.type === 'draft_team').length} draft {tapestryContent.filter(i => i.properties?.type === 'draft_team').length === 1 ? 'team' : 'teams'}
+                      </span>{' '}
+                      are permanently recorded on Solana via Tapestry Protocol — immutable and verifiable by anyone.
+                    </>
+                  ) : (
+                    'Submit a team to permanently record your picks on Solana via Tapestry Protocol.'
+                  )}
+                </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-                  <span className="font-mono text-xs text-gray-500 select-all" title="Your Tapestry profile ID">
-                    {tapestryStatus.tapestryUserId?.slice(0, 8)}...{tapestryStatus.tapestryUserId?.slice(-6)}
-                  </span>
-                  <a
-                    href={`https://www.usetapestry.dev/profiles/${tapestryStatus.tapestryUserId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-gold-400 hover:text-gold-300 transition-colors flex items-center gap-1"
+                {/* Identity footer */}
+                <div className="flex items-center justify-between pt-1 border-t border-gray-800/60">
+                  <div>
+                    <div className="text-xs text-gray-600 mb-0.5">Your Tapestry identity</div>
+                    <span className="font-mono text-xs text-gray-400 select-all">
+                      {tapestryStatus.tapestryUserId?.slice(0, 10)}...{tapestryStatus.tapestryUserId?.slice(-8)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className="flex items-center gap-1.5 text-xs text-gold-400 hover:text-gold-300 transition-colors font-medium"
                   >
-                    View on Tapestry →
-                  </a>
+                    View contest history
+                    <ArrowRight size={12} />
+                  </button>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">
-                Sign in to link your Tapestry social profile. Teams and scores will be published to the on-chain social graph.
-              </p>
+              <div className="p-5">
+                <p className="text-sm text-gray-500">
+                  Sign in to link your on-chain identity. Your draft teams and contest scores will be published to Solana via Tapestry — permanently verifiable by anyone.
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -895,6 +976,214 @@ export default function Profile() {
                 <Binoculars size={20} />
                 Browse Intel
               </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* History Tab */}
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          {/* Career Stats Summary */}
+          {careerStats && careerStats.totalContests > 0 && (
+            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-white">{careerStats.totalContests}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Contests</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gold-400">{careerStats.wins}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Wins</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{careerStats.bestScore}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Best Score</div>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-800 flex justify-between text-sm">
+                <span className="text-gray-500">Avg score: <span className="text-white font-medium">{careerStats.avgScore} pts</span></span>
+                {careerStats.bestRank && (
+                  <span className="text-gray-500">Best rank: <span className="text-yellow-400 font-medium">#{careerStats.bestRank}</span></span>
+                )}
+                {careerStats.topThree > 0 && (
+                  <span className="text-gray-500">Top 3: <span className="text-emerald-400 font-medium">{careerStats.topThree}x</span></span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {historyLoading && history.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">Loading your history...</p>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-12 text-center">
+              <Trophy size={40} className="mx-auto mb-3 text-gray-600" />
+              <h3 className="font-semibold text-white mb-1">No contests yet</h3>
+              <p className="text-gray-500 text-sm mb-4">Enter a contest to start building your career history</p>
+              <Link
+                to="/compete?tab=contests"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold-500 hover:bg-gold-600 rounded-lg text-gray-950 font-medium transition-colors text-sm"
+              >
+                <Crown size={16} />
+                Browse Contests
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {history.map((entry) => {
+                const isExpanded = expandedEntry === entry.contestId;
+                const hasResult = entry.status === 'finalized' || entry.status === 'completed';
+                return (
+                  <div key={`${entry.contestId}-${entry.enteredAt}`} className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
+                    {/* Row header */}
+                    <button
+                      onClick={() => setExpandedEntry(isExpanded ? null : entry.contestId)}
+                      className="w-full flex items-center justify-between p-4 hover:bg-gray-800/30 transition-colors text-left"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-white text-sm truncate">{entry.contestName}</span>
+                          {entry.tapestryVerified && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+                              <img src="/tapestry-icon.png" alt="" className="w-3 h-3 invert opacity-70" />
+                              Tapestry
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                          {entry.endDate && (
+                            <span>{new Date(entry.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          )}
+                          {entry.totalPlayers && <span>{entry.totalPlayers} players</span>}
+                          {!hasResult && <span className="text-cyan-400 capitalize">{entry.status}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 shrink-0 ml-3">
+                        <div className="text-right">
+                          {entry.rank && (
+                            <div className={`text-base font-bold ${entry.rank === 1 ? 'text-gold-400' : entry.rank <= 3 ? 'text-yellow-400' : 'text-white'}`}>
+                              #{entry.rank}
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-400">{entry.score} pts</div>
+                        </div>
+                        <CaretRight
+                          size={16}
+                          className={`text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Expanded picks */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-800 p-4 space-y-3">
+                        {/* Picks list */}
+                        {entry.picks.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {entry.picks.map((pick) => (
+                              <div key={pick.id} className="flex items-center gap-3 py-1">
+                                <div className="relative shrink-0">
+                                  <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden">
+                                    {pick.avatarUrl ? (
+                                      <img src={pick.avatarUrl} alt={pick.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                        <UserCircle size={20} />
+                                      </div>
+                                    )}
+                                  </div>
+                                  {pick.isCaptain && (
+                                    <Crown size={10} weight="fill" className="absolute -top-1 -right-1 text-gold-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm text-white font-medium truncate">{pick.name}</span>
+                                    {pick.isCaptain && (
+                                      <span className="text-xs text-gold-400 font-bold shrink-0">©</span>
+                                    )}
+                                    <span className={`text-xs px-1 py-0.5 rounded border font-medium shrink-0 ${getTierBadgeClasses(pick.tier)}`}>
+                                      {pick.tier}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs text-gray-500">@{pick.handle}</span>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className={`text-sm font-bold ${pick.isCaptain ? 'text-gold-400' : 'text-white'}`}>
+                                    {pick.effectivePoints} pts
+                                  </div>
+                                  {pick.isCaptain && (
+                                    <div className="text-xs text-gray-600">{pick.points} × 1.5</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 text-center py-2">Pick details not available</p>
+                        )}
+
+                        {/* Score breakdown — always show */}
+                        <div className="pt-2 border-t border-gray-800">
+                          <div className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">Score Breakdown</div>
+                          {!hasResult ? (
+                            <p className="text-xs text-gray-600 italic">Scores update every 6 hours · Final when contest ends</p>
+                          ) : (
+                            <div className="grid grid-cols-4 gap-2">
+                              <div className="bg-gray-800/40 rounded-lg p-2 text-center">
+                                <div className="text-sm font-bold text-white">{Math.round(entry.scoreBreakdown.activity)}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Activity</div>
+                              </div>
+                              <div className="bg-gray-800/40 rounded-lg p-2 text-center">
+                                <div className="text-sm font-bold text-cyan-400">{Math.round(entry.scoreBreakdown.engagement)}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Engage</div>
+                              </div>
+                              <div className="bg-gray-800/40 rounded-lg p-2 text-center">
+                                <div className="text-sm font-bold text-emerald-400">{Math.round(entry.scoreBreakdown.growth)}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Growth</div>
+                              </div>
+                              <div className="bg-gray-800/40 rounded-lg p-2 text-center">
+                                <div className="text-sm font-bold text-gold-400">{Math.round(entry.scoreBreakdown.viral)}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">Viral</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Prize */}
+                        {entry.prizeWon > 0 && (
+                          <div className="flex items-center justify-between pt-2 border-t border-gray-800 text-sm">
+                            <span className="text-gray-500">Prize won</span>
+                            <span className="text-emerald-400 font-medium">{entry.prizeWon} SOL {entry.claimed ? '· Claimed' : '· Unclaimed'}</span>
+                          </div>
+                        )}
+
+                        {/* Tapestry proof footer */}
+                        {entry.tapestryVerified && (
+                          <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
+                            <img src="/tapestry-icon.png" alt="Tapestry" className="w-3.5 h-3.5 invert opacity-50" />
+                            <span className="text-xs text-gray-600">Team picks permanently recorded on Solana via Tapestry Protocol</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Load more */}
+              {history.length < historyTotal && (
+                <button
+                  onClick={() => fetchHistory(history.length)}
+                  disabled={historyLoading}
+                  className="w-full py-3 text-sm text-gray-400 hover:text-white border border-gray-800 hover:border-gray-700 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {historyLoading ? 'Loading...' : `Load more (${historyTotal - history.length} remaining)`}
+                </button>
+              )}
             </div>
           )}
         </div>

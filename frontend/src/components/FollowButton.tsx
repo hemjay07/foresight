@@ -2,8 +2,8 @@
  * FollowButton — Follow/unfollow users via Tapestry social graph
  *
  * States:
- * - Not following: Cyan outline button "Follow"
- * - Following: Gold-bordered button "Following", rose hint on hover → "Unfollow"
+ * - Not following: Ghost gray button "Follow" — quiet, doesn't compete with scores
+ * - Following: Minimal check + text, rose hint on hover → "Unfollow"
  * - Loading: Spinner
  */
 
@@ -17,6 +17,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface FollowButtonProps {
   targetProfileId: string;
+  targetUsername?: string;
   initialFollowing?: boolean;
   size?: 'sm' | 'md';
   onFollowChange?: (isFollowing: boolean) => void;
@@ -25,6 +26,7 @@ interface FollowButtonProps {
 
 export default function FollowButton({
   targetProfileId,
+  targetUsername,
   initialFollowing = false,
   size = 'md',
   onFollowChange,
@@ -52,7 +54,7 @@ export default function FollowButton({
       const endpoint = isFollowing ? 'unfollow' : 'follow';
       await axios.post(
         `${API_URL}/api/tapestry/${endpoint}`,
-        { targetProfileId },
+        { targetProfileId, targetUsername },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -93,22 +95,22 @@ export default function FollowButton({
         onClick={handleToggle}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-all ${
+        className={`inline-flex items-center gap-1 rounded-md font-medium transition-all border ${
           isHovered
-            ? 'border-rose-500/50 bg-rose-500/10 text-rose-400'
-            : 'border-gold-500/30 bg-gold-500/10 text-gold-400'
-        } border ${
-          isSm ? 'px-2.5 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'
+            ? 'border-rose-500/30 bg-rose-500/5 text-rose-400'
+            : 'border-transparent bg-transparent text-gray-500'
+        } ${
+          isSm ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
         } ${className}`}
       >
         {isHovered ? (
           <>
-            <UserMinus size={isSm ? 12 : 14} weight="bold" />
+            <UserMinus size={isSm ? 11 : 13} weight="bold" />
             Unfollow
           </>
         ) : (
           <>
-            <Check size={isSm ? 12 : 14} weight="bold" />
+            <Check size={isSm ? 11 : 13} weight="bold" className="text-emerald-500" />
             Following
           </>
         )}
@@ -119,11 +121,11 @@ export default function FollowButton({
   return (
     <button
       onClick={handleToggle}
-      className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-all border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-500/50 ${
-        isSm ? 'px-2.5 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'
+      className={`inline-flex items-center gap-1 rounded-md font-medium transition-all border border-transparent text-gray-500 hover:border-gray-600 hover:bg-gray-800 hover:text-gray-200 ${
+        isSm ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
       } ${className}`}
     >
-      <UserPlus size={isSm ? 12 : 14} weight="bold" />
+      <UserPlus size={isSm ? 11 : 13} weight="bold" />
       Follow
     </button>
   );

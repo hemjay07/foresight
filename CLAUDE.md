@@ -86,7 +86,8 @@ Never just implement UI blindly. Always rethink from scratch to ensure we're usi
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | High-level context, current focus, quick reference |
-| `docs/design/REVAMP_TRACKER.md` | **Detailed page-by-page analysis and decisions** |
+| **`docs/design/DESIGN_PRINCIPLES.md`** | **⚠️ MUST READ before any design change** |
+| `docs/design/REVAMP_TRACKER.md` | Detailed page-by-page analysis and decisions |
 | `docs/design/DESIGN_TOKENS.md` | Color, typography, spacing specifications |
 | `docs/design/DESIGN_RESEARCH_PLAN.md` | Competitive analysis framework |
 
@@ -106,6 +107,21 @@ Never just implement UI blindly. Always rethink from scratch to ensure we're usi
 - Database: PostgreSQL
 - Chain: Base Sepolia
 - Icons: Phosphor Icons
+
+---
+
+## ⚠️ DESIGN PRINCIPLES — READ BEFORE ANY UI CHANGE
+
+**File:** `docs/design/DESIGN_PRINCIPLES.md`
+
+This document is the law for all visual decisions. Key rules to internalize:
+1. **Color in content, not chrome** — card borders/backgrounds are always gray; color belongs on icons and badges that mean something
+2. **Repeated actions whisper** — buttons on every row have no border, no background; only appear on hover
+3. **One gold CTA per context** — everything else is gray or ghost
+4. **Destructive actions hidden until hover** — no ambient negativity
+5. **No gradient card backgrounds** — gradients live inside small icons only
+
+If you're about to add a colored border, gradient background, or teal/colored button on a repeating element — stop and re-read the principles doc first.
 
 ---
 

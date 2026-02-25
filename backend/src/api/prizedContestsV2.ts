@@ -5,6 +5,7 @@ import foresightScoreService from '../services/foresightScoreService';
 import questService from '../services/questService';
 import tapestryService from '../services/tapestryService';
 import logger from '../utils/logger';
+import { getXPLevel } from '../utils/xp';
 import {
   Connection,
   Keypair,
@@ -302,45 +303,56 @@ router.get('/contests/:id/entries', async (req: Request, res: Response) => {
 
 /**
  * GET /api/v2/contests/:id/social-scouts
- * Returns entries in this contest made by users the current user follows on Tapestry.
- * Powers the "Scouting Panel" — see what your network has drafted before you lock.
+ * Returns entries in this contest made by users the current user follows.
+ * Matches by tapestry_user_id (primary) OR username (fallback).
+ * If nobody has entered this contest yet, falls back to their most recent entries
+ * from any other contest (for the "Rival Picks" panel to always show something useful).
  */
 router.get('/contests/:id/social-scouts', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user!.userId;
 
-    // 1. Get current user's tapestry profile ID
-    const currentUser = await db('users').where({ id: userId }).first();
-    if (!currentUser?.tapestry_user_id) {
-      return res.json({ scouts: [], message: 'No Tapestry profile connected' });
-    }
-
-    // 2. Get the contest so we know which entries table to use
+    // 1. Get the contest
     const contest = await db('prized_contests').where('id', id).first();
     if (!contest) {
       return res.status(404).json({ error: 'Contest not found' });
     }
 
-    // 3. Fetch who this user follows on Tapestry
-    let followingIds: string[] = [];
-    try {
-      const { getFollowing } = await import('../services/tapestryService');
-      const following = await getFollowing(currentUser.tapestry_user_id, 1, 100);
-      followingIds = (following || []).map((f) => f.id).filter(Boolean);
-    } catch {
-      return res.json({ scouts: [], message: 'Could not fetch following list' });
-    }
+    // 2. Fetch who this user follows from local DB (source of truth)
+    const follows = await db('user_follows')
+      .where('follower_user_id', userId)
+      .select('following_tapestry_profile_id', 'following_username');
 
-    if (followingIds.length === 0) {
+    if (follows.length === 0) {
       return res.json({ scouts: [], message: 'You are not following anyone yet' });
     }
 
-    // 4. Find users who have those tapestry IDs and have entered this contest
+    const followingIds = follows.map((f: any) => f.following_tapestry_profile_id).filter(Boolean);
+    const followingUsernames = follows.map((f: any) => f.following_username).filter(Boolean).map((u: string) => u.toLowerCase());
+
+    // Helper: build the WHERE clause matching by tapestry_user_id OR username
+    const buildFollowFilter = (query: any, table: string) => {
+      query.where(function(this: any) {
+        let added = false;
+        if (followingIds.length > 0) {
+          this.whereIn(`${table}.tapestry_user_id`, followingIds);
+          added = true;
+        }
+        if (followingUsernames.length > 0) {
+          if (added) {
+            this.orWhereRaw('LOWER(users.username) = ANY(?)', [followingUsernames]);
+          } else {
+            this.whereRaw('LOWER(users.username) = ANY(?)', [followingUsernames]);
+          }
+        }
+      });
+    };
+
+    // 3. Try to find entries for THIS specific contest first
     const entriesTable = contest.is_free ? 'free_league_entries' : 'prized_entries';
-    const scouts = await db(entriesTable)
+    const contestQuery = db(entriesTable)
       .join('users', `${entriesTable}.user_id`, 'users.id')
-      .whereIn('users.tapestry_user_id', followingIds)
       .where(`${entriesTable}.contest_id`, id)
       .select(
         `${entriesTable}.team_ids`,
@@ -348,28 +360,64 @@ router.get('/contests/:id/social-scouts', authenticate, async (req: Request, res
         `${entriesTable}.score`,
         'users.username',
         'users.tapestry_user_id',
+        db.raw('NULL::text as fallback_contest_name'),
       )
       .limit(10);
+    buildFollowFilter(contestQuery, 'users');
+    let scouts = await contestQuery;
+    let fromPreviousContest = false;
+
+    // 4. Fallback: if nobody has entered this contest yet, show their most recent entries from any contest
+    if (scouts.length === 0) {
+      const fallbackQuery = db('free_league_entries as e')
+        .join('users', 'e.user_id', 'users.id')
+        .join('prized_contests as c', 'e.contest_id', 'c.id')
+        .whereNot('e.contest_id', id) // exclude current contest to avoid confusion
+        .orderBy('e.created_at', 'desc')
+        .select(
+          'e.team_ids',
+          'e.captain_id',
+          'e.score',
+          'users.username',
+          'users.tapestry_user_id',
+          'c.name as fallback_contest_name',
+        )
+        .limit(10);
+      buildFollowFilter(fallbackQuery, 'users');
+
+      // Deduplicate: one entry per user (their most recent)
+      const allFallback = await fallbackQuery;
+      const seenUsers = new Set<string>();
+      scouts = allFallback.filter((s: any) => {
+        const key = s.username || s.tapestry_user_id;
+        if (!key || seenUsers.has(key)) return false;
+        seenUsers.add(key);
+        return true;
+      });
+      fromPreviousContest = scouts.length > 0;
+    }
 
     if (scouts.length === 0) {
-      return res.json({ scouts: [], message: 'None of your follows have entered this contest yet' });
+      return res.json({ scouts: [], message: 'None of your follows have entered any contests yet' });
     }
 
     // 5. Resolve captain handles
-    const captainIds = scouts.filter(s => s.captain_id).map(s => s.captain_id);
+    const captainIds = scouts.filter((s: any) => s.captain_id).map((s: any) => s.captain_id);
     const captains = captainIds.length > 0
       ? await db('influencers').whereIn('id', captainIds).select('id', 'twitter_handle', 'display_name')
       : [];
-    const captainMap = new Map(captains.map(c => [c.id, c]));
+    const captainMap = new Map(captains.map((c: any) => [c.id, c]));
 
     res.json({
-      scouts: scouts.map(s => ({
+      fromPreviousContest,
+      scouts: scouts.map((s: any) => ({
         username: s.username || 'Anonymous',
         tapestryUserId: s.tapestry_user_id,
         teamIds: s.team_ids,
         captainId: s.captain_id,
         captainHandle: s.captain_id ? captainMap.get(s.captain_id)?.twitter_handle : null,
         score: s.score,
+        contestName: s.fallback_contest_name || null,
       })),
     });
   } catch (error: any) {
@@ -552,6 +600,48 @@ router.post('/contests/:id/enter-free', authenticate, async (req: Request, res: 
  * PUT /api/v2/contests/:id/update-free-team
  * Update team selection for a free league entry
  */
+/**
+ * GET /api/v2/contests/:id/transfer-status
+ * Returns how many team updates the user has used/remaining for this contest
+ */
+router.get('/contests/:id/transfer-status', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const walletAddress = req.user!.walletAddress;
+    if (!walletAddress) return res.status(400).json({ success: false, error: 'No wallet connected' });
+
+    const user = await db('users').where('wallet_address', walletAddress.toLowerCase()).first();
+    const xpData = getXPLevel(user?.xp || 0);
+    const maxTransfers = xpData.levelInfo.maxTransfers;
+
+    const entry = await db('free_league_entries')
+      .where('contest_id', id)
+      .where('wallet_address', walletAddress.toLowerCase())
+      .first();
+
+    const transfersUsed = entry?.update_count || 0;
+
+    res.json({
+      success: true,
+      data: {
+        transfersAllowed: maxTransfers,
+        transfersUsed,
+        transfersRemaining: Math.max(0, maxTransfers - transfersUsed),
+        level: xpData.level,
+        isUnlimited: maxTransfers >= 999,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error getting transfer status:', error, { context: 'ContestsV2' });
+    res.status(500).json({ success: false, error: 'Failed to get transfer status' });
+  }
+});
+
+/**
+ * PUT /api/v2/contests/:id/update-free-team
+ * Update team picks for a free contest entry.
+ * Enforces XP-level-based transfer limits (NOVICE=1, APPRENTICE=2, etc.)
+ */
 router.put('/contests/:id/update-free-team', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -586,6 +676,23 @@ router.put('/contests/:id/update-free-team', authenticate, async (req: Request, 
       return res.status(404).json({ error: 'Entry not found' });
     }
 
+    // ── Transfer limit check ───────────────────────────────────────────────
+    const user = await db('users').where('wallet_address', walletAddress.toLowerCase()).first();
+    const xpData = getXPLevel(user?.xp || 0);
+    const maxTransfers = xpData.levelInfo.maxTransfers;
+    const transfersUsed = entry.update_count || 0;
+
+    if (transfersUsed >= maxTransfers) {
+      return res.status(429).json({
+        success: false,
+        error: `Weekly transfer limit reached (${maxTransfers} for ${xpData.level} level). Earn XP to unlock more transfers.`,
+        transfersRemaining: 0,
+        level: xpData.level,
+        maxTransfers,
+      });
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     // Validate team size
     if (!Array.isArray(teamIds) || teamIds.length !== contest.team_size) {
       return res.status(400).json({ error: `Team must have exactly ${contest.team_size} influencers` });
@@ -602,11 +709,16 @@ router.put('/contests/:id/update-free-team', authenticate, async (req: Request, 
         team_ids: teamIds,
         captain_id: contest.has_captain ? captainId : null,
         updated_at: new Date(),
+        update_count: transfersUsed + 1,
       });
+
+    const transfersRemaining = Math.max(0, maxTransfers - (transfersUsed + 1));
 
     res.json({
       success: true,
       message: 'Team updated successfully',
+      transfersRemaining,
+      level: xpData.level,
     });
   } catch (error: any) {
     console.error('Error updating free team:', error);
@@ -1152,5 +1264,161 @@ function getNextWeekStart(currentWeekStart: Date): Date {
   d.setUTCDate(d.getUTCDate() + 7);
   return d;
 }
+
+/**
+ * GET /api/v2/me/history
+ * Career history: all past contest entries with hydrated picks + career stats
+ */
+router.get('/me/history', authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const walletAddress = req.user!.walletAddress;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    if (!walletAddress) {
+      return res.json({ success: true, data: { history: [], careerStats: { totalContests: 0, wins: 0, topThree: 0, avgScore: 0, bestScore: 0, bestRank: null }, total: 0 } });
+    }
+
+    const wa = walletAddress.toLowerCase();
+
+    // Fetch free entries with contest info
+    const freeEntries = await db('free_league_entries as e')
+      .join('prized_contests as c', 'e.contest_id', 'c.id')
+      .where('e.wallet_address', wa)
+      .select(
+        'e.id', 'e.contest_id', 'e.score', 'e.rank', 'e.score_breakdown',
+        'e.team_ids', 'e.captain_id', 'e.prize_won as prize_won', 'e.claimed', 'e.created_at',
+        'c.name as contest_name', 'c.status as contest_status',
+        'c.lock_time as lock_time', 'c.end_time', 'c.player_count', 'c.is_free', 'c.entry_fee'
+      )
+      .orderBy('e.created_at', 'desc');
+
+    // Fetch paid entries with contest info
+    const paidEntries = await db('prized_entries as e')
+      .join('prized_contests as c', 'e.contest_id', 'c.id')
+      .where('e.wallet_address', wa)
+      .select(
+        'e.id', 'e.contest_id', 'e.score', 'e.rank', 'e.score_breakdown',
+        'e.team_ids', 'e.captain_id', 'e.prize_amount as prize_won', 'e.claimed', 'e.created_at',
+        'c.name as contest_name', 'c.status as contest_status',
+        'c.lock_time as lock_time', 'c.end_time', 'c.player_count', 'c.is_free', 'c.entry_fee'
+      )
+      .orderBy('e.created_at', 'desc');
+
+    // Merge and sort
+    const allEntries = [
+      ...freeEntries.map(e => ({ ...e, contestType: 'free' })),
+      ...paidEntries.map(e => ({ ...e, contestType: 'paid' })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const total = allEntries.length;
+    const pageEntries = allEntries.slice(offset, offset + limit);
+
+    // Collect all influencer IDs needed
+    const allInfluencerIds = new Set<number>();
+    for (const entry of pageEntries) {
+      if (Array.isArray(entry.team_ids)) {
+        entry.team_ids.forEach((id: number) => allInfluencerIds.add(id));
+      }
+    }
+
+    // Batch fetch influencers
+    const influencerMap: Record<number, any> = {};
+    if (allInfluencerIds.size > 0) {
+      const influencers = await db('influencers')
+        .whereIn('id', Array.from(allInfluencerIds))
+        .select('id', 'display_name', 'twitter_handle', 'tier', 'avatar_url', 'price', 'total_points');
+      for (const inf of influencers) {
+        influencerMap[inf.id] = inf;
+      }
+    }
+
+    // Check if user has tapestry_user_id for verification badge
+    const userRow = await db('users').where('id', userId).select('tapestry_user_id').first();
+    const tapestryVerified = !!userRow?.tapestry_user_id;
+
+    // Build history response
+    const history = pageEntries.map(entry => {
+      const picks = Array.isArray(entry.team_ids)
+        ? entry.team_ids
+            .map((infId: number) => {
+              const inf = influencerMap[infId];
+              if (!inf) return null;
+              const isCaptain = infId === entry.captain_id;
+              const basePoints = parseInt(inf.total_points) || 0;
+              return {
+                id: inf.id,
+                name: inf.display_name,
+                handle: inf.twitter_handle,
+                tier: inf.tier,
+                avatarUrl: inf.avatar_url,
+                price: parseFloat(inf.price) || 0,
+                isCaptain,
+                points: basePoints,
+                effectivePoints: isCaptain ? Math.round(basePoints * 1.5) : basePoints,
+              };
+            })
+            .filter(Boolean)
+        : [];
+
+      const breakdown = entry.score_breakdown || {};
+
+      return {
+        contestId: entry.contest_id,
+        contestName: entry.contest_name,
+        contestType: entry.contestType,
+        startDate: entry.lock_time,
+        endDate: entry.end_time,
+        status: entry.contest_status,
+        score: parseFloat(entry.score) || 0,
+        rank: entry.rank,
+        totalPlayers: entry.player_count,
+        prizeWon: parseFloat(entry.prize_won) || 0,
+        claimed: entry.claimed,
+        scoreBreakdown: {
+          activity: parseFloat(breakdown.activity) || 0,
+          engagement: parseFloat(breakdown.engagement) || 0,
+          growth: parseFloat(breakdown.growth) || 0,
+          viral: parseFloat(breakdown.viral) || 0,
+        },
+        picks,
+        tapestryVerified,
+        onChainId: `foresight-team-${userId}-${entry.contest_id}`,
+        enteredAt: entry.created_at,
+      };
+    });
+
+    // Career stats across ALL entries (not just page)
+    const scores = allEntries.map(e => parseFloat(e.score) || 0);
+    const ranks = allEntries.map(e => e.rank).filter(r => r != null && r > 0);
+    const wins = allEntries.filter(e => e.rank === 1).length;
+    const topThree = allEntries.filter(e => e.rank && e.rank <= 3).length;
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+    const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
+    const bestRank = ranks.length > 0 ? Math.min(...ranks) : null;
+
+    res.json({
+      success: true,
+      data: {
+        history,
+        careerStats: {
+          totalContests: total,
+          wins,
+          topThree,
+          avgScore,
+          bestScore,
+          bestRank,
+        },
+        total,
+        limit,
+        offset,
+      },
+    });
+  } catch (error: any) {
+    console.error('[History] Error fetching career history:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch career history' });
+  }
+});
 
 export default router;

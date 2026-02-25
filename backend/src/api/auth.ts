@@ -425,6 +425,7 @@ router.get(
     sendSuccess(res, {
       connected: !!user.tapestry_user_id,
       tapestryUserId: user.tapestry_user_id || null,
+      walletAddress: user.wallet_address || null,
       profile: tapestryProfile,
     });
   })

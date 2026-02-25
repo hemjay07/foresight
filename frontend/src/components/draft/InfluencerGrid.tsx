@@ -40,11 +40,11 @@ interface InfluencerGridProps {
 
 const TIER_ORDER = ['S', 'A', 'B', 'C'];
 
-const TIER_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  S: { label: 'S-TIER (Elite)', color: 'text-gold-400', bg: 'bg-gold-500/10', border: 'border-gold-500/30' },
-  A: { label: 'A-TIER (Strong)', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30' },
-  B: { label: 'B-TIER (Solid)', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
-  C: { label: 'C-TIER (Value)', color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30' },
+const TIER_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; accent: string }> = {
+  S: { label: 'S-TIER (Elite)', color: 'text-gold-400', bg: 'bg-gold-500/10', border: 'border-gold-500/30', accent: 'border-l-gold-500' },
+  A: { label: 'A-TIER (Strong)', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', accent: 'border-l-cyan-500' },
+  B: { label: 'B-TIER (Solid)', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', accent: 'border-l-emerald-500' },
+  C: { label: 'C-TIER (Value)', color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', accent: 'border-l-gray-600' },
 };
 
 export default function InfluencerGrid({
@@ -166,12 +166,12 @@ export default function InfluencerGrid({
                       key={inf.id}
                       onClick={() => !disabled && onSelect(inf)}
                       disabled={disabled && !selected}
-                      className={`relative p-3 rounded-lg border text-left transition-all ${
+                      className={`relative p-3 rounded-lg text-left transition-all border ${
                         selected
-                          ? `${config.bg} ${config.border} border-2`
+                          ? `${config.bg} ${config.border} border-l-[3px] ${config.accent}`
                           : disabled
-                          ? 'bg-gray-900/50 border-gray-800 opacity-50 cursor-not-allowed'
-                          : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                          ? `bg-gray-900/50 border-gray-800 border-l-[3px] ${config.accent} opacity-50 cursor-not-allowed`
+                          : `bg-gray-800/50 border-gray-700 border-l-[3px] ${config.accent} hover:border-gray-600`
                       }`}
                     >
                       {/* Selected indicator */}

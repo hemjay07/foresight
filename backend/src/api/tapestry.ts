@@ -29,28 +29,35 @@ async function getTapestryProfileId(userId: string): Promise<string | null> {
 /**
  * POST /api/tapestry/follow
  * Follow another user by their Tapestry profile ID.
- * Gracefully degrades if Tapestry API is unavailable or profiles are missing.
+ * Persists to local DB first (source of truth), then syncs to Tapestry async.
  */
 router.post(
   '/follow',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const { targetProfileId } = req.body;
+    const { targetProfileId, targetUsername } = req.body;
 
     if (!targetProfileId) {
       throw new AppError('targetProfileId is required', 400);
     }
 
-    const myProfileId = await getTapestryProfileId(userId);
+    // ── 1. Persist to local DB (source of truth) ──────────────────────────
+    await db('user_follows')
+      .insert({
+        follower_user_id: userId,
+        following_tapestry_profile_id: targetProfileId,
+        following_username: targetUsername || null,
+      })
+      .onConflict(['follower_user_id', 'following_tapestry_profile_id'])
+      .ignore(); // idempotent — re-following is a no-op
 
-    // Try Tapestry API, but succeed regardless (optimistic follow for demo)
+    // ── 2. Sync to Tapestry async (non-blocking) ──────────────────────────
+    const myProfileId = await getTapestryProfileId(userId);
     if (myProfileId) {
-      try {
-        await tapestryService.followProfile(myProfileId, targetProfileId);
-      } catch {
-        // Tapestry API failed — still return success for UX
-      }
+      tapestryService.followProfile(myProfileId, targetProfileId).catch(() => {
+        // Tapestry sync failed — local DB has it, sync will retry later
+      });
     }
 
     sendSuccess(res, { followed: true, targetProfileId });
@@ -60,7 +67,7 @@ router.post(
 /**
  * POST /api/tapestry/unfollow
  * Unfollow a user by their Tapestry profile ID.
- * Gracefully degrades if Tapestry API is unavailable or profiles are missing.
+ * Removes from local DB first (source of truth), then syncs to Tapestry async.
  */
 router.post(
   '/unfollow',
@@ -73,15 +80,17 @@ router.post(
       throw new AppError('targetProfileId is required', 400);
     }
 
-    const myProfileId = await getTapestryProfileId(userId);
+    // ── 1. Remove from local DB (source of truth) ─────────────────────────
+    await db('user_follows')
+      .where({ follower_user_id: userId, following_tapestry_profile_id: targetProfileId })
+      .delete();
 
-    // Try Tapestry API, but succeed regardless
+    // ── 2. Sync to Tapestry async (non-blocking) ──────────────────────────
+    const myProfileId = await getTapestryProfileId(userId);
     if (myProfileId) {
-      try {
-        await tapestryService.unfollowProfile(myProfileId, targetProfileId);
-      } catch {
-        // Tapestry API failed — still return success for UX
-      }
+      tapestryService.unfollowProfile(myProfileId, targetProfileId).catch(() => {
+        // Tapestry sync failed — local DB already reflects unfollow
+      });
     }
 
     sendSuccess(res, { followed: false, targetProfileId });
@@ -91,6 +100,7 @@ router.post(
 /**
  * GET /api/tapestry/following-state/:targetProfileId
  * Check if the current user follows another profile.
+ * Reads from local DB (source of truth).
  */
 router.get(
   '/following-state/:targetProfileId',
@@ -99,18 +109,11 @@ router.get(
     const userId = req.user!.userId;
     const { targetProfileId } = req.params;
 
-    const myProfileId = await getTapestryProfileId(userId);
-    if (!myProfileId) {
-      sendSuccess(res, { isFollowing: false });
-      return;
-    }
+    const row = await db('user_follows')
+      .where({ follower_user_id: userId, following_tapestry_profile_id: targetProfileId })
+      .first();
 
-    try {
-      const following = await tapestryService.isFollowing(myProfileId, targetProfileId);
-      sendSuccess(res, { isFollowing: following });
-    } catch {
-      sendSuccess(res, { isFollowing: false });
-    }
+    sendSuccess(res, { isFollowing: !!row });
   })
 );
 
@@ -271,6 +274,7 @@ router.get(
 /**
  * POST /api/tapestry/following-state-batch
  * Check follow state for multiple profiles at once.
+ * Reads from local DB (source of truth) — single query for all targets.
  * Body: { targetProfileIds: string[] }
  */
 router.post(
@@ -285,27 +289,17 @@ router.post(
       return;
     }
 
-    const myProfileId = await getTapestryProfileId(userId);
+    const limited = targetProfileIds.slice(0, 50);
 
-    if (!myProfileId) {
-      // No tapestry profile — all false
-      const results: Record<string, boolean> = {};
-      for (const id of targetProfileIds.slice(0, 50)) results[id] = false;
-      sendSuccess(res, { states: results });
-      return;
-    }
+    // Single DB query instead of N Tapestry API calls
+    const followed = await db('user_follows')
+      .where({ follower_user_id: userId })
+      .whereIn('following_tapestry_profile_id', limited)
+      .select('following_tapestry_profile_id');
 
-    // Check follow state for each target in parallel
+    const followedSet = new Set(followed.map((r: any) => r.following_tapestry_profile_id));
     const results: Record<string, boolean> = {};
-    await Promise.all(
-      targetProfileIds.slice(0, 50).map(async (targetId: string) => {
-        try {
-          results[targetId] = await tapestryService.isFollowing(myProfileId, targetId);
-        } catch {
-          results[targetId] = false;
-        }
-      })
-    );
+    for (const id of limited) results[id] = followedSet.has(id);
 
     sendSuccess(res, { states: results });
   })
@@ -314,25 +308,20 @@ router.post(
 /**
  * GET /api/tapestry/my-following
  * Get list of all profile IDs the current user follows (for Friends Leaderboard).
+ * Reads from local DB (source of truth) — format: { id, username }[]
  */
 router.get(
   '/my-following',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const myProfileId = await getTapestryProfileId(userId);
 
-    if (!myProfileId) {
-      sendSuccess(res, { following: [] });
-      return;
-    }
+    const rows = await db('user_follows')
+      .where({ follower_user_id: userId })
+      .select('following_tapestry_profile_id as id', 'following_username as username')
+      .orderBy('created_at', 'desc');
 
-    try {
-      const following = await tapestryService.getFollowing(myProfileId, 1, 100);
-      sendSuccess(res, { following });
-    } catch {
-      sendSuccess(res, { following: [] });
-    }
+    sendSuccess(res, { following: rows });
   })
 );
 
@@ -340,7 +329,9 @@ router.get(
 
 /**
  * GET /api/tapestry/activity
- * Get the current user's Tapestry activity feed.
+ * Get the current user's activity feed.
+ * Primary: Tapestry social feed (on-chain follows).
+ * Fallback: Local DB activity (follows tracked in user_follows table).
  */
 router.get(
   '/activity',
@@ -350,12 +341,55 @@ router.get(
     const page = parseInt(req.query.page as string) || 1;
 
     const user = await db('users').where({ id: userId }).first();
-    if (!user?.tapestry_user_id) {
-      sendSuccess(res, { activity: [] });
-      return;
+
+    // Try Tapestry first
+    let activity: any[] = [];
+    if (user?.tapestry_user_id) {
+      activity = await tapestryService.getActivityFeed(user.username, page);
     }
 
-    const activity = await tapestryService.getActivityFeed(user.username, page);
+    // Fallback: build activity from local DB (user_follows + contest entries)
+    if (activity.length === 0) {
+      const following = await db('user_follows')
+        .where({ follower_user_id: userId })
+        .select('following_username');
+
+      if (following.length > 0) {
+        const usernames = following.map((f: any) => f.following_username).filter(Boolean);
+        // Get recent contest entries from users we follow
+        const recentEntries = await db('free_league_entries as e')
+          .join('users as u', 'e.user_id', 'u.id')
+          .whereIn('u.username', usernames)
+          .orderBy('e.created_at', 'desc')
+          .limit(10)
+          .select('u.username', 'u.tapestry_user_id', 'e.created_at', 'e.contest_id');
+
+        activity = recentEntries.map((entry: any) => ({
+          type: 'content_create',
+          timestamp: entry.created_at,
+          actor: { id: entry.tapestry_user_id || entry.username, username: entry.username },
+        }));
+
+        // Also include recent follows from our DB
+        const recentFollows = await db('user_follows as f')
+          .join('users as u', 'f.follower_user_id', 'u.id')
+          .whereIn('u.username', usernames)
+          .orderBy('f.created_at', 'desc')
+          .limit(5)
+          .select('u.username', 'u.tapestry_user_id', 'f.created_at', 'f.following_username');
+
+        const followActivity = recentFollows.map((f: any) => ({
+          type: 'follow',
+          timestamp: f.created_at,
+          actor: { id: f.tapestry_user_id || f.username, username: f.username },
+          target: { id: f.following_username, username: f.following_username },
+        }));
+
+        activity = [...activity, ...followActivity]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 10);
+      }
+    }
 
     sendSuccess(res, { activity });
   })

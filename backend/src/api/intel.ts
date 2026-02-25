@@ -539,4 +539,187 @@ router.get('/stats', async (_req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/intel/influencers/:id/weekly-history
+ * Returns 4-week engagement history computed from ct_tweets.
+ * Used by the influencer detail modal to show weekly performance trends.
+ */
+router.get('/influencers/:id/weekly-history', async (req: AuthRequest, res: Response) => {
+  try {
+    const influencerId = parseInt(req.params.id);
+    if (isNaN(influencerId)) {
+      return res.status(400).json({ success: false, error: 'Invalid influencer ID' });
+    }
+
+    // Check influencer exists
+    const influencer = await db('influencers').where('id', influencerId).first();
+    if (!influencer) {
+      return res.status(404).json({ success: false, error: 'Influencer not found' });
+    }
+
+    // Query weekly data from ct_tweets using DATE_TRUNC
+    const weeklyData = await db.raw(`
+      SELECT
+        DATE_TRUNC('week', created_at)::date as week_start,
+        COUNT(*)::int as tweet_count,
+        COALESCE(SUM(likes), 0)::bigint as total_likes,
+        COALESCE(SUM(retweets), 0)::bigint as total_retweets,
+        COALESCE(SUM(views), 0)::bigint as total_views,
+        COALESCE(SUM(replies), 0)::bigint as total_replies,
+        COALESCE(AVG(engagement_score), 0)::float as avg_engagement
+      FROM ct_tweets
+      WHERE influencer_id = ? AND created_at >= NOW() - INTERVAL '4 weeks'
+      GROUP BY DATE_TRUNC('week', created_at)
+      ORDER BY week_start DESC
+      LIMIT 4
+    `, [influencerId]);
+
+    const rows = weeklyData.rows || [];
+
+    // Calculate estimated points for each week
+    interface WeekData {
+      weekLabel: string;
+      tweetCount: number;
+      totalLikes: number;
+      totalRetweets: number;
+      totalViews: number;
+      totalReplies: number;
+      avgEngagement: number;
+      estimatedPts: number;
+    }
+
+    const weeks: WeekData[] = rows.map((row: any) => {
+      // Scoring formula: activity + engagement + viral
+      const activityPts = Math.min(row.tweet_count * 5, 35);
+      const engagementPts = Math.min(
+        ((row.total_likes + row.total_retweets * 2 + row.total_replies) / 1000) * 10,
+        60
+      );
+
+      // Count viral tweets (avg_engagement > 500)
+      let viralCount = 0;
+      if (row.avg_engagement > 500) {
+        viralCount = Math.min(row.tweet_count, 5); // Conservative estimate
+      }
+      const viralPts = Math.min(viralCount * 5, 25);
+
+      const estimatedPts = Math.round(activityPts + engagementPts + viralPts);
+
+      // Format week label: "Feb 17"
+      const weekStart = new Date(row.week_start);
+      const monthStr = weekStart.toLocaleDateString('en-US', { month: 'short' });
+      const dayStr = weekStart.getDate();
+      const weekLabel = `${monthStr} ${dayStr}`;
+
+      return {
+        weekLabel,
+        tweetCount: row.tweet_count,
+        totalLikes: Number(row.total_likes),
+        totalRetweets: Number(row.total_retweets),
+        totalViews: Number(row.total_views),
+        totalReplies: Number(row.total_replies),
+        avgEngagement: Number(row.avg_engagement),
+        estimatedPts,
+      };
+    });
+
+    // Calculate consistency stats
+    let consistency = 'Steady';
+    let avgWeeklyPts = 0;
+    let trend = 'neutral';
+
+    if (weeks.length > 0) {
+      avgWeeklyPts = Math.round(weeks.reduce((sum, w) => sum + w.estimatedPts, 0) / weeks.length);
+
+      if (weeks.length > 1) {
+        const points = weeks.map(w => w.estimatedPts);
+        const mean = points.reduce((a, b) => a + b, 0) / points.length;
+        const variance = points.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / points.length;
+        const stdDev = Math.sqrt(variance);
+        const stdDevPercent = (stdDev / mean) * 100;
+
+        if (stdDevPercent > 50) {
+          consistency = 'Volatile';
+        } else if (stdDevPercent < 20) {
+          consistency = 'Stable';
+        } else {
+          consistency = 'Steady';
+        }
+
+        // Check trend
+        const latest = points[0];
+        const previous = points[1];
+        if (latest > previous * 1.2) {
+          trend = 'rising';
+          consistency = 'Rising';
+        } else if (latest < previous * 0.8) {
+          trend = 'declining';
+          consistency = 'Declining';
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        weeks: weeks.reverse(), // Chronological order (oldest first)
+        consistency,
+        avgWeeklyPts,
+        trend,
+      },
+    });
+  } catch (error) {
+    console.error('[Intel API] Error fetching weekly history:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch weekly history' });
+  }
+});
+
+/**
+ * GET /api/intel/community-picks
+ * Returns ranked list of most drafted influencers (last 7 days)
+ */
+router.get('/community-picks', async (_req: Request, res: Response) => {
+  try {
+    const picks = await db.raw(`
+      SELECT
+        i.id as influencer_id,
+        i.twitter_handle as handle,
+        i.display_name as name,
+        i.avatar_url as avatar,
+        i.tier,
+        i.price,
+        COUNT(*)::int as draft_count,
+        COUNT(DISTINCT e.user_id)::int as unique_drafters
+      FROM free_league_entries e
+      CROSS JOIN LATERAL UNNEST(e.team_ids) AS unnested_id(influencer_id)
+      JOIN influencers i ON i.id = unnested_id.influencer_id
+      WHERE e.created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY i.id, i.twitter_handle, i.display_name, i.avatar_url, i.tier, i.price
+      ORDER BY draft_count DESC
+      LIMIT 20
+    `);
+
+    const formatted = (picks.rows || []).map((row: any) => ({
+      influencerId: row.influencer_id,
+      handle: row.handle,
+      name: row.name,
+      avatar: row.avatar,
+      tier: row.tier || 'C',
+      price: parseFloat(row.price) || 10,
+      draftCount: row.draft_count,
+      uniqueDrafters: row.unique_drafters,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        picks: formatted,
+      },
+    });
+  } catch (error) {
+    console.error('[Intel API] Error fetching community picks:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch community picks' });
+  }
+});
+
 export default router;

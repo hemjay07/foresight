@@ -16,6 +16,7 @@ import {
 } from '@phosphor-icons/react';
 import { useToast } from '../../contexts/ToastContext';
 import InfluencerProfileCard from './InfluencerProfileCard';
+import InfluencerDetailModal from './InfluencerDetailModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -30,6 +31,10 @@ interface Influencer {
   followers: number;
   engagementRate: number;
   isScouted: boolean;
+}
+
+interface CommunityPicks {
+  [influencerId: number]: number;
 }
 
 interface ProfilesTabProps {
@@ -59,6 +64,13 @@ export default function ProfilesTab({ onCompare }: ProfilesTabProps) {
 
   // Scouting state
   const [scoutingId, setScoutingId] = useState<number | null>(null);
+
+  // Detail modal state
+  const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+
+  // Community picks data
+  const [communityPicks, setCommunityPicks] = useState<CommunityPicks>({});
 
   // Fetch influencers
   const fetchInfluencers = useCallback(async (reset = false) => {
@@ -98,6 +110,30 @@ export default function ProfilesTab({ onCompare }: ProfilesTabProps) {
       setLoading(false);
     }
   }, [page, sortBy, tier, search, influencers]);
+
+  // Fetch community picks
+  useEffect(() => {
+    const fetchCommunityPicks = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await axios.get(`${API_URL}/api/intel/community-picks`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (res.data.success && res.data.data) {
+          const picksMap: CommunityPicks = {};
+          res.data.data.picks?.forEach((pick: any) => {
+            picksMap[pick.influencer_id] = pick.count;
+          });
+          setCommunityPicks(picksMap);
+        }
+      } catch (err) {
+        console.log('[ProfilesTab] Error fetching community picks:', err);
+      }
+    };
+
+    fetchCommunityPicks();
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -171,6 +207,11 @@ export default function ProfilesTab({ onCompare }: ProfilesTabProps) {
     if (compareIds.length >= 2 && onCompare) {
       onCompare(compareIds);
     }
+  };
+
+  const handleOpenDetail = (influencer: Influencer) => {
+    setSelectedInfluencer(influencer);
+    setShowDetail(true);
   };
 
   // Load more
@@ -320,9 +361,11 @@ export default function ProfilesTab({ onCompare }: ProfilesTabProps) {
                 influencer={influencer}
                 onScout={handleScout}
                 onSelect={handleSelectForCompare}
+                onOpenDetail={handleOpenDetail}
                 isCompareMode={compareMode}
                 isSelected={compareIds.includes(influencer.id)}
                 scouting={scoutingId === influencer.id}
+                draftCount={communityPicks[influencer.id] || 0}
               />
             ))}
           </div>
@@ -349,6 +392,17 @@ export default function ProfilesTab({ onCompare }: ProfilesTabProps) {
           <p className="text-gray-400">No influencers found</p>
           <p className="text-xs text-gray-600 mt-1">Try adjusting your filters</p>
         </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetail && selectedInfluencer && (
+        <InfluencerDetailModal
+          influencer={selectedInfluencer}
+          onClose={() => setShowDetail(false)}
+          onScout={handleScout}
+          scouting={scoutingId === selectedInfluencer.id}
+          communityPickCount={communityPicks[selectedInfluencer.id] || 0}
+        />
       )}
     </div>
   );

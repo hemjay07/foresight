@@ -107,6 +107,7 @@ export default function Intel() {
   const [hasTeam, setHasTeam] = useState(false);
   const [scoutedIds, setScoutedIds] = useState<number[]>([]);
   const [scoutingId, setScoutingId] = useState<number | null>(null);
+  const [communityPicks, setCommunityPicks] = useState<Record<number, number>>({});
 
   // Comparison state
   const [compareIds, setCompareIds] = useState<number[]>([]);
@@ -173,6 +174,25 @@ export default function Intel() {
         );
         setScoutedIds((prev) => [...prev, influencerId]);
         showToast(`Scouted ${influencerName}! View in Profile → Watchlist`, 'success');
+
+        // Secondary: Write to Tapestry (non-blocking)
+        try {
+          await axios.post(
+            `${API_URL}/api/tapestry/content`,
+            {
+              title: `Scouted ${influencerName}`,
+              body: `Watching @${influencerName} for potential future team picks`,
+              contentType: 'scout',
+              metadata: {
+                influencerId,
+                influencerName,
+              },
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (tapestryErr) {
+          console.log('[Intel] Tapestry scout write failed (non-blocking):', tapestryErr);
+        }
       }
     } catch (err) {
       showToast('Failed to update watchlist', 'error');
@@ -180,6 +200,30 @@ export default function Intel() {
       setScoutingId(null);
     }
   };
+
+  // Fetch community picks
+  useEffect(() => {
+    const fetchCommunityPicks = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await axios.get(`${API_URL}/api/intel/community-picks`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (res.data.success && res.data.data) {
+          const picksMap: Record<number, number> = {};
+          res.data.data.picks?.forEach((pick: any) => {
+            picksMap[pick.influencerId] = pick.draftCount;
+          });
+          setCommunityPicks(picksMap);
+        }
+      } catch (err) {
+        console.log('[Intel] Error fetching community picks:', err);
+      }
+    };
+
+    fetchCommunityPicks();
+  }, []);
 
   // Fetch feed data
   useEffect(() => {
@@ -499,6 +543,11 @@ export default function Intel() {
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${tierStyle.bg} ${tierStyle.text}`}>
                                 {tweet.influencer.tier}
                               </span>
+                              {communityPicks[tweet.influencer.id] > 0 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap">
+                                  🏆 {communityPicks[tweet.influencer.id]}
+                                </span>
+                              )}
                               {onTeam && (
                                 <Trophy size={12} weight="fill" className="text-gold-400" />
                               )}

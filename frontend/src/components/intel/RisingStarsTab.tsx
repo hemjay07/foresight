@@ -123,6 +123,20 @@ export default function RisingStarsTab() {
         }));
 
         showToast(res.data.data.action === 'voted' ? 'Vote recorded!' : 'Vote updated!', 'success');
+
+        // Secondary: Write to Tapestry if voting 'for' (non-blocking)
+        if (vote === 'for') {
+          try {
+            const contentId = `foresight-rising-star-${starId}`;
+            await axios.post(
+              `${API_URL}/api/tapestry/like/${contentId}`,
+              {},
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          } catch (tapestryErr) {
+            console.log('[RisingStars] Tapestry like write failed (non-blocking):', tapestryErr);
+          }
+        }
       }
     } catch (err) {
       showToast('Failed to vote', 'error');

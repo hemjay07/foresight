@@ -2,7 +2,7 @@
  * InfluencerDetailModal - Shows detailed stats for an influencer
  */
 
-import { X, TwitterLogo, TrendUp, Users, Fire, ChartLineUp, Crown } from '@phosphor-icons/react';
+import { X, TwitterLogo, TrendUp, Users, Fire, ChartLineUp, Crown, Heart, ArrowsClockwise, Coins } from '@phosphor-icons/react';
 
 interface Influencer {
   id: number;
@@ -110,41 +110,61 @@ export default function InfluencerDetailModal({
 
         {/* Stats Grid */}
         <div className="p-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-3 mb-4">
             <StatCard
-              icon={<Users size={18} />}
+              icon={<Users size={16} />}
               label="Followers"
               value={formatNumber(influencer.follower_count)}
               color="text-gray-400"
             />
             <StatCard
-              icon={<TrendUp size={18} />}
-              label="Engagement"
-              value={influencer.engagement_rate ? `${influencer.engagement_rate.toFixed(2)}%` : '—'}
+              icon={<TrendUp size={16} />}
+              label="Eng. Rate"
+              value={influencer.engagement_rate ? `${influencer.engagement_rate.toFixed(1)}%` : '—'}
               color="text-cyan-400"
             />
             <StatCard
-              icon={<Fire size={18} />}
-              label="Total Points"
-              value={formatNumber(influencer.total_points)}
+              icon={<Fire size={16} />}
+              label="Total Pts"
+              value={influencer.total_points ? String(influencer.total_points) : '—'}
               color="text-gold-400"
             />
             <StatCard
-              icon={<ChartLineUp size={18} />}
-              label="Salary"
+              icon={<Heart size={16} />}
+              label="Avg Likes"
+              value={formatNumber(influencer.avg_likes)}
+              color="text-rose-400"
+            />
+            <StatCard
+              icon={<ArrowsClockwise size={16} />}
+              label="Avg RTs"
+              value={formatNumber(influencer.avg_retweets)}
+              color="text-blue-400"
+            />
+            <StatCard
+              icon={<Coins size={16} />}
+              label="Draft Cost"
               value={`$${influencer.price}`}
               color="text-emerald-400"
             />
           </div>
 
           {/* Performance Summary */}
-          <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Performance Summary</h3>
-            <p className="text-sm text-gray-300">
-              {influencer.tier === 'S' && 'Elite performer. Consistently high engagement and viral potential. Premium price but worth it for your captain slot.'}
-              {influencer.tier === 'A' && 'Strong performer with above-average engagement. Great value for building a competitive team.'}
-              {influencer.tier === 'B' && 'Solid mid-tier option. Reliable points with occasional breakout games.'}
-              {influencer.tier === 'C' && 'Budget-friendly pick. Lower ceiling but allows flexibility in your lineup.'}
+          <div className="bg-gray-800/50 rounded-lg p-3 mb-5">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Scouting Report</h3>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              {influencer.tier === 'S' && (
+                <>Elite-tier. {influencer.follower_count ? `${formatNumber(influencer.follower_count)} followers` : 'Massive following'} with high viral ceiling. Best suited for your <span className="text-gold-400 font-medium">Captain slot</span> where they earn 1.5× points.</>
+              )}
+              {influencer.tier === 'A' && (
+                <>Strong performer with {influencer.engagement_rate ? `${influencer.engagement_rate.toFixed(1)}% engagement` : 'above-average engagement'}. {influencer.total_points ? `${influencer.total_points} career points` : 'Reliable scorer'} — good captain candidate if budget is tight.</>
+              )}
+              {influencer.tier === 'B' && (
+                <>Mid-tier value pick at <span className="text-emerald-400">${influencer.price}</span>. {influencer.total_points ? `${influencer.total_points} pts` : 'Solid'} — pairs well with an S or A-tier captain to stay under budget.</>
+              )}
+              {influencer.tier === 'C' && (
+                <>Budget pick at <span className="text-emerald-400">${influencer.price}</span> — lowest draft cost in the pool. Stack 3-4 of these to free up budget for an elite captain. <span className="text-gray-500">Lower points ceiling.</span></>
+              )}
             </p>
           </div>
 
@@ -198,12 +218,12 @@ export default function InfluencerDetailModal({
 
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
   return (
-    <div className="bg-gray-800/50 rounded-lg p-3">
-      <div className={`flex items-center gap-2 ${color} mb-1`}>
+    <div className="bg-gray-800/50 rounded-lg p-2.5">
+      <div className={`flex items-center gap-1.5 ${color} mb-1`}>
         {icon}
-        <span className="text-xs text-gray-500">{label}</span>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</span>
       </div>
-      <span className="text-lg font-bold text-white">{value}</span>
+      <span className="text-base font-bold text-white">{value}</span>
     </div>
   );
 }

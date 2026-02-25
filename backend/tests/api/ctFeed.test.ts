@@ -193,4 +193,32 @@ describe('CT Feed API', () => {
       expect(response.body).toHaveProperty('success');
     });
   });
+
+  describe('CT Feed Quality Filter', () => {
+    it('should not return tweets with spam indicators', async () => {
+      const response = await request(app)
+        .get('/api/ct-feed')
+        .expect(200);
+
+      const tweets = response.body.data?.tweets || [];
+      for (const tweet of tweets) {
+        // Should not have classic spam patterns
+        expect(tweet.text).not.toMatch(/抽選で毎日|フォロー.*リポスト|follow.*retweet.*win/i);
+      }
+    });
+
+    it('should filter out low-quality tweets', async () => {
+      const response = await request(app)
+        .get('/api/ct-feed')
+        .expect(200);
+
+      const tweets = response.body.data?.tweets || [];
+      for (const tweet of tweets) {
+        // Each tweet should have either engagement_score > 0 or views > 1000
+        const hasEngagement = tweet.engagementScore > 0;
+        const hasViews = tweet.views > 1000;
+        expect(hasEngagement || hasViews).toBe(true);
+      }
+    });
+  });
 });

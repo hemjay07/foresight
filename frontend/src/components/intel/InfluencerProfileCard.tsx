@@ -36,9 +36,11 @@ interface InfluencerProfileCardProps {
   influencer: Influencer;
   onScout?: (id: number, name: string) => void;
   onSelect?: (influencer: Influencer) => void;
+  onOpenDetail?: (influencer: Influencer) => void;
   isCompareMode?: boolean;
   isSelected?: boolean;
   scouting?: boolean;
+  draftCount?: number;
 }
 
 const TIER_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -52,9 +54,11 @@ export default function InfluencerProfileCard({
   influencer,
   onScout,
   onSelect,
+  onOpenDetail,
   isCompareMode = false,
   isSelected = false,
   scouting = false,
+  draftCount = 0,
 }: InfluencerProfileCardProps) {
   const tierStyle = TIER_STYLES[influencer.tier] || TIER_STYLES.C;
 
@@ -62,6 +66,14 @@ export default function InfluencerProfileCard({
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toLocaleString();
+  };
+
+  const handleCardClick = () => {
+    if (isCompareMode && onSelect) {
+      onSelect(influencer);
+    } else if (!isCompareMode && onOpenDetail) {
+      onOpenDetail(influencer);
+    }
   };
 
   const handleClick = () => {
@@ -79,11 +91,11 @@ export default function InfluencerProfileCard({
 
   return (
     <div
-      onClick={handleClick}
+      onClick={handleCardClick}
       className={`
         relative p-4 rounded-xl border transition-all
-        ${isCompareMode ? 'cursor-pointer hover:border-cyan-500/50' : ''}
-        ${isSelected ? 'bg-cyan-500/10 border-cyan-500/50 ring-1 ring-cyan-500/30' : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'}
+        ${isCompareMode ? 'cursor-pointer hover:border-cyan-500/50' : 'cursor-pointer hover:border-cyan-500/30'}
+        ${isSelected ? 'bg-cyan-500/10 border-cyan-500/50 ring-1 ring-cyan-500/30' : 'bg-gray-900/50 border-gray-800 hover:border-gray-700/50'}
       `}
     >
       {/* Selection indicator */}
@@ -126,6 +138,14 @@ export default function InfluencerProfileCard({
           <div className="text-xs text-gray-500">price</div>
         </div>
       </div>
+
+      {/* Community Picks Badge */}
+      {draftCount > 0 && (
+        <div className="mb-3 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs text-emerald-400 font-medium flex items-center gap-1.5">
+          <span>🔥</span>
+          <span>{draftCount} drafted</span>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-2 mb-3">

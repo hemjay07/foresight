@@ -18,9 +18,9 @@ export const getApiUrl = (): string => {
     return import.meta.env.VITE_API_URL || '';
   }
 
-  // In development, use relative URL — Vite proxy forwards /api to the backend.
-  // Override with VITE_API_URL only if you need to point at a remote backend.
-  return import.meta.env.VITE_API_URL || '';
+  // In development, use direct localhost — avoids Vite proxy port misconfiguration.
+  // Override with VITE_API_URL to point at a remote backend.
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
 };
 
 export const API_URL = getApiUrl();
