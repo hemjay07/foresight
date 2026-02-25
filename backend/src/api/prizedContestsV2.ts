@@ -300,6 +300,84 @@ router.get('/contests/:id/entries', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/v2/contests/:id/social-scouts
+ * Returns entries in this contest made by users the current user follows on Tapestry.
+ * Powers the "Scouting Panel" — see what your network has drafted before you lock.
+ */
+router.get('/contests/:id/social-scouts', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    // 1. Get current user's tapestry profile ID
+    const currentUser = await db('users').where({ id: userId }).first();
+    if (!currentUser?.tapestry_user_id) {
+      return res.json({ scouts: [], message: 'No Tapestry profile connected' });
+    }
+
+    // 2. Get the contest so we know which entries table to use
+    const contest = await db('prized_contests').where('id', id).first();
+    if (!contest) {
+      return res.status(404).json({ error: 'Contest not found' });
+    }
+
+    // 3. Fetch who this user follows on Tapestry
+    let followingIds: string[] = [];
+    try {
+      const { getFollowing } = await import('../services/tapestryService');
+      const following = await getFollowing(currentUser.tapestry_user_id, 1, 100);
+      followingIds = (following || []).map((f) => f.id).filter(Boolean);
+    } catch {
+      return res.json({ scouts: [], message: 'Could not fetch following list' });
+    }
+
+    if (followingIds.length === 0) {
+      return res.json({ scouts: [], message: 'You are not following anyone yet' });
+    }
+
+    // 4. Find users who have those tapestry IDs and have entered this contest
+    const entriesTable = contest.is_free ? 'free_league_entries' : 'prized_entries';
+    const scouts = await db(entriesTable)
+      .join('users', `${entriesTable}.user_id`, 'users.id')
+      .whereIn('users.tapestry_user_id', followingIds)
+      .where(`${entriesTable}.contest_id`, id)
+      .select(
+        `${entriesTable}.team_ids`,
+        `${entriesTable}.captain_id`,
+        `${entriesTable}.score`,
+        'users.username',
+        'users.tapestry_user_id',
+      )
+      .limit(10);
+
+    if (scouts.length === 0) {
+      return res.json({ scouts: [], message: 'None of your follows have entered this contest yet' });
+    }
+
+    // 5. Resolve captain handles
+    const captainIds = scouts.filter(s => s.captain_id).map(s => s.captain_id);
+    const captains = captainIds.length > 0
+      ? await db('influencers').whereIn('id', captainIds).select('id', 'twitter_handle', 'display_name')
+      : [];
+    const captainMap = new Map(captains.map(c => [c.id, c]));
+
+    res.json({
+      scouts: scouts.map(s => ({
+        username: s.username || 'Anonymous',
+        tapestryUserId: s.tapestry_user_id,
+        teamIds: s.team_ids,
+        captainId: s.captain_id,
+        captainHandle: s.captain_id ? captainMap.get(s.captain_id)?.twitter_handle : null,
+        score: s.score,
+      })),
+    });
+  } catch (error: any) {
+    console.error('[SocialScouts] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch scout data' });
+  }
+});
+
 // ============ FREE LEAGUE ENDPOINTS ============
 
 /**

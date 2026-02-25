@@ -18,6 +18,7 @@ import FormationTeam from '../components/draft/FormationTeam';
 import InfluencerGrid from '../components/draft/InfluencerGrid';
 import TapestryBadge from '../components/TapestryBadge';
 import DraftReceipt from '../components/DraftReceipt';
+import ScoutingPanel from '../components/ScoutingPanel';
 import ShareTeamCard from '../components/ShareTeamCard';
 import { useToast } from '../contexts/ToastContext';
 import { useDelayedLoading } from '../hooks/useDelayedLoading';
@@ -560,6 +561,10 @@ export default function Draft() {
 
           {/* Left: Influencer Selection */}
           <div>
+            {/* Scouting Panel — shows what followed players have drafted */}
+            {contestId && isAuthenticated && (
+              <ScoutingPanel contestId={contestId} className="mb-4" />
+            )}
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Select Your Team</h2>
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-400">
