@@ -97,7 +97,7 @@ export default function WelcomeModal({ onClose, freeLeagueContestId }: WelcomeMo
               <div>
                 <p className="font-semibold text-white mb-1">Captain Bonus</p>
                 <p className="text-sm text-gray-300">
-                  Pick one captain who earns 1.5x points for your team
+                  Pick one captain who earns 2.0x points for your team
                 </p>
               </div>
             </div>

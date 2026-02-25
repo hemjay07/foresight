@@ -16,7 +16,7 @@ import foresightScoreService from './foresightScoreService';
  * - All points earned through actual performance
  * - Normalized for account size using rates and square roots
  * - Rewards exceptional viral moments
- * - Captain bonus is ×1.5, not ×2
+ * - Captain bonus is ×2.0 (doubled from original ×1.5)
  *
  * SCORING FORMULA:
  * Weekly Score = Activity + Engagement + Growth + Viral + Spotlight
@@ -82,8 +82,8 @@ const SCORING_CONFIG = {
     cap: 25,
   },
 
-  // Captain multiplier (1.5x, not 2x)
-  captainMultiplier: 1.5,
+  // Captain multiplier (2.0x — high-stakes decision, industry standard)
+  captainMultiplier: 2.0,
 
   // Spotlight bonuses (flat points, not percentage)
   spotlightBonuses: [12, 8, 4], // 1st, 2nd, 3rd place
@@ -322,7 +322,7 @@ export async function calculateWeeklyContestScores(contestId: number): Promise<{
   console.log(`║  SCORING V2: Contest ${contestId}                    ║`);
   console.log('╠════════════════════════════════════════════╣');
   console.log('║  Formula: Activity + Engage + Growth + Viral ║');
-  console.log('║  Captain: ×1.5 | Spotlight: +12/+8/+4 pts   ║');
+  console.log('║  Captain: ×2.0 | Spotlight: +12/+8/+4 pts   ║');
   console.log('╚════════════════════════════════════════════╝\n');
 
   const errors: string[] = [];
@@ -399,7 +399,7 @@ export async function calculateWeeklyContestScores(contestId: number): Promise<{
         // Calculate weekly score using V2 formula
         const scoreResult = calculateInfluencerWeeklyScore(delta, startFollowers);
 
-        // Apply captain multiplier (×1.5, not ×2)
+        // Apply captain multiplier (×2.0)
         const isCaptain = influencer.is_captain;
         let influencerFinalScore = scoreResult.baseTotal;
         if (isCaptain) {
@@ -444,7 +444,7 @@ export async function calculateWeeklyContestScores(contestId: number): Promise<{
         const grw = scoreResult.growthScore.toFixed(0).padStart(3);
         const vir = scoreResult.viralScore.toFixed(0).padStart(3);
         const tot = influencerFinalScore.toFixed(0).padStart(3);
-        const captainNote = isCaptain ? ` (×1.5)` : '';
+        const captainNote = isCaptain ? ` (×2.0)` : '';
         const spotNote = spotlightBonus > 0 ? ` (+${spotlightBonus})` : '';
 
         console.log(`│${captainMark}${name} │ ${act} │ ${eng} │ ${grw} │ ${vir} │ ${tot} │${captainNote}${spotNote}`);

@@ -882,7 +882,7 @@ export default function ContestDetail() {
                                 {player.tier}-Tier
                               </span>
                               {player.isCaptain && (
-                                <span className="text-xs text-yellow-400 font-bold">1.5x Points</span>
+                                <span className="text-xs text-yellow-400 font-bold">2.0× Points</span>
                               )}
                             </div>
                           </div>

@@ -733,14 +733,14 @@ async function scoreEndedPrizedContests(): Promise<void> {
               }
             }
 
-            // Apply captain bonus (1.5x per V2 formula)
+            // Apply captain bonus (2.0x)
             const isCaptain = captainId === influencerId;
             if (isCaptain) {
-              influencerScore *= 1.5;
+              influencerScore *= 2.0;
             }
 
             scoreBreakdown[influencerId] = {
-              baseScore: influencerScore / (isCaptain ? 1.5 : 1),
+              baseScore: influencerScore / (isCaptain ? 2.0 : 1),
               isCaptain,
               finalScore: influencerScore,
             };

@@ -247,7 +247,7 @@ export default function Draft() {
 
   const handleSetCaptain = (id: number) => {
     setCaptainId(id);
-    showToast('Captain selected! They earn 1.5× points', 'success');
+    showToast('Captain selected! They earn 2.0× points', 'success');
   };
 
   // Clear all selections
@@ -625,7 +625,7 @@ export default function Draft() {
               <h3 className="text-sm font-medium text-white mb-2">How Scoring Works</h3>
               <ul className="text-xs text-gray-400 space-y-1">
                 <li>• Points earned from influencer engagement</li>
-                <li>• Captain earns <span className="text-gold-400 font-medium">1.5× points</span></li>
+                <li>• Captain earns <span className="text-gold-400 font-medium">2.0× points</span></li>
                 <li>• Scores update weekly on Sundays</li>
                 <li>• Top performers win prizes</li>
               </ul>

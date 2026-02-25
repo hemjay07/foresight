@@ -1152,7 +1152,7 @@ router.get('/team/:teamId/breakdown', async (req: Request, res: Response) => {
         engagement: { max: 60, description: 'sqrt(weighted_engagement) × volume' },
         growth: { max: 40, description: 'absolute + rate bonus' },
         viral: { max: 25, description: 'bonus for 10K+ engagement tweets' },
-        captain: { multiplier: 1.5, description: 'captain gets ×1.5' },
+        captain: { multiplier: 2.0, description: 'captain gets ×2.0' },
         spotlight: { bonuses: [12, 8, 4], description: 'top 3 voted get flat bonus' },
       },
     });
@@ -1663,8 +1663,8 @@ router.get('/scoring-formula', async (_req: Request, res: Response) => {
       {
         name: 'Captain',
         icon: '⭐',
-        value: '×1.5',
-        description: 'Your captain gets 1.5× their base score.',
+        value: '×2.0',
+        description: 'Your captain gets 2.0× their base score.',
       },
       {
         name: 'Spotlight',

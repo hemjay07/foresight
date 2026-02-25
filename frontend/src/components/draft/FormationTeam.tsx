@@ -144,7 +144,7 @@ export default function FormationTeam({
       {filledCount > 0 && !captainId && (
         <p className="text-center text-xs text-gold-400 mb-3 flex items-center justify-center gap-1">
           <Crown size={12} weight="fill" />
-          Tap a player to make them captain (1.5× points)
+          Tap a player to make them captain (2.0× points)
         </p>
       )}
 
@@ -154,7 +154,7 @@ export default function FormationTeam({
         {captain && (
           <span className="text-gold-400 flex items-center gap-1">
             <Crown size={12} weight="fill" />
-            @{captain.handle} (1.5×)
+            @{captain.handle} (2.0×)
           </span>
         )}
       </div>
