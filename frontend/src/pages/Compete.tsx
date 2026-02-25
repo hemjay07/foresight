@@ -24,6 +24,7 @@ import {
   ChartLineUp,
   Calendar,
   CheckCircle,
+  MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { getNumericLevel } from '../utils/xp';
 import FoundingMemberBadge from '../components/FoundingMemberBadge';
@@ -141,6 +142,7 @@ export default function Compete() {
   const [rankingsSubTab, setRankingsSubTab] = useState<RankingsSubTab>(initialRankingsTab);
   const [fsTimeframe, setFsTimeframe] = useState<FsTimeframe>('all_time');
   const [contestFilter, setContestFilter] = useState<ContestFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Data states
@@ -330,6 +332,13 @@ export default function Compete() {
 
   const enteredContestIds = useMemo(() => new Set(myEntries.map(e => e.contestId)), [myEntries]);
 
+  const filteredFsLeaders = useMemo(() =>
+    searchQuery.trim()
+      ? fsLeaders.filter(e => (e.username || '').toLowerCase().includes(searchQuery.toLowerCase()))
+      : fsLeaders,
+    [fsLeaders, searchQuery]
+  );
+
   // Helpers
   const getRankDisplay = (rank: number) => {
     if (rank === 1) return <span className="text-2xl">1st</span>;
@@ -366,122 +375,113 @@ export default function Compete() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center">
-            <Trophy size={22} weight="fill" className="text-gray-950" />
+      {/* Row 1: Title + Main Tabs in one line */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center shrink-0">
+            <Trophy size={16} weight="fill" className="text-gray-950" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Compete</h1>
-            <p className="text-sm text-gray-400">Rankings, leaderboards & contests</p>
-          </div>
+          <h1 className="text-lg font-bold text-white">Compete</h1>
         </div>
-      </div>
-
-      {/* Main Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setMainTab('rankings')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-            mainTab === 'rankings'
-              ? 'bg-gold-500 text-gray-950 shadow-lg shadow-gold-500/20'
-              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
-          }`}
-        >
-          <Medal size={18} weight={mainTab === 'rankings' ? 'fill' : 'regular'} />
-          Rankings
-        </button>
-        <button
-          onClick={() => setMainTab('contests')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-            mainTab === 'contests'
-              ? 'bg-gold-500 text-gray-950 shadow-lg shadow-gold-500/20'
-              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
-          }`}
-        >
-          <Trophy size={18} weight={mainTab === 'contests' ? 'fill' : 'regular'} />
-          Contests
-          {(filteredContests.length + signatureContests.length) > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-gray-950/30 text-xs">
-              {filteredContests.length + signatureContests.length}
-            </span>
-          )}
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setMainTab('rankings')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              mainTab === 'rankings'
+                ? 'bg-gold-500 text-gray-950 shadow-lg shadow-gold-500/20'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+            }`}
+          >
+            <Medal size={15} weight={mainTab === 'rankings' ? 'fill' : 'regular'} />
+            Rankings
+          </button>
+          <button
+            onClick={() => setMainTab('contests')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              mainTab === 'contests'
+                ? 'bg-gold-500 text-gray-950 shadow-lg shadow-gold-500/20'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-white'
+            }`}
+          >
+            <Trophy size={15} weight={mainTab === 'contests' ? 'fill' : 'regular'} />
+            Contests
+            {(filteredContests.length + signatureContests.length) > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-gray-950/30 text-xs">
+                {filteredContests.length + signatureContests.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Rankings Tab */}
       {mainTab === 'rankings' && (
-        <div className="space-y-4">
-          {/* Sub-tabs */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {[
-              { id: 'fs' as RankingsSubTab, label: 'Foresight Score', icon: Sparkle, color: 'gold' },
-              { id: 'fantasy' as RankingsSubTab, label: 'Draft Leaders', icon: Trophy, color: 'yellow' },
-              { id: 'xp' as RankingsSubTab, label: 'XP Rankings', icon: Crown, color: 'cyan' },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = rankingsSubTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setRankingsSubTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-gray-700 text-white border border-gray-600'
-                      : 'bg-gray-800/30 text-gray-400 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Icon size={16} weight={isActive ? 'fill' : 'regular'} />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* FS Timeframe selector */}
-          {rankingsSubTab === 'fs' && (
-            <div className="flex gap-1 bg-gray-800/50 border border-gray-700 rounded-lg p-1 w-fit">
+        <div className="space-y-3">
+          {/* Row 2: Sub-tab selector + timeframe + search — all on one line */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sub-tabs */}
+            <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-0.5">
               {[
-                { id: 'all_time' as FsTimeframe, label: 'All-Time' },
-                { id: 'friends' as FsTimeframe, label: 'Friends' },
-                { id: 'season' as FsTimeframe, label: 'Season' },
-                { id: 'weekly' as FsTimeframe, label: 'Weekly' },
-                { id: 'referral' as FsTimeframe, label: 'Referrals' },
-              ].map((tf) => (
-                <button
-                  key={tf.id}
-                  onClick={() => setFsTimeframe(tf.id)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
-                    fsTimeframe === tf.id
-                      ? 'bg-gold-500 text-gray-950'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {tf.label}
-                </button>
-              ))}
+                { id: 'fs' as RankingsSubTab, label: 'FS Score', icon: Sparkle },
+                { id: 'fantasy' as RankingsSubTab, label: 'Draft', icon: Trophy },
+                { id: 'xp' as RankingsSubTab, label: 'XP', icon: Crown },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = rankingsSubTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setRankingsSubTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-gray-700 text-white'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    <Icon size={13} weight={isActive ? 'fill' : 'regular'} />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
 
-          {/* User position banner */}
-          {userPosition && rankingsSubTab === 'fs' && (
-            <div className="bg-gold-500/10 border border-gold-500/30 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gold-500/20 flex items-center justify-center">
-                  <Target size={20} className="text-gold-400" />
-                </div>
-                <div>
-                  <div className="text-sm text-gray-400">Your Position</div>
-                  <div className="text-xl font-bold text-white">#{userPosition.rank}</div>
-                </div>
+            {/* Timeframe — only for FS tab */}
+            {rankingsSubTab === 'fs' && (
+              <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-0.5">
+                {[
+                  { id: 'all_time' as FsTimeframe, label: 'All-Time' },
+                  { id: 'friends' as FsTimeframe, label: 'Friends' },
+                  { id: 'season' as FsTimeframe, label: 'Season' },
+                  { id: 'weekly' as FsTimeframe, label: 'Weekly' },
+                  { id: 'referral' as FsTimeframe, label: 'Referrals' },
+                ].map((tf) => (
+                  <button
+                    key={tf.id}
+                    onClick={() => setFsTimeframe(tf.id)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      fsTimeframe === tf.id
+                        ? 'bg-gold-500 text-gray-950'
+                        : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-400">Percentile</div>
-                <div className="text-lg font-semibold text-gold-400">Top {100 - userPosition.percentile}%</div>
-              </div>
+            )}
+
+            {/* Search */}
+            <div className="relative ml-auto">
+              <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search players..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-7 pr-3 py-1.5 text-xs bg-gray-800/50 border border-gray-700/50 rounded-lg text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-600 w-36 focus:w-44 transition-all"
+              />
             </div>
-          )}
+          </div>
 
           {/* Loading */}
           {loading && (
@@ -515,7 +515,30 @@ export default function Compete() {
               </div>
 
               <div className="divide-y divide-gray-800/50">
-                {fsLeaders.map((entry, index) => {
+                {/* Pinned: Your Position — inside list, not above it */}
+                {userPosition && rankingsSubTab === 'fs' && !searchQuery && (
+                  <div className="px-4 py-3 border-l-4 border-l-gold-400/50 bg-gold-500/5 border-b border-gray-800/50">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 text-center shrink-0">
+                        <span className="text-xs font-bold text-gold-400">#{userPosition.rank}</span>
+                      </div>
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-amber-500 flex items-center justify-center text-white shrink-0 ring-2 ring-gold-400/30">
+                        <Users size={16} weight="fill" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-gold-400">You</span>
+                          <span className="text-[10px] text-gray-500">Top {100 - userPosition.percentile}%</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs text-gray-500 uppercase tracking-widest">Your rank</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {filteredFsLeaders.map((entry, index) => {
                   const rank = index + 1;
                   const tierConfig = TIER_CONFIG[entry.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.bronze;
                   const isTop3 = rank <= 3;
@@ -561,12 +584,14 @@ export default function Compete() {
                             <span className={`px-1.5 py-0.5 text-[10px] font-bold ${tierConfig.bg} ${tierConfig.color} rounded uppercase tracking-wide whitespace-nowrap`}>
                               {entry.tier}
                             </span>
-                            <FoundingMemberBadge
-                              isFoundingMember={entry.isFoundingMember}
-                              foundingMemberNumber={entry.foundingMemberNumber}
-                              earlyAdopterTier={entry.earlyAdopterTier}
-                              variant="minimal"
-                            />
+                            <span className="hidden sm:inline-flex">
+                              <FoundingMemberBadge
+                                isFoundingMember={entry.isFoundingMember}
+                                foundingMemberNumber={entry.foundingMemberNumber}
+                                earlyAdopterTier={entry.earlyAdopterTier}
+                                variant="minimal"
+                              />
+                            </span>
                             {/* On-chain: icon-only dot, tooltip explains */}
                             {entry.tapestryUserId && (() => {
                               const repTier = getReputationTier(rank, fsTotal);
