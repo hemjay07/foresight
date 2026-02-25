@@ -23,6 +23,7 @@ import {
   CaretRight,
   ChartLineUp,
   Calendar,
+  CheckCircle,
 } from '@phosphor-icons/react';
 import { getNumericLevel } from '../utils/xp';
 import FoundingMemberBadge from '../components/FoundingMemberBadge';
@@ -32,6 +33,16 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../hooks/useAuth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+/** Tapestry reputation tier based on leaderboard percentile */
+function getReputationTier(rank: number, total: number): { label: string; color: string } {
+  if (total === 0) return { label: 'Verified', color: 'text-gold-400' };
+  const pct = rank / total;
+  if (pct <= 0.05) return { label: 'Diamond', color: 'text-cyan-400' };
+  if (pct <= 0.15) return { label: 'Gold',    color: 'text-gold-400' };
+  if (pct <= 0.35) return { label: 'Silver',  color: 'text-gray-300' };
+  return                   { label: 'Bronze',  color: 'text-amber-600' };
+}
 
 type MainTab = 'rankings' | 'contests';
 type RankingsSubTab = 'fs' | 'fantasy' | 'xp';
@@ -557,7 +568,18 @@ export default function Compete() {
                               earlyAdopterTier={entry.earlyAdopterTier}
                               variant="minimal"
                             />
-                            <TapestryBadge variant="inline" tapestryUserId={entry.tapestryUserId} />
+                            {entry.tapestryUserId && (() => {
+                              const tier = getReputationTier(rank, fsTotal);
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1 text-[10px] ${tier.color}`}
+                                  title="On-chain reputation verified by Tapestry Protocol"
+                                >
+                                  <CheckCircle size={11} weight="fill" />
+                                  {tier.label} · On-chain
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -616,11 +638,16 @@ export default function Compete() {
 
               {/* Tapestry verification footer */}
               {fsLeaders.length > 0 && (
-                <div className="px-4 py-2 border-t border-gray-800">
+                <div className="px-4 py-2 border-t border-gray-800 flex items-center justify-between">
                   <p className="text-[10px] text-gray-600 flex items-center gap-1">
                     <Sparkle size={10} weight="fill" className="text-gold-400/50" />
-                    All scores stored on Tapestry Protocol — verifiable on Solana
+                    All scores verified on Solana via Tapestry Protocol
                   </p>
+                  {fsTotal > 0 && (
+                    <span className="text-[10px] text-gray-600">
+                      {fsTotal.toLocaleString()} profiles on-chain
+                    </span>
+                  )}
                 </div>
               )}
             </div>
