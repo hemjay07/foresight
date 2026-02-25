@@ -638,8 +638,10 @@ export default function Profile() {
                     <div className="text-xs text-gray-500">Following</div>
                   </div>
                   <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-gold-400">{tapestryContent.length}</div>
-                    <div className="text-xs text-gray-500">On-chain Items</div>
+                    <div className="text-xl font-bold text-gold-400">
+                      {tapestryContent.filter(i => i.properties.type === 'draft_team').length}
+                    </div>
+                    <div className="text-xs text-gray-500">Teams on Solana</div>
                   </div>
                 </div>
 
@@ -672,16 +674,16 @@ export default function Profile() {
                 )}
 
                 <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-                  <span className="font-mono text-xs text-gray-500">
-                    ID: {tapestryStatus.tapestryUserId?.slice(0, 12)}...
+                  <span className="font-mono text-xs text-gray-500 select-all" title="Your Tapestry profile ID">
+                    {tapestryStatus.tapestryUserId?.slice(0, 8)}...{tapestryStatus.tapestryUserId?.slice(-6)}
                   </span>
                   <a
-                    href="https://www.usetapestry.dev"
+                    href={`https://www.usetapestry.dev/profiles/${tapestryStatus.tapestryUserId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
+                    className="text-xs text-gold-400 hover:text-gold-300 transition-colors flex items-center gap-1"
                   >
-                    View Protocol →
+                    View on Tapestry →
                   </a>
                 </div>
               </div>
