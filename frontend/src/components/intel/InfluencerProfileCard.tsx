@@ -63,14 +63,14 @@ const TIER_CONFIG: Record<string, {
   },
   B: {
     badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40',
-    bar: 'bg-emerald-400',
+    bar: 'bg-emerald-500',
     labelText: 'text-emerald-400',
     label: 'B-Tier',
   },
   C: {
     badge: 'bg-gray-500/20 text-gray-400 border border-gray-600/40',
-    bar: 'bg-gray-500',
-    labelText: 'text-gray-500',
+    bar: 'bg-gray-400',
+    labelText: 'text-gray-400',
     label: 'C-Tier',
   },
 };
