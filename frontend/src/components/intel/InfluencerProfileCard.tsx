@@ -44,37 +44,32 @@ interface InfluencerProfileCardProps {
 
 // Tier visual tokens — color accent per tier
 const TIER_CONFIG: Record<string, {
-  badge: string;        // badge text + bg
-  bar: string;          // progress bar fill
-  topBorder: string;    // card top accent
-  labelText: string;    // tier label
-  label: string;        // human label
+  badge: string;     // badge text + bg
+  bar: string;       // progress bar fill
+  labelText: string; // tier label color
+  label: string;     // human label
 }> = {
   S: {
     badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/40',
     bar: 'bg-amber-400',
-    topBorder: 'border-t-amber-400',
     labelText: 'text-amber-400',
     label: 'S-Tier',
   },
   A: {
     badge: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40',
     bar: 'bg-cyan-400',
-    topBorder: 'border-t-cyan-400',
     labelText: 'text-cyan-400',
     label: 'A-Tier',
   },
   B: {
     badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40',
     bar: 'bg-emerald-400',
-    topBorder: 'border-t-emerald-400',
     labelText: 'text-emerald-400',
     label: 'B-Tier',
   },
   C: {
     badge: 'bg-gray-500/20 text-gray-400 border border-gray-600/40',
     bar: 'bg-gray-500',
-    topBorder: 'border-t-gray-600',
     labelText: 'text-gray-500',
     label: 'C-Tier',
   },
@@ -134,9 +129,7 @@ export default function InfluencerProfileCard({
     <div
       onClick={handleCardClick}
       className={`
-        relative rounded-xl border transition-all overflow-hidden
-        border-t-2 ${tc.topBorder}
-        ${isCompareMode ? 'cursor-pointer' : 'cursor-pointer'}
+        relative rounded-xl border transition-all overflow-hidden cursor-pointer
         ${isSelected
           ? 'bg-cyan-500/10 border-cyan-500/50 ring-1 ring-cyan-500/30'
           : 'bg-gray-900/60 border-gray-800 hover:border-gray-700 hover:bg-gray-900/80'}

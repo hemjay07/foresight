@@ -94,25 +94,16 @@ interface HighlightCardProps {
   accent?: 'orange' | 'cyan';
 }
 
-// Tier top-border color for viral cards
-const TWEET_CARD_TOP: Record<string, string> = {
-  S: 'border-t-amber-400',
-  A: 'border-t-cyan-400',
-  B: 'border-t-emerald-400',
-  C: 'border-t-gray-600',
-};
-
 function HighlightCard({
   tweet, onTeam, scouted, scouting, draftCount, onScout,
   engagementLabel, tierStyle, formatNumber, accent = 'orange',
 }: HighlightCardProps) {
-  const tierTop = TWEET_CARD_TOP[tweet.influencer.tier] ?? 'border-t-gray-700';
   const cardBase = onTeam
     ? 'bg-amber-500/5 border-amber-500/25'
     : 'bg-gray-900/60 border-gray-800 hover:border-gray-700';
 
   return (
-    <div className={`rounded-xl border border-t-2 transition-all overflow-hidden ${tierTop} ${cardBase}`}>
+    <div className={`rounded-xl border transition-all overflow-hidden ${cardBase}`}>
       <div className="p-3">
         {/* Avatar · handle · tier badge */}
         <div className="flex items-center gap-2 mb-2.5">
