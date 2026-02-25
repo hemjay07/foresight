@@ -34,14 +34,14 @@ import { useAuth } from '../hooks/useAuth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-/** Tapestry reputation tier based on leaderboard percentile */
+/** Tapestry on-chain reputation tier — separate from player tier badges */
 function getReputationTier(rank: number, total: number): { label: string; color: string } {
-  if (total === 0) return { label: 'Verified', color: 'text-gold-400' };
+  if (total === 0) return { label: 'Verified', color: 'text-emerald-400' };
   const pct = rank / total;
-  if (pct <= 0.05) return { label: 'Diamond', color: 'text-cyan-400' };
-  if (pct <= 0.15) return { label: 'Gold',    color: 'text-gold-400' };
-  if (pct <= 0.35) return { label: 'Silver',  color: 'text-gray-300' };
-  return                   { label: 'Bronze',  color: 'text-amber-600' };
+  if (pct <= 0.05) return { label: 'Stellar',  color: 'text-cyan-300' };
+  if (pct <= 0.15) return { label: 'Premium',  color: 'text-cyan-400' };
+  if (pct <= 0.35) return { label: 'Member',   color: 'text-cyan-500' };
+  return                   { label: 'Active',   color: 'text-gray-400' };
 }
 
 type MainTab = 'rankings' | 'contests';
@@ -112,11 +112,11 @@ interface MyEntry {
 }
 
 const TIER_CONFIG = {
-  bronze: { color: 'text-orange-400', bg: 'bg-orange-500/20' },
-  silver: { color: 'text-gray-300', bg: 'bg-gray-400/20' },
-  gold: { color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+  bronze: { color: 'text-amber-500',  bg: 'bg-amber-500/20' },
+  silver: { color: 'text-gray-300',   bg: 'bg-gray-500/20' },
+  gold:   { color: 'text-gold-400',   bg: 'bg-gold-500/20' },
   platinum: { color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
-  diamond: { color: 'text-gold-400', bg: 'bg-gold-500/20' },
+  diamond:  { color: 'text-gold-400', bg: 'bg-gold-500/30' },
 } as const;
 
 const CONTEST_CONFIG: Record<string, { icon: React.ElementType; color: string; gradient: string }> = {
@@ -339,10 +339,10 @@ export default function Compete() {
   };
 
   const getRankStyle = (rank: number) => {
-    if (rank === 1) return 'text-yellow-400 font-bold';
-    if (rank === 2) return 'text-gray-300 font-bold';
-    if (rank === 3) return 'text-orange-400 font-bold';
-    return 'text-gray-400';
+    if (rank === 1) return 'text-gold-400 font-bold';
+    if (rank === 2) return 'text-cyan-400 font-bold';
+    if (rank === 3) return 'text-emerald-400 font-bold';
+    return 'text-gray-500';
   };
 
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -520,70 +520,71 @@ export default function Compete() {
                   const tierConfig = TIER_CONFIG[entry.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.bronze;
                   const isTop3 = rank <= 3;
                   const rowBorder = rank === 1
-                    ? 'border-l-2 border-l-yellow-400 bg-yellow-500/5'
+                    ? 'border-l-4 border-l-gold-400 bg-gold-500/5'
                     : rank === 2
-                    ? 'border-l-2 border-l-gray-300 bg-gray-400/5'
+                    ? 'border-l-4 border-l-cyan-400 bg-cyan-500/5'
                     : rank === 3
-                    ? 'border-l-2 border-l-orange-400 bg-orange-500/5'
-                    : '';
+                    ? 'border-l-4 border-l-emerald-400 bg-emerald-500/5'
+                    : 'border-l-4 border-l-transparent';
 
                   return (
-                    <div key={entry.userId} className={`p-4 hover:bg-gray-800/30 transition-colors ${rowBorder}`}>
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 text-center ${getRankStyle(rank)}`}>
+                    <div key={entry.userId} className={`px-4 py-3 hover:bg-gray-800/30 transition-colors ${rowBorder}`}>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        {/* Rank — compact, consistent width */}
+                        <div className={`w-8 text-center shrink-0 text-sm ${getRankStyle(rank)}`}>
                           {rank === 1 ? (
-                            <Crown size={24} weight="fill" className="mx-auto text-yellow-400" />
+                            <Crown size={18} weight="fill" className="mx-auto text-gold-400" />
                           ) : rank === 2 ? (
-                            <Medal size={22} weight="fill" className="mx-auto text-gray-300" />
+                            <Medal size={16} weight="fill" className="mx-auto text-cyan-400" />
                           ) : rank === 3 ? (
-                            <Medal size={22} weight="fill" className="mx-auto text-orange-400" />
+                            <Medal size={16} weight="fill" className="mx-auto text-emerald-400" />
                           ) : (
-                            getRankDisplay(rank)
+                            <span className="text-xs text-gray-500">#{rank}</span>
                           )}
                         </div>
-                        <div className={`${isTop3 ? 'w-12 h-12' : 'w-10 h-10'} rounded-full bg-gradient-to-br from-gold-500 to-amber-500 flex items-center justify-center text-white overflow-hidden ring-2 ${rank === 1 ? 'ring-yellow-400/50' : rank === 2 ? 'ring-gray-300/30' : rank === 3 ? 'ring-orange-400/30' : 'ring-transparent'}`}>
+
+                        {/* Avatar — consistent size across all ranks */}
+                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br from-gold-500 to-amber-500 flex items-center justify-center text-white overflow-hidden shrink-0 ring-2 ${rank === 1 ? 'ring-gold-400/50' : rank === 2 ? 'ring-cyan-400/30' : rank === 3 ? 'ring-emerald-400/30' : 'ring-transparent'}`}>
                           {entry.avatarUrl ? (
                             <img src={entry.avatarUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <Users size={isTop3 ? 20 : 18} weight="fill" />
+                            <Users size={16} weight="fill" />
                           )}
                         </div>
+
+                        {/* Identity — username + tier badge + founding + on-chain dot */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`${isTop3 ? 'text-base' : 'text-sm'} font-semibold text-white truncate`}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-semibold text-white truncate max-w-[120px] sm:max-w-none">
                               {entry.username || 'Anonymous'}
                             </span>
-                            <span className={`px-1.5 py-0.5 text-xs font-bold ${tierConfig.bg} ${tierConfig.color} rounded uppercase`}>
+                            <span className={`px-1.5 py-0.5 text-[10px] font-bold ${tierConfig.bg} ${tierConfig.color} rounded uppercase tracking-wide whitespace-nowrap`}>
                               {entry.tier}
                             </span>
-                            {/* Level badge derived from FS score */}
-                            {entry.score > 0 && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-bold text-gray-400 bg-gray-800 rounded">
-                                Lvl {Math.max(1, Math.min(50, Math.floor(entry.score / 25) + 1))}
-                              </span>
-                            )}
                             <FoundingMemberBadge
                               isFoundingMember={entry.isFoundingMember}
                               foundingMemberNumber={entry.foundingMemberNumber}
                               earlyAdopterTier={entry.earlyAdopterTier}
                               variant="minimal"
                             />
+                            {/* On-chain: icon-only dot, tooltip explains */}
                             {entry.tapestryUserId && (() => {
-                              const tier = getReputationTier(rank, fsTotal);
+                              const repTier = getReputationTier(rank, fsTotal);
                               return (
                                 <span
-                                  className={`inline-flex items-center gap-1 text-[10px] ${tier.color}`}
-                                  title="On-chain reputation verified by Tapestry Protocol"
+                                  className={`inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-800 ${repTier.color}`}
+                                  title={`${repTier.label} · Verified on Tapestry Protocol`}
                                 >
-                                  <CheckCircle size={11} weight="fill" />
-                                  {tier.label} · On-chain
+                                  <CheckCircle size={10} weight="fill" />
                                 </span>
                               );
                             })()}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {entry.tapestryUserId && isConnected && localStorage.getItem('authToken') && (
+
+                        {/* Follow — hidden on mobile to keep rows clean */}
+                        {entry.tapestryUserId && isConnected && localStorage.getItem('authToken') && (
+                          <div className="hidden sm:block shrink-0">
                             <FollowButton
                               targetProfileId={entry.tapestryUserId}
                               initialFollowing={followStates[entry.tapestryUserId] || false}
@@ -601,13 +602,15 @@ export default function Compete() {
                                 }
                               }}
                             />
-                          )}
-                          <div className="text-right">
-                            <div className={`${isTop3 ? 'text-lg' : 'text-base'} font-bold ${tierConfig.color}`}>
-                              {entry.score.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-gray-500">FS</div>
                           </div>
+                        )}
+
+                        {/* Score — primary metric, always dominant */}
+                        <div className="text-right shrink-0">
+                          <div className={`${isTop3 ? 'text-xl' : 'text-lg'} font-black tracking-tight text-white`}>
+                            {entry.score.toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-widest">FS</div>
                         </div>
                       </div>
                     </div>
