@@ -1,10 +1,94 @@
 # Foresight — Progress Checkpoint
 
-> **Last Updated:** February 25, 2026 (Intel Features Complete)
-> **Phase:** Day 5: Intel Page Enhancements + Tapestry Integration
-> **Current Score:** 90/100 (Features Complete, Tapestry Integrated)
-> **Target Score:** 93-95/100 (Ship + 1-week iteration)
-> **Status:** INTEL PAGE ENHANCED - Ready for Final QA
+> **Last Updated:** February 26, 2026 (Shareable Card Design Round 2)
+> **Phase:** Day 6: Profile polish + shareable card design strategy
+> **Current Score:** 93/100 (Features Complete, Tests Passing)
+> **Target Score:** 95/100 (Deploy ready)
+> **Status:** PROFILE OVERHAULED + SHAREABLE CARD DESIGN FINALIZED — 82 backend tests + strategy docs complete
+
+## SESSION: Feb 26, 2026 — Shareable Card Design Round 2 (NEW)
+
+### Deliverables Created
+
+**3 Design Strategy Documents:**
+
+1. **`docs/design/SHAREABLE_CARD_ROUND2_ANALYSIS.md`** (7K words, comprehensive)
+   - Brutal self-critique of Round 1 concepts (Trading Card, Battle Pass, Oracle, Heatmap, Terminal)
+   - Verdict: Trading Card is clear winner (9/10 human feel)
+   - Name-informed design: Tested all 5 product names (SIGNAL, DEGEN DRAFT, RATIO, HODL GAMES, CLOUT)
+   - Winner: **SIGNAL + Trading Card + "I called it."**
+   - Statement copy analysis with ranked alternatives
+   - Why Moonberg's card felt human (and why ours does too)
+   - Full Canvas 2D implementation specs with exact coordinates, font sizes, colors
+   - Part 6: Checklist against Moonberg's standard (all criteria met)
+
+2. **`docs/design/SHAREABLE_CARD_QUICK_REFERENCE.md`** (2K words, one-page decision matrix)
+   - All 5 names vs. Trading Card concept (ranked table)
+   - Why SIGNAL wins (formula breakdown)
+   - Copy lines ranked by CT resonance
+   - Implementation checklist (7-8 hours estimated)
+   - Risks & mitigations
+   - Design tokens reference
+
+3. **`docs/design/SHAREABLE_CARD_VISUAL_MOCKUP.md`** (3K words + canvas code)
+   - Full ASCII mockup of the card
+   - Complete Canvas 2D implementation code (production-ready)
+   - Mobile responsive scaling
+   - Alternative statements for A/B testing
+   - Design checklist (visual quality, responsiveness, accessibility)
+   - Performance notes + caching strategy
+   - Fallback states for avatar failures
+   - Testing checklist with 5 user ranks
+
+### Key Decisions Made
+
+**The Shareable Card Concept:**
+- **Visual:** Trading card with holographic shine effect
+- **Name/Brand:** SIGNAL (insider prediction platform)
+- **Statement:** "I CALLED IT" (3 words, pure confidence)
+- **Hero Element:** Avatar with gold glow + statement text (56px)
+- **Layout:** 1200x630px (OG standard), mobile-responsive
+- **Colors:** Dark bg #0A0A0F + gold #F59E0B (brand-native)
+- **Effects:** Holographic shine on avatar, dashed dividers, rank badge optional
+- **Psychology:** Celebrates prediction accuracy (insight over luck)
+
+**Why This Beats Round 1 + Moonberg's Standard:**
+- Single strong concept (not a feature checklist)
+- Typographic confidence (56px "I CALLED IT" is hero)
+- Visual tension (glow vs dark, image vs text)
+- Has a voice (personal victory, insider knowledge)
+- CT culture native ("I called it" = pure trader energy)
+- Memorable line (sticks with you)
+- Human feel (made by someone who loves the game)
+
+### Next Steps (Phase 2 - Approval Needed)
+
+1. **Design validation** — Create Figma mockup (30 min)
+2. **User testing** — Show 5 CT power users ("Would you share this?") (1 hour)
+3. **Implementation** — Canvas 2D rendering in shareCard.ts (4 hours)
+4. **Testing** — Real user data, mobile verification (2 hours)
+5. **Launch** — Add to profile/leaderboard pages (1 hour)
+
+**Total estimated effort: 7-8 hours**
+
+---
+
+## SESSION: Feb 26, 2026 — Profile Overhaul + Critical Bug Fixes
+
+### Fixes Applied
+
+1. **Profile page restructured** — removed "Today's Actions" nav cards + "Quick Links" (duplicated navigation, not profile content); moved Tapestry section to top position for judge visibility
+2. **Critical data wrapper bug fixed** — `GET /api/users/me` wraps response in `sendSuccess({ success, data })` but Profile.tsx and Settings.tsx were reading `profileRes.data.username` (undefined) instead of `profileRes.data.data.username`. This caused profile names/XP/stats to always show as empty/zero.
+3. **Settings.tsx data access fixed** — same wrapper issue; profile data now correctly unwrapped
+4. **Quests inline display added** — Profile Overview now shows individual daily quests with progress bars, not just a link to the quests page
+5. **Quests API response handling fixed** — quests endpoint returns grouped `{ daily: [], onboarding: [], weekly: [] }` but we were trying to filter a non-array; now flatten before storing
+6. **Stale CTFeed.test.tsx deleted** — was importing a component that no longer exists at that path; caused frontend test suite to fail
+7. **Quest timezone bug fixed** (previous session) — `getDate()` → `getUTCDate()` in quests.ts
+
+### Test Status
+- **Backend:** 7 test files, 82 tests — all passing ✅
+- **Frontend:** 1 test file, 1 test — passing ✅
+- **TypeScript:** Both frontend and backend — clean ✅
 
 ---
 
@@ -690,7 +774,7 @@ Three features that make Tapestry load-bearing:
 - [ ] Deploy frontend to Vercel (connect repo, set env vars)
 - [ ] Get Privy keys from https://dashboard.privy.io
 - [ ] Get Tapestry key from https://www.usetapestry.dev
-- [ ] DNS setup (foresight.gg)
+- [ ] DNS setup (ct-foresight.xyz)
 - [ ] E2E test on production
 
 ---
