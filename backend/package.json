@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc --noEmit false || echo 'Build completed with warnings'",
     "start": "tsx src/index.ts",
-    "db:migrate": "NODE_OPTIONS='--import tsx' pnpm exec knex migrate:latest",
+    "db:migrate": "NODE_OPTIONS='--import tsx' npx knex migrate:latest",
     "db:seed": "NODE_OPTIONS='--import tsx' pnpm exec knex seed:run",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -78,14 +78,19 @@ export async function up(knex: Knex): Promise<void> {
 
   // ─── Fix 2: Add tapestry_user_id + avatar_url to demo users ─────────
   for (let i = 0; i < DEMO_WALLETS.length; i++) {
+    // Update tapestry info (always safe to overwrite)
     await knex('users')
       .where('wallet_address', DEMO_WALLETS[i])
       .update({
         tapestry_user_id: `demo_tapestry_${i + 1}`,
         avatar_url: DEMO_AVATARS[i],
         is_founding_member: true,
-        founding_member_number: i + 2, // Start at 2 (real user might be #1)
       });
+    // Only set founding_member_number if not already set (trigger may have set it)
+    await knex('users')
+      .where('wallet_address', DEMO_WALLETS[i])
+      .whereNull('founding_member_number')
+      .update({ founding_member_number: i + 2 });
   }
   console.log('Updated demo users with tapestry IDs and avatars');
 

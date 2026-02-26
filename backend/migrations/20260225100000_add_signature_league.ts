@@ -65,6 +65,8 @@ export async function up(knex: Knex): Promise<void> {
 
   const [contestId] = await knex('prized_contests').insert({
     contest_type_id: freeLeagueType.id,
+    contract_contest_id: 998,
+    contract_address: 'SignatureLeagueCZChampions2026',
     name: "CZ's Champions League",
     description: "Created by @cz_binance — Draft the biggest names in CT and prove you know who runs this space.",
     entry_fee: 0,

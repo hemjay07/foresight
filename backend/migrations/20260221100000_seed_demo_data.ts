@@ -212,6 +212,8 @@ export async function up(knex: Knex): Promise<void> {
 
     await knex('prized_contests').insert({
       contest_type_id: freeLeagueType.id,
+      contract_contest_id: 999,
+      contract_address: 'HackathonDemoFreeLeague2026',
       name: 'Hackathon Demo League',
       description: 'Free entry league for the Solana Graveyard Hackathon demo. Draft your dream CT team and compete for glory!',
       entry_fee: 0,
