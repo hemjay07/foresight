@@ -1,0 +1,18 @@
+{
+  "name": "Foresight",
+  "short_name": "Foresight",
+  "description": "Fantasy sports for Crypto Twitter. Draft CT influencers, earn points, compete for prizes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090B",
+  "theme_color": "#F59E0B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

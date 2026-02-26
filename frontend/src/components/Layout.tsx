@@ -4,7 +4,6 @@ import {
   House,
   User,
   Trophy,
-  Lightning,
   Newspaper,
   SignIn,
   CaretDown,
@@ -101,9 +100,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-6">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center shadow-gold">
-                <Lightning size={18} weight="fill" className="text-gray-950" />
-              </div>
+              <img src="/logo.svg" alt="Foresight" className="h-7 w-auto" />
               <span className="font-display font-bold text-white hidden sm:block">Foresight</span>
             </Link>
 
