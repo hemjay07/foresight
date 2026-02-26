@@ -46,9 +46,13 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, Postman, curl)
     if (!origin) return callback(null, true);
 
-    // Allow configured frontend URL or localhost on any port in development
+    // Allow configured frontend URL(s) or localhost on any port in development
+    const extraOrigins = process.env.CORS_EXTRA_ORIGINS
+      ? process.env.CORS_EXTRA_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+      : [];
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      ...extraOrigins,
       'http://localhost:5173',
       'http://localhost:5174',
     ].filter(Boolean);
