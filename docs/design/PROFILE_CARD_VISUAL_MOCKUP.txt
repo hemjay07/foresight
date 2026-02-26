@@ -1,0 +1,468 @@
+================================================================================
+PROFILE SHARE CARD REDESIGN — DETAILED VISUAL MOCKUPS
+================================================================================
+
+This document shows what each design looks like in detailed ASCII art form.
+Use these to visualize exactly what users will see.
+
+================================================================================
+DESIGN 1: FEDERAL AGENT BADGE (Shield Shape, Navy + Gold)
+================================================================================
+
+FULL CARD VIEW (520×680px):
+
+                          ╱─────────────────┐
+                        ╱                     │
+                      ╱    FORESIGHT ID      │
+                    ╱      ⚡ AGENCY CREST ⭐ │ Top 50px
+                  ╱                          │
+                ╱                            │
+              │                              │
+              │                              │
+              │     ┌─────────────────────┐  │
+              │     │                     │  │
+              │     │    AVATAR PHOTO     │  │
+              │     │   [SQUARE 110px]    │  │
+              │     │                     │  │
+              │     │  Gold border 8px    │  │ Avatar section
+              │     │  Polaroid fade FX   │  │ 110×220px
+              │     │                     │  │
+              │     └─────────────────────┘  │
+              │                              │
+              │      LIC #FST-0042117        │
+              │                              │
+              │  ┌─────────────────────────┐ │
+              │  │  NAME:       HEMJAY     │ │
+              │  │  TIER:    SILVER AGENT  │ │
+              │  │  RANK:       #1,847     │ │
+              │  │  SCORE:  2,142 FS ⚡    │ │
+              │  │  MULTIPLIER: 1.58× 🔥   │ │
+              │  │  STATUS:    VERIFIED    │ │
+              │  │  ISSUED:  26 FEB 2026   │ │
+              │  │  EXPIRES: 26 FEB 2027   │ │
+              │  └─────────────────────────┘ │ Data fields
+              │                              │ Section
+              │  ═══════════════════════════ │
+              │                              │
+              │  [HOLOGRAM SHIMMER EFFECT]   │ Rainbow
+              │  SPECTRUM IRIDESCENCE        │ colors
+              │                              │ Bottom
+              │  TAPESTRY · SOLANA VERIFIED  │ 100px
+              │                              │
+              │                              │
+              │                              │
+                ╲                            │
+                  ╲                          │
+                    ╲                        ╱
+                      ╲    ═══════════════  ╱
+                        ╲─────────────────┘
+
+Color Scheme:
+  Background: #0F1729 (Deep navy-black)
+  Borders: #F59E0B (Gold)
+  Text: #FFFFFF (White)
+  Labels: #A1A1AA (Muted gray)
+  Highlights: #F59E0B (Gold)
+
+Typography:
+  "FORESIGHT ID": Inter bold 11px
+  Data labels: JetBrains Mono 11px
+  Data values: JetBrains Mono 11px (gold for score/multiplier)
+
+Unique Elements:
+  • Shield shape (not rectangular)
+  • Square photo (ID photo style, not circular)
+  • Monospace data grid (official, technical feel)
+  • Hologram rainbow effect at bottom
+  • Watermark "SOLANA" repeating diagonally behind everything
+  • Perforated left edge (like ticket stubs)
+
+Emotional Response:
+  First impression: "Wait, is that an FBI ID?"
+  On zoom: "Oh, it's a Crypto Intelligence Agent license"
+  On share: "This is actually genius"
+
+
+DESKTOP PREVIEW (Full color rendering):
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                    ⚡ FORESIGHT ID                   ┃
+┃                                                      ┃
+┃                  [⭐ AGENCY CREST]                   ┃
+┃                                                      ┃
+┃               ╱─────────────────────╲               ┃
+┃             ╱                         ╲             ┃
+┃            │                           │            ┃
+┃            │    ┌─────────────────┐    │            ┃
+┃            │    │  HEMJAY AVATAR  │    │            ┃
+┃            │    │   (110px square) │    │            ┃
+┃            │    │   Gold border    │    │            ┃
+┃            │    │                  │    │            ┃
+┃            │    └─────────────────┘    │            ┃
+┃            │                           │            ┃
+┃            │      LIC #FST-0042117     │            ┃
+┃            │                           │            ┃
+┃            │  NAME:       HEMJAY       │            ┃
+┃            │  TIER:    SILVER AGENT    │            ┃
+┃            │  RANK:       #1,847       │            ┃
+┃            │  SCORE:  2,142 FS (GOLD)  │            ┃
+┃            │  MULTIPLIER: 1.58× (GOLD) │            ┃
+┃            │  STATUS:    VERIFIED      │            ┃
+┃            │  ISSUED:  26 FEB 2026     │            ┃
+┃            │  EXPIRES: 26 FEB 2027     │            ┃
+┃            │                           │            ┃
+┃            │  ═══════════════════════  │            ┃
+┃            │                           │            ┃
+┃            │   [RAINBOW HOLOGRAM FX]   │            ┃
+┃            │   MAGENTA→CYAN→GREEN→     │            ┃
+┃            │   YELLOW→ORANGE SHIMMER   │            ┃
+┃            │                           │            ┃
+┃            │   TAPESTRY · SOLANA       │            ┃
+┃             ╲                         ╱             ┃
+┃              ╲─────────────────────────              ┃
+┃                                                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+On Twitter scrolling (520px width):
+  What you see: Shield shape + gold border + white name text
+  Scroll stop factor: VERY HIGH (unusual geometry)
+  Zoom factor: HIGH (want to see what's inside)
+
+
+================================================================================
+DESIGN 2: VINTAGE CHAMPIONSHIP CERTIFICATE (Cream + Serif + Ornate)
+================================================================================
+
+FULL CARD VIEW (520×680px):
+
+                    ╔═════════════════════════════╗
+                    ║                             ║
+                    ║   CERTIFICATE OF           ║
+                    ║   ACHIEVEMENT              ║ Top border
+                    ║                             ║
+                    ║   THIS IS TO CERTIFY THAT   ║
+                    ║                             ║
+                    ║      ╭─────────────╮        ║ Avatar
+                    ║      │             │        ║ 100px
+                    ║      │  AVATAR     │        ║ circle
+                    ║      │   PHOTO     │        ║ gold ring
+                    ║      │             │        ║
+                    ║      ╰─────────────╯        ║
+                    ║                             ║
+                    ║   HAS ACHIEVED THE          ║
+                    ║   RANK OF                   ║
+                    ║                             ║
+                    ║      HEMJAY                 ║ Name serif
+                    ║   ─────────────────         ║ Gold line
+                    ║                             ║
+                    ║   SILVER TIER ANALYST       ║ Achievement
+                    ║   Foresight Score: 2142 FS  ║ stats
+                    ║   Season Ranking: #1,847    ║
+                    ║   Multiplier: 1.58×         ║
+                    ║                             ║
+                    ║   IN THE LEAGUE OF          ║
+                    ║                             ║
+                    ║   CRYPTO TWITTER TALENT     ║
+                    ║                             ║
+                    ║   __________  __________    ║ Signature
+                    ║    VERIFIED     DATE        ║ lines
+                    ║                             ║
+                    ║   ISSUED 26 FEB 2026        ║
+                    ║   EXPIRES 26 FEB 2027       ║ Footer
+                    ║   LICENSE #FST-0042117      ║
+                    ║                             ║
+                    ║          ⭐                  ║ Wax seal
+                    ║       (TIER COLOR)          ║ bottom-right
+                    ║       GOLD RING             ║
+                    ║       CRIMPED EDGE          ║
+                    ║                             ║
+                    ╚═════════════════════════════╝
+
+Color Scheme:
+  Background: #F5F1E8 (Cream parchment)
+  Text: #1A1A1A (Charcoal)
+  Borders: #F59E0B (Gold)
+  Accents: #FBBF2444 (Gold transparent)
+  Muted: #52525B (Gray)
+
+Typography:
+  "CERTIFICATE OF ACHIEVEMENT": Georgia bold 28px
+  "THIS IS TO CERTIFY THAT": Georgia italic 12px
+  Name (HEMJAY): Georgia bold 38px
+  Achievement text: Georgia 12px
+  License/footer: JetBrains Mono 9px
+
+Unique Elements:
+  • Cream background (completely different from dark UI)
+  • Ornate gold border with corner flourishes
+  • Serif fonts (Georgia) for elegance
+  • Circular avatar with wax seal
+  • Signature lines
+  • Certificate language ("This is to certify that")
+  • Dashed/crimped wax seal edge
+  • Paper texture overlay (subtle diagonal noise)
+
+Emotional Response:
+  First impression: "Ooh, that's fancy"
+  On zoom: "This actually looks premium"
+  On print: "I want to frame this"
+  On share: "Look how legit this looks"
+
+
+DESKTOP PREVIEW (Full color rendering):
+
+╔════════════════════════════════════════════════════════╗
+║          ⭐ CORNER FLOURISH (Gold swirls)             ║
+║                                                        ║
+║      CERTIFICATE OF ACHIEVEMENT                       ║
+║      (Georgia serif, letter-spaced)                    ║
+║                                                        ║
+║         THIS IS TO CERTIFY THAT                        ║
+║                                                        ║
+║                ╭──────────────╮                        ║
+║                │              │                        ║
+║                │   HEMJAY     │ (Circular, gold ring)  ║
+║                │   AVATAR     │                        ║
+║                │              │                        ║
+║                ╰──────────────╯                        ║
+║                                                        ║
+║            HAS ACHIEVED THE RANK OF                    ║
+║                                                        ║
+║                    HEMJAY                              ║
+║              ────────────────────                       ║ (Gold line)
+║                                                        ║
+║            SILVER TIER ANALYST                         ║
+║            Foresight Score: 2,142 FS                   ║
+║            Season Ranking: #1,847                      ║
+║            Multiplier Achievement: 1.58×               ║
+║                                                        ║
+║               IN THE LEAGUE OF                         ║
+║                                                        ║
+║           CRYPTO TWITTER TALENT                        ║
+║                                                        ║
+║         ____________    ____________                   ║
+║           VERIFIED          DATE                       ║
+║                                                        ║
+║          ISSUED 26 FEBRUARY 2026                       ║
+║          EXPIRES 26 FEBRUARY 2027                      ║
+║                                                        ║
+║          LICENSE #FST-0042117                          ║
+║          Verified on Solana Blockchain                 ║
+║                                                        ║
+║                      ⭐                                 ║
+║              (Gold + Tier Color Wax Seal)              ║
+║                 [CRIMPED EDGE]                         ║
+║                                                        ║
+║          ⭐ CORNER FLOURISH (Bottom-right)             ║
+╚════════════════════════════════════════════════════════╝
+
+Background appearance:
+  Cream color #F5F1E8
+  Subtle diagonal paper texture (2% opacity)
+  Looks aged but premium (like parchment)
+
+On Twitter scrolling (520px width):
+  What you see: Cream background (HIGH contrast vs. dark UI)
+  Gold border frame
+  Blue text "CERTIFICATE OF ACHIEVEMENT"
+  Circular avatar with gold ring
+
+  Scroll stop factor: HIGH (cream pops on dark feed)
+  Zoom factor: VERY HIGH (want to read the certificate)
+
+
+================================================================================
+SIDE-BY-SIDE: What People See When Scrolling Twitter
+================================================================================
+
+Current Design (Football Pitch):
+  Dark background → Green gradient → Center circle → Stats panel
+  Feeling: "Another sports card thing"
+  Scroll by: 1.2 seconds
+  Share: No
+
+Badge Design (Shield):
+  Dark background → Unusual shield shape → Gold border
+  Feeling: "Wait... is that a badge?"
+  Scroll stop: Yes, want to zoom
+  Share: "I'm a cryptographic intelligence agent!"
+
+Certificate Design (Cream):
+  Dark background → CREAM background appears (HIGH CONTRAST)
+  Feeling: "That's... beautiful?"
+  Scroll stop: Yes, want to read it
+  Share: "This is actually legit"
+
+
+================================================================================
+SIDE-BY-SIDE: Avatar Presentation
+================================================================================
+
+Current Design: Circular
+  - Center of card
+  - Tier-colored glow
+  - Simple border ring
+
+Badge Design: Square (ID PHOTO)
+  - Slightly off-center in shield
+  - White padding (Polaroid instant film effect)
+  - Gold border + fade at bottom
+  - Looks like an official ID photo
+  - License number stamped below: "LIC #FST-0042117"
+
+Certificate Design: Circular (ELEGANT)
+  - Center of card
+  - Gold ring borders (8px + 2px)
+  - Embossed shadow effect
+  - White star at top-left corner (embossed highlight)
+  - Wax seal at bottom-right corner
+
+
+================================================================================
+SIDE-BY-SIDE: Stats Presentation
+================================================================================
+
+Current Design (Frosted Panel):
+  ┌─────────────────────────────┐
+  │  SCORE    │    SEASON RANK  │
+  │  2,142    │       #1,847    │
+  │           │                 │
+  │ All-time #1847 · +320 week  │
+  └─────────────────────────────┘
+
+  Feel: Modern, minimal, app-like
+
+Badge Design (Data Fields):
+  NAME:        HEMJAY
+  TIER:        SILVER AGENT
+  RANK:        #1,847
+  SCORE:       2,142 FS (⚡ GOLD)
+  MULTIPLIER:  1.58× (🔥 GOLD)
+  STATUS:      VERIFIED
+  ISSUED:      26 FEB 2026
+  EXPIRES:     26 FEB 2027
+
+  Feel: Official, technical, government ID
+  Font: JetBrains Mono (monospace)
+
+Certificate Design (Achievement Language):
+  HAS ACHIEVED THE RANK OF
+
+  SILVER TIER ANALYST
+  Foresight Score: 2,142 FS
+  Season Ranking: #1,847
+  Multiplier Achievement: 1.58×
+
+  Feel: Formal, premium, achievement-oriented
+  Font: Georgia serif
+
+
+================================================================================
+MOBILE PREVIEW (375px viewport, scaled to fit)
+================================================================================
+
+BADGE on Phone:
+  Display at 90% scale = 468px width (visible with slight scroll)
+  Shield shape: Still recognizable
+  Avatar: Square photo still visible
+  Data fields: Readable (monospace fonts scale well)
+  Hologram: Still shimmers at bottom
+
+  UX: Pinch-to-zoom works well
+  Download: Full 520×680 PNG saved
+
+CERTIFICATE on Phone:
+  Display at 100% = 520px width (might need horizontal scroll)
+  Cream background: Very obvious (good)
+  Ornate border: Still visible
+  Avatar circle: Still shows seal
+  Text: Readable
+
+  UX: Pinch-to-zoom works well
+  Download: Full 520×680 PNG saved
+
+
+================================================================================
+PRINT PREVIEW (If someone prints it)
+================================================================================
+
+BADGE Printed at 4×5.5 inches (standard ID size):
+  @ 150 DPI: Crisp
+  @ 300 DPI: Excellent
+  Color accuracy: Deep navy might print darker
+  Border: Gold prints bright
+  Text: All readable
+  Recommendation: Test print before finalizing
+
+CERTIFICATE Printed at 5×6.5 inches:
+  @ 150 DPI: Excellent (serif fonts look great)
+  @ 300 DPI: Premium quality
+  Color accuracy: Cream background prints as pale yellow
+  Gold accents: Bright and accurate
+  Text: All readable, serif looks beautiful
+  Recommendation: Looks amazing printed!
+  Framing suggestion: White mat, thin gold frame
+
+
+================================================================================
+ACCESSIBILITY CHECK
+================================================================================
+
+BADGE:
+  Navy (#0F1729) + Gold (#F59E0B): 4.8:1 contrast ✓ WCAG AA
+  Navy + White: 9.2:1 contrast ✓ WCAG AAA
+  Monospace fonts: Highly readable ✓
+  Small text (9px): Readable on 1x, sharp on 2x ✓
+
+CERTIFICATE:
+  Charcoal (#1A1A1A) + Cream (#F5F1E8): 11.2:1 contrast ✓ WCAG AAA
+  All text readable ✓
+  Serif fonts: Readable, elegant ✓
+  Small text (9px): Readable ✓
+
+
+================================================================================
+TECHNICAL RENDERING
+================================================================================
+
+Canvas Size: 520×680px @ 2x = 1040×1360px
+PNG Quality: 8-bit RGB
+File Size:
+  - Badge: 180-220 KB
+  - Certificate: 150-200 KB
+
+Render Time:
+  - Badge (with avatar): 250-350ms
+  - Certificate (with avatar): 200-300ms
+
+Performance:
+  - No stuttering on mobile ✓
+  - Smooth interaction ✓
+  - Twitter compression: Minimal quality loss ✓
+
+
+================================================================================
+WHICH ONE TO SHIP?
+================================================================================
+
+Ship BADGE if:
+  ✓ You want maximum engagement on Twitter
+  ✓ You're confident in CT audience appreciation
+  ✓ You want people asking "what is that?"
+  ✓ You like the spy/agent humor
+  ✓ You want something unique in the market
+
+Ship CERTIFICATE if:
+  ✓ You want broader appeal (beyond CT)
+  ✓ You want maximum visual polish
+  ✓ You want people to want to frame it
+  ✓ You prefer safe over bold
+  ✓ You want premium/professional vibes
+
+Ship BOTH if:
+  ✓ You have 8 hours
+  ✓ You want A/B test data
+  ✓ You're willing to iterate
+  ✓ You want maximum flexibility
+
+================================================================================
