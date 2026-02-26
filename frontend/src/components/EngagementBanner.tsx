@@ -75,7 +75,7 @@ export default function EngagementBanner() {
               message: daysUntilStart === 0
                 ? 'New contest starts today!'
                 : `New contest starts in ${daysUntilStart} day${daysUntilStart > 1 ? 's' : ''}!`,
-              action: { label: 'Get Ready', link: '/play' },
+              action: { label: 'Get Ready', link: '/compete?tab=contests' },
               dismissible: true
             });
           }
@@ -102,7 +102,7 @@ export default function EngagementBanner() {
           message: daysRemaining === 0
             ? 'Contest ends today! Make your final picks.'
             : 'Only 1 day left in the contest!',
-          action: { label: 'Check Scores', link: '/play' },
+          action: { label: 'Check Scores', link: '/compete?tab=rankings' },
           dismissible: true
         });
       }
@@ -114,7 +114,7 @@ export default function EngagementBanner() {
           type: 'info',
           icon: <Bell size={20} weight="fill" />,
           message: `${daysRemaining} days left to climb the rankings!`,
-          action: { label: 'View Leaderboard', link: '/play' },
+          action: { label: 'View Leaderboard', link: '/compete?tab=rankings' },
           dismissible: true
         });
       }
@@ -135,7 +135,7 @@ export default function EngagementBanner() {
               type: 'warning',
               icon: <Trophy size={20} weight="fill" />,
               message: 'You haven\'t joined this week\'s contest yet!',
-              action: { label: 'Draft Now', link: '/play' },
+              action: { label: 'Draft Now', link: '/compete?tab=contests' },
               dismissible: true
             });
           }
@@ -146,7 +146,7 @@ export default function EngagementBanner() {
             type: 'warning',
             icon: <Trophy size={20} weight="fill" />,
             message: 'Join this week\'s contest!',
-            action: { label: 'Draft Now', link: '/play' },
+            action: { label: 'Draft Now', link: '/compete?tab=contests' },
             dismissible: true
           });
         }
@@ -162,7 +162,7 @@ export default function EngagementBanner() {
           type: 'success',
           icon: <TrendUp size={20} weight="fill" />,
           message: 'Scores just updated! Check your ranking.',
-          action: { label: 'View Scores', link: '/play' },
+          action: { label: 'View Scores', link: '/compete?tab=rankings' },
           dismissible: true
         });
       }
@@ -174,7 +174,7 @@ export default function EngagementBanner() {
           type: 'info',
           icon: <Fire size={20} weight="fill" />,
           message: 'Welcome to Foresight! Draft your first team.',
-          action: { label: 'Get Started', link: '/play' },
+          action: { label: 'Get Started', link: '/compete?tab=contests' },
           dismissible: true
         });
         localStorage.setItem('returning_user', 'true');
