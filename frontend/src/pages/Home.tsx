@@ -30,19 +30,108 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: boolean; login: () => void; xp: number; teamsOnChain: number | null }) {
   const xpInfo = xp > 0 ? getXPLevel(xp) : null;
+
+  const ctaButton = isConnected ? (
+    <Link to="/compete?tab=contests" className="flex items-center justify-center gap-2 w-full sm:w-auto sm:px-8 py-4 rounded-xl bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-gray-950 font-bold text-base transition-colors">
+      Start Playing <ArrowRight size={20} weight="bold" />
+    </Link>
+  ) : (
+    <button onClick={login} className="flex items-center justify-center gap-2 w-full sm:w-auto sm:px-8 py-4 rounded-xl bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-gray-950 font-bold text-base transition-colors">
+      <SignIn size={20} weight="bold" />
+      Sign In to Play
+      <ArrowRight size={20} weight="bold" />
+    </button>
+  );
+
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Hero Section */}
-      <section className="pt-6 pb-12 md:pt-10 md:pb-20">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          {/* Left: Copy — below formation on mobile, left on desktop */}
-          <div className="order-2 lg:order-1 text-center lg:text-left">
-            {/* Badge row */}
-            <div className="flex flex-wrap items-center gap-2 justify-center lg:justify-start mb-6">
+
+      {/* ─── MOBILE HERO (hidden on lg+) ─── */}
+      <section className="lg:hidden pt-8 pb-10 px-1">
+        {/* Live badge */}
+        <div className="flex items-center gap-2 mb-5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 text-xs text-gold-400 font-medium">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500" />
+            </span>
+            Live on Solana
+          </div>
+          <a
+            href="https://www.usetapestry.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700 text-[10px] text-gray-400"
+          >
+            <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="" className="w-3 h-3 rounded-sm invert opacity-70" />
+            Tapestry
+          </a>
+        </div>
+
+        {/* Headline */}
+        <h1 className="text-4xl font-bold text-white mb-3 leading-tight">
+          Fantasy league for{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">
+            Crypto Twitter
+          </span>
+        </h1>
+
+        {/* Subheadline */}
+        <p className="text-base text-gray-400 mb-6 leading-relaxed">
+          Draft CT influencers, earn points from their engagement, win prizes.
+        </p>
+
+        {/* CTA */}
+        {ctaButton}
+
+        {/* Trust signals — 3 compact items on one line */}
+        <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1 shrink-0">
+            <CheckCircle size={13} className="text-emerald-500 shrink-0" weight="fill" /> Free
+          </span>
+          <span className="flex items-center gap-1 shrink-0">
+            <CheckCircle size={13} className="text-emerald-500 shrink-0" weight="fill" /> Real prizes
+          </span>
+          <span className="flex items-center gap-1 shrink-0">
+            <CheckCircle size={13} className="text-emerald-500 shrink-0" weight="fill" /> On Solana
+          </span>
+        </div>
+
+        {/* Team slots teaser */}
+        <div className="mt-8 p-4 rounded-2xl bg-gray-900/60 border border-gray-800">
+          <p className="text-[10px] uppercase tracking-widest text-gray-600 mb-4 text-center">Build your dream team</p>
+          <div className="flex items-center justify-between gap-2">
+            {[
+              { tier: 'S', label: 'Captain', ringClass: 'ring-gold-400/60', bgClass: 'bg-gold-500/15 border-gold-500/50', textClass: 'text-gold-400' },
+              { tier: 'A', label: '', ringClass: 'ring-cyan-400/40', bgClass: 'bg-cyan-500/10 border-cyan-500/40', textClass: 'text-cyan-400' },
+              { tier: 'A', label: '', ringClass: 'ring-cyan-400/40', bgClass: 'bg-cyan-500/10 border-cyan-500/40', textClass: 'text-cyan-400' },
+              { tier: 'B', label: '', ringClass: 'ring-emerald-400/40', bgClass: 'bg-emerald-500/10 border-emerald-500/40', textClass: 'text-emerald-400' },
+              { tier: 'C', label: '', ringClass: 'ring-gray-500/30', bgClass: 'bg-gray-700/30 border-gray-600/40', textClass: 'text-gray-400' },
+            ].map((slot, i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
+                <div className={`w-12 h-12 rounded-full border-2 ${slot.bgClass} flex items-center justify-center ${i === 0 ? 'ring-2 ring-offset-1 ring-offset-gray-900 ' + slot.ringClass : ''}`}>
+                  <span className={`text-xs font-bold ${slot.textClass}`}>{slot.tier}</span>
+                </div>
+                {slot.label && (
+                  <span className="text-[9px] text-gold-400 font-medium uppercase tracking-wide">CPT</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[11px] text-gray-600 mt-3">150pt budget · pick 5 players · 1 captain</p>
+        </div>
+      </section>
+
+      {/* ─── DESKTOP HERO (hidden on mobile) ─── */}
+      <section className="hidden lg:block pt-10 pb-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left: Copy */}
+          <div className="text-left">
+            <div className="flex items-center gap-2 mb-6">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/20 text-sm text-gold-400 font-medium">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500" />
                 </span>
                 Live on Solana
               </div>
@@ -57,133 +146,99 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
               </a>
             </div>
 
-            {/* Headline */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
               Fantasy league for{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">
                 Crypto Twitter
               </span>
             </h1>
 
-            {/* Subheadline */}
-            <p className="text-lg md:text-xl text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0">
+            <p className="text-xl text-gray-400 mb-8 max-w-lg">
               Draft 5 CT influencers. Earn points from their engagement. Climb the leaderboard.
             </p>
 
-            {/* CTA */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              {isConnected ? (
-                <Link
-                  to="/compete?tab=contests"
-                  className="btn-primary btn-lg group"
-                >
-                  Start Playing
-                  <ArrowRight size={20} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              ) : (
-                <button
-                  onClick={login}
-                  className="btn-primary btn-lg group"
-                >
-                  <SignIn size={20} weight="bold" />
-                  Start Playing
-                  <ArrowRight size={20} weight="bold" className="transition-transform group-hover:translate-x-0.5" />
-                </button>
-              )}
-            </div>
+            {ctaButton}
 
-            {/* Trust Signals */}
-            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 justify-center lg:justify-start text-xs text-gray-500">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle size={15} className="text-emerald-500 shrink-0" weight="fill" />
-                <span>Free to play</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle size={15} className="text-emerald-500 shrink-0" weight="fill" />
-                <span>Win real prizes</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle size={15} className="text-emerald-500 shrink-0" weight="fill" />
-                <span>No deposit required</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="Tapestry" className="w-3.5 h-3.5 rounded-sm invert opacity-50 shrink-0" />
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5"><CheckCircle size={15} className="text-emerald-500" weight="fill" />Free to play</span>
+              <span className="flex items-center gap-1.5"><CheckCircle size={15} className="text-emerald-500" weight="fill" />Win real prizes</span>
+              <span className="flex items-center gap-1.5"><CheckCircle size={15} className="text-emerald-500" weight="fill" />No deposit required</span>
+              <span className="flex items-center gap-1.5">
+                <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="" className="w-3.5 h-3.5 rounded-sm invert opacity-50" />
                 <span className="text-gray-400">Teams on Tapestry</span>
-              </div>
+              </span>
             </div>
           </div>
 
-          {/* Right: Formation Preview — first on mobile, right on desktop */}
-          <div className="order-1 lg:order-2 flex flex-col items-center gap-3">
-            <div className="relative w-full">
+          {/* Right: Formation Preview */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative w-full rounded-2xl overflow-hidden">
               <FormationPreview variant="hero" showStats={true} />
-              {/* Glow effect behind */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-gold-500/20 via-transparent to-cyan-500/20 blur-3xl -z-10"></div>
+              {/* Contained glow — no overflow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-gold-500/10 via-transparent to-cyan-500/10 pointer-events-none rounded-2xl" />
             </div>
-            {/* Tapestry attribution — below the formation, clean and intentional */}
             <a
               href="https://www.usetapestry.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors group"
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
             >
-              <img
-                src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png"
-                alt="Tapestry"
-                className="w-4 h-4 rounded-sm invert opacity-60 group-hover:opacity-90 transition-opacity"
-              />
+              <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="Tapestry" className="w-4 h-4 rounded-sm invert opacity-60" />
               <span>Teams sealed on-chain · Tapestry Protocol</span>
             </a>
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-16 border-t border-gray-800/50">
-        <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-12">
+      {/* ─── HOW IT WORKS ─── */}
+      <section className="py-10 md:py-16 border-t border-gray-800/50">
+        <h2 className="text-xl md:text-3xl font-bold text-white text-center mb-6 md:mb-12">
           How it works
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Step 1 */}
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-gold-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition"></div>
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 font-bold mb-4">
-                1
+        {/* Mobile: compact list */}
+        <div className="md:hidden space-y-3 px-1">
+          {[
+            { n: 1, title: 'Draft your team', desc: 'Pick 5 CT influencers within your 150pt budget.', color: 'text-gold-400', bg: 'bg-gold-500/10 border-gold-500/20' },
+            { n: 2, title: 'Earn points', desc: 'Scores update based on Twitter engagement daily.', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+            { n: 3, title: 'Win prizes', desc: 'Top teams win prizes + Foresight Score rewards.', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          ].map(step => (
+            <div key={step.n} className="flex items-center gap-4 p-4 rounded-xl bg-gray-900/50 border border-gray-800">
+              <div className={`w-10 h-10 rounded-lg border ${step.bg} flex items-center justify-center ${step.color} font-bold text-base shrink-0`}>
+                {step.n}
               </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-white text-sm">{step.title}</h3>
+                <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{step.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: cards */}
+        <div className="hidden md:grid md:grid-cols-3 gap-8">
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-gold-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
+            <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
+              <div className="w-10 h-10 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 font-bold mb-4">1</div>
               <h3 className="text-lg font-semibold text-white mb-2">Draft your team</h3>
-              <p className="text-gray-400 text-sm">
-                Pick 5 CT influencers within your 150-point budget. Mix S-tier legends with rising stars.
-              </p>
+              <p className="text-gray-400 text-sm">Pick 5 CT influencers within your 150-point budget. Mix S-tier legends with rising stars.</p>
             </div>
           </div>
-
-          {/* Step 2 */}
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
             <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold mb-4">
-                2
-              </div>
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold mb-4">2</div>
               <h3 className="text-lg font-semibold text-white mb-2">Earn points</h3>
-              <p className="text-gray-400 text-sm">
-                Your team scores based on their Twitter engagement — likes, retweets, followers.
-              </p>
+              <p className="text-gray-400 text-sm">Your team scores based on their Twitter engagement — likes, retweets, followers.</p>
             </div>
           </div>
-
-          {/* Step 3 */}
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition"></div>
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
             <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 font-bold mb-4">
-                3
-              </div>
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 font-bold mb-4">3</div>
               <h3 className="text-lg font-semibold text-white mb-2">Win prizes</h3>
-              <p className="text-gray-400 text-sm">
-                Top teams win prizes. Build your Foresight Score for exclusive rewards.
-              </p>
+              <p className="text-gray-400 text-sm">Top teams win prizes. Build your Foresight Score for exclusive rewards.</p>
             </div>
           </div>
         </div>

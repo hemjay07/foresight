@@ -32,6 +32,9 @@ import Referrals from './pages/Referrals';
 import Draft from './pages/Draft';
 import ContestDetail from './pages/ContestDetail';
 
+// Design Tools
+import CardCompare from './pages/CardCompare';
+
 // Legal Pages
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -173,6 +176,9 @@ function AppContent() {
           <Route path="/quests" element={<Navigate to="/progress" replace />} />
           <Route path="/arena" element={<Navigate to="/compete" replace />} />
 
+          {/* Design Tools */}
+          <Route path="/card-compare" element={<CardCompare />} />
+
           {/* Legal Pages */}
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
@@ -193,9 +199,8 @@ function AppProviders({ children }: { children: React.ReactNode }) {
           theme: 'dark',
           accentColor: '#F59E0B',
           walletChainType: 'solana-only',
-          showWalletLoginFirst: true,
         },
-        loginMethods: ['wallet'],
+        loginMethods: ['wallet', 'email', 'twitter'],
         externalWallets: {
           solana: {
             connectors: solanaConnectors,
