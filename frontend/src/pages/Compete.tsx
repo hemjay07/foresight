@@ -1221,7 +1221,7 @@ export default function Compete() {
               <Trophy size={48} className="mx-auto mb-4 text-gray-600" />
               <h3 className="text-xl font-bold text-white mb-2">No contests available</h3>
               <p className="text-gray-400 mb-6">Check back soon for new contests!</p>
-              {isConnected && address && (
+              {isConnected && (
                 <button
                   onClick={async () => {
                     try {

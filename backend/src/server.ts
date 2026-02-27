@@ -7,6 +7,7 @@ import { testConnection } from './utils/db';
 import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeCronJobs } from './services/cronJobs';
+import { ensureDemoContest } from './api/admin';
 import logger from './utils/logger';
 
 // Import routes
@@ -212,6 +213,20 @@ export async function startServer() {
 
     // Initialize Cron Jobs for automated scoring
     initializeCronJobs();
+
+    // Ensure a demo contest exists (self-healing — runs on every startup)
+    ensureDemoContest()
+      .then(({ created }) => {
+        if (created) {
+          logger.info('✅ Demo contest auto-created on startup');
+        } else {
+          logger.info('✅ Demo contest already active');
+        }
+      })
+      .catch((err) => {
+        // Log but don't crash the server — contest creation is non-critical at boot
+        logger.warn('⚠️  Demo contest auto-seed failed (will retry on next startup):', err.message);
+      });
 
     // Start listening
     httpServer.listen(PORT, () => {
