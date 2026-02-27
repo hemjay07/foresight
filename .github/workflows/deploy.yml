@@ -13,12 +13,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fix git author for Vercel
-        run: |
-          git config user.email "mujeebopabode07@gmail.com"
-          git config user.name "hemjay07"
-          git commit --allow-empty --amend --no-edit --reset-author
-
       - name: Create Vercel project config
         run: |
           mkdir -p frontend/.vercel
