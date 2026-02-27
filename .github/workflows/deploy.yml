@@ -13,19 +13,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create Vercel project config
+      - name: Setup Vercel auth
         run: |
+          mkdir -p $HOME/.local/share/com.vercel.cli
+          printf '{"token":"%s"}' "${{ secrets.VERCEL_TOKEN }}" > $HOME/.local/share/com.vercel.cli/auth.json
           mkdir -p frontend/.vercel
-          echo '{
-            "projectId": "${{ secrets.VERCEL_PROJECT_ID }}",
-            "orgId": "${{ secrets.VERCEL_ORG_ID }}"
-          }' > frontend/.vercel/project.json
+          printf '{"projectId":"%s","orgId":"%s"}' "${{ secrets.VERCEL_PROJECT_ID }}" "${{ secrets.VERCEL_ORG_ID }}" > frontend/.vercel/project.json
 
       - name: Deploy to Vercel
         working-directory: frontend
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: npx vercel --prod --token=$VERCEL_TOKEN --yes
+        run: npx vercel --prod --yes
 
   deploy-backend:
     name: Backend to Railway
