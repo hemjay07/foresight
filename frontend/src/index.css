@@ -48,19 +48,9 @@
 }
 
 @layer components {
-  /* ===== WAR ROOM — NEON GLOW UTILITIES ===== */
-  .shadow-glow-neon {
-    box-shadow: 0 0 20px rgba(16, 249, 129, 0.4),
-                0 0 40px rgba(16, 249, 129, 0.2);
-  }
-
-  .shadow-glow-neon-intense {
-    box-shadow: 0 0 40px rgba(16, 249, 129, 0.6),
-                0 0 80px rgba(16, 249, 129, 0.3);
-  }
-
+  /* Live indicator dot — simple, no glow */
   .live-dot {
-    @apply inline-block w-1.5 h-1.5 rounded-full bg-neon-500 animate-pulse-neon-loop;
+    @apply inline-block w-1.5 h-1.5 rounded-full bg-green-500;
   }
 
   /* Mono number helper — all stats use this */
