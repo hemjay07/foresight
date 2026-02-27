@@ -80,10 +80,10 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/30 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Binoculars size={16} className="text-cyan-400" weight="fill" />
+          <Binoculars size={16} className="text-gray-400" weight="fill" />
           <span className="text-sm font-semibold text-white">Rival Picks</span>
           {hasMostDrafted && (
-            <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded-full">
+            <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded-full">
               {scouts.length} follow{scouts.length !== 1 ? 's' : ''} entered
             </span>
           )}
@@ -113,7 +113,7 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
               </p>
               <p className="text-xs text-gray-600 mt-1">
                 Follow other players on the{' '}
-                <a href="/compete?tab=rankings" className="text-cyan-500 hover:text-cyan-400">leaderboard</a>
+                <a href="/compete?tab=rankings" className="text-gray-300 hover:text-white">leaderboard</a>
                 {' '}to see who they're drafting.
               </p>
             </div>
@@ -140,8 +140,8 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
               {/* Scout rows */}
               {scouts.map((scout, i) => (
                 <div key={scout.tapestryUserId || scout.username || i} className="px-4 py-2.5 flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30 flex items-center justify-center shrink-0">
-                    <span className="text-[10px] font-bold text-cyan-400">
+                  <div className="w-7 h-7 rounded-full bg-gray-700/60 flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-bold text-gray-300">
                       {(scout.username || '?')[0].toUpperCase()}
                     </span>
                   </div>

@@ -99,7 +99,7 @@ export default function InfluencerDetailModal({
                 href={`https://x.com/${influencer.handle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-cyan-400 hover:underline flex items-center gap-1 text-sm"
+                className="text-gray-400 hover:text-white flex items-center gap-1 text-sm"
               >
                 <XLogo size={14} weight="fill" />
                 @{influencer.handle}

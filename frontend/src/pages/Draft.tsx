@@ -449,7 +449,7 @@ export default function Draft() {
         <div className="text-center">
           <Warning size={48} className="mx-auto mb-4 text-red-400" />
           <p className="text-gray-400">Contest not found</p>
-          <Link to="/compete?tab=contests" className="text-cyan-400 hover:underline mt-2 block">
+          <Link to="/compete?tab=contests" className="text-gray-400 hover:text-white underline mt-2 block">
             Back to contests
           </Link>
         </div>
@@ -464,7 +464,7 @@ export default function Draft() {
         <div className="max-w-sm mx-auto px-4 w-full">
           {/* Header */}
           <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold text-white mb-1">You're in! 🏆</h2>
+            <h2 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2"><Trophy size={24} weight="fill" className="text-gold-400" /> You're in!</h2>
             <p className="text-gray-400 text-sm">
               Share your lineup on Twitter
             </p>
@@ -821,7 +821,9 @@ export default function Draft() {
             {/* Body */}
             <div className="p-5">
               <div className="text-center mb-5">
-                <div className="text-4xl mb-3">🏆</div>
+                <div className="flex items-center justify-center mb-3">
+                  <Trophy size={40} weight="fill" className="text-gold-400" />
+                </div>
                 <p className="font-bold text-white text-lg mb-0.5">{contest.name}</p>
                 <p className="text-sm text-gray-400">Entry fee</p>
               </div>

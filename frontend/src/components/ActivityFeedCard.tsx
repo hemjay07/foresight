@@ -61,7 +61,7 @@ export default function ActivityFeedCard() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'follow':
-        return <UserPlus size={14} weight="fill" className="text-cyan-400" />;
+        return <UserPlus size={14} weight="fill" className="text-gray-400" />;
       case 'content_create':
         return <Trophy size={14} weight="fill" className="text-gold-400" />;
       case 'like':
@@ -134,7 +134,7 @@ export default function ActivityFeedCard() {
           <p className="text-xs text-gray-500">Follow other players to see their activity here</p>
           <Link
             to="/compete"
-            className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2"
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white mt-2"
           >
             Browse Leaderboard <ArrowRight size={12} />
           </Link>

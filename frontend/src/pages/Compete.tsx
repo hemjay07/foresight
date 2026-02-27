@@ -40,9 +40,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 function getReputationTier(rank: number, total: number): { label: string; color: string } {
   if (total === 0) return { label: 'Verified', color: 'text-emerald-400' };
   const pct = rank / total;
-  if (pct <= 0.05) return { label: 'Stellar',  color: 'text-cyan-300' };
-  if (pct <= 0.15) return { label: 'Premium',  color: 'text-cyan-400' };
-  if (pct <= 0.35) return { label: 'Member',   color: 'text-cyan-500' };
+  if (pct <= 0.05) return { label: 'Stellar',  color: 'text-gold-400' };
+  if (pct <= 0.15) return { label: 'Premium',  color: 'text-gray-200' };
+  if (pct <= 0.35) return { label: 'Member',   color: 'text-gray-400' };
   return                   { label: 'Active',   color: 'text-gray-400' };
 }
 
@@ -127,7 +127,7 @@ const CONTEST_CONFIG: Record<string, { icon: React.ElementType; color: string; g
   WEEKLY_STARTER: { icon: Play, color: 'text-blue-400', gradient: 'from-blue-500 to-indigo-600' },
   WEEKLY_STANDARD: { icon: Trophy, color: 'text-gold-400', gradient: 'from-gold-500 to-amber-600' },
   WEEKLY_PRO: { icon: Crown, color: 'text-yellow-400', gradient: 'from-yellow-500 to-orange-600' },
-  DAILY_FLASH: { icon: Lightning, color: 'text-cyan-400', gradient: 'from-cyan-500 to-blue-600' },
+  DAILY_FLASH: { icon: Lightning, color: 'text-gold-400', gradient: 'from-gold-500 to-amber-600' },
 };
 
 export default function Compete() {
@@ -370,7 +370,7 @@ export default function Compete() {
 
   const getRankStyle = (rank: number) => {
     if (rank === 1) return 'text-gold-400 font-bold';
-    if (rank === 2) return 'text-cyan-400 font-bold';
+    if (rank === 2) return 'text-gray-300 font-bold';
     if (rank === 3) return 'text-emerald-400 font-bold';
     return 'text-gray-500';
   };
@@ -612,20 +612,20 @@ export default function Compete() {
                   const rowBorder = rank === 1
                     ? 'border-l-4 border-l-gold-400 bg-gold-500/5'
                     : rank === 2
-                    ? 'border-l-4 border-l-cyan-400 bg-cyan-500/5'
+                    ? 'border-l-4 border-l-gray-400 bg-gray-500/5'
                     : rank === 3
                     ? 'border-l-4 border-l-emerald-400 bg-emerald-500/5'
                     : 'border-l-4 border-l-transparent';
 
                   return (
-                    <div key={entry.userId} className={`px-4 py-3 hover:bg-gray-800/30 transition-colors ${rowBorder}`}>
+                    <div key={entry.userId} className={`group px-4 py-3 hover:bg-gray-800/30 transition-colors ${rowBorder}`}>
                       <div className="flex items-center gap-2 sm:gap-3">
                         {/* Rank — monospace, consistent width */}
                         <div className={`w-9 text-center shrink-0 ${getRankStyle(rank)}`}>
                           {rank === 1 ? (
                             <Crown size={18} weight="fill" className="mx-auto text-gold-400" />
                           ) : rank === 2 ? (
-                            <Medal size={16} weight="fill" className="mx-auto text-cyan-400" />
+                            <Medal size={16} weight="fill" className="mx-auto text-gray-300" />
                           ) : rank === 3 ? (
                             <Medal size={16} weight="fill" className="mx-auto text-emerald-400" />
                           ) : (
@@ -662,7 +662,7 @@ export default function Compete() {
                             {/* On-chain dot: cyan = profile verified on Tapestry */}
                             {entry.tapestryUserId && (
                               <span
-                                className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-800 text-cyan-400"
+                                className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-800 text-neon-500"
                                 title="Profile verified on-chain via Tapestry Protocol"
                               >
                                 <CheckCircle size={10} weight="fill" />
@@ -671,9 +671,9 @@ export default function Compete() {
                           </div>
                         </div>
 
-                        {/* Follow — visible on all screen sizes */}
+                        {/* Follow — ghost, hover-reveal only */}
                         {entry.tapestryUserId && isConnected && localStorage.getItem('authToken') && (
-                          <div className="shrink-0">
+                          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                             <FollowButton
                               targetProfileId={entry.tapestryUserId}
                               targetUsername={entry.username}
@@ -701,7 +701,7 @@ export default function Compete() {
 
                         {/* Score — monospace, visually dominant */}
                         <div className="text-right shrink-0">
-                          <div className={`${isTop3 ? 'text-xl' : 'text-base'} font-mono font-black tabular-nums leading-none ${rank === 1 ? 'text-gold-400' : rank === 2 ? 'text-cyan-400' : rank === 3 ? 'text-emerald-400' : 'text-white'}`}>
+                          <div className={`${isTop3 ? 'text-xl' : 'text-base'} font-mono font-black tabular-nums leading-none ${rank === 1 ? 'text-gold-400' : rank === 2 ? 'text-gray-300' : rank === 3 ? 'text-emerald-400' : 'text-white'}`}>
                             {entry.score.toLocaleString()}
                           </div>
                           <div className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5">FS</div>
@@ -718,7 +718,7 @@ export default function Compete() {
                     <p className="text-gray-400 text-sm mb-4">Follow other players to see them here</p>
                     <button
                       onClick={() => setFsTimeframe('all_time')}
-                      className="text-sm text-cyan-400 hover:text-cyan-300"
+                      className="text-sm text-gray-400 hover:text-white"
                     >
                       Browse All-Time leaderboard to find players →
                     </button>
@@ -770,7 +770,7 @@ export default function Compete() {
                     All scores verified on Solana via Tapestry Protocol
                   </p>
                   <span className="text-[10px] text-gray-600 flex items-center gap-1 shrink-0">
-                    <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-800 text-cyan-400">
+                    <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-800 text-neon-500">
                       <CheckCircle size={9} weight="fill" />
                     </span>
                     = profile on-chain
@@ -824,7 +824,7 @@ export default function Compete() {
           {!loading && rankingsSubTab === 'xp' && (
             <div className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden">
               <div className="p-4 border-b border-gray-800 flex items-center gap-2">
-                <Crown size={20} weight="fill" className="text-cyan-400" />
+                <Crown size={20} weight="fill" className="text-gold-400" />
                 <span className="font-semibold text-white">XP Rankings</span>
               </div>
 
@@ -851,7 +851,7 @@ export default function Compete() {
                           <div className="text-sm text-gray-500">Level {level}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-cyan-400">{(user.lifetime_xp || user.xp).toLocaleString()}</div>
+                          <div className="font-bold font-mono tabular-nums text-gold-400">{(user.lifetime_xp || user.xp).toLocaleString()}</div>
                           <div className="text-xs text-gray-500">XP</div>
                         </div>
                       </div>
@@ -890,7 +890,7 @@ export default function Compete() {
                   const getRankColor = (r: number | null) => {
                     if (!r) return 'text-gray-400';
                     if (r === 1) return 'text-gold-400';
-                    if (r === 2) return 'text-cyan-400';
+                    if (r === 2) return 'text-gray-300';
                     if (r === 3) return 'text-emerald-400';
                     return 'text-white';
                   };
@@ -909,14 +909,14 @@ export default function Compete() {
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {entry.rank ? (
-                            <span className={`text-sm font-bold ${getRankColor(entry.rank)}`}>
+                            <span className={`text-sm font-bold font-mono tabular-nums ${getRankColor(entry.rank)}`}>
                               #{entry.rank}
                             </span>
                           ) : (
                             <span className="text-xs text-gray-500">Pending</span>
                           )}
                           {entry.score > 0 && (
-                            <span className="text-xs text-gray-500">{entry.score.toFixed(0)} pts</span>
+                            <span className="text-xs text-gray-500 font-mono tabular-nums">{entry.score.toFixed(0)} pts</span>
                           )}
                           {entry.status === 'finalized' && (
                             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">

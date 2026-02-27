@@ -244,8 +244,8 @@ export default function Progress() {
             <p className="text-sm text-gray-500">Earn FS through gameplay and quests</p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-3">
-              <Target size={24} weight="fill" className="text-cyan-400" />
+            <div className="w-12 h-12 rounded-lg bg-gold-500/15 flex items-center justify-center mx-auto mb-3">
+              <Target size={24} weight="fill" className="text-gold-400" />
             </div>
             <h3 className="font-semibold text-white mb-1">Daily Quests</h3>
             <p className="text-sm text-gray-500">Complete challenges for bonus rewards</p>
@@ -454,9 +454,9 @@ export default function Progress() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Gift size={20} className="text-green-400" />
+              <Gift size={20} className="text-neon-500" />
               Ready to Claim
-              <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-xs font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-neon-500/20 text-neon-500 text-xs font-bold font-mono">
                 {claimableCount}
               </span>
             </h2>
@@ -464,7 +464,7 @@ export default function Progress() {
               <button
                 onClick={claimAllRewards}
                 disabled={claimingAll}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-500/20 hover:bg-neon-500/30 border border-neon-500/40 text-neon-500 font-semibold transition-all disabled:opacity-50"
               >
                 {claimingAll ? (
                   <>
@@ -486,10 +486,10 @@ export default function Progress() {
               return (
                 <div
                   key={`claim-${quest.id}`}
-                  className="bg-gradient-to-r from-green-500/20 to-gold-500/10 border border-green-500/40 rounded-xl p-4 flex items-center gap-4"
+                  className="bg-neon-500/5 border border-neon-500/30 rounded-xl p-4 flex items-center gap-4 shadow-glow-neon"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-green-500/30 flex items-center justify-center shrink-0">
-                    <QuestIcon size={24} weight="fill" className="text-green-400" />
+                  <div className="w-12 h-12 rounded-xl bg-neon-500/15 flex items-center justify-center shrink-0">
+                    <QuestIcon size={24} weight="fill" className="text-neon-500" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-white">{quest.name}</h3>
@@ -498,14 +498,14 @@ export default function Progress() {
                   <button
                     onClick={() => claimReward(quest.id)}
                     disabled={claiming === quest.id}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold transition-all disabled:opacity-50 shadow-lg shadow-green-500/20"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neon-500/20 hover:bg-neon-500/30 border border-neon-500/40 text-neon-500 font-bold font-mono transition-all disabled:opacity-50"
                   >
                     {claiming === quest.id ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <Gift size={18} weight="fill" />
-                        Claim +{quest.fsReward} FS
+                        Claim +<span className="tabular-nums">{quest.fsReward}</span> FS
                       </>
                     )}
                   </button>
@@ -543,7 +543,7 @@ export default function Progress() {
                 </span>
               )}
               {hasClaimable && !isActive && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-400" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-neon-500" />
               )}
             </button>
           );
@@ -566,10 +566,10 @@ export default function Progress() {
             >
               <div className="p-4 flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                  quest.isClaimed ? 'bg-green-500/20' : 'bg-gray-800'
+                  quest.isClaimed ? 'bg-neon-500/15' : 'bg-gray-800'
                 }`}>
                   {quest.isClaimed ? (
-                    <CheckCircle size={24} weight="fill" className="text-green-500" />
+                    <CheckCircle size={24} weight="fill" className="text-neon-500" />
                   ) : (
                     <QuestIcon size={24} weight="fill" className="text-gray-400" />
                   )}
@@ -595,8 +595,8 @@ export default function Progress() {
                     </div>
                   )}
                   {quest.isClaimed && (
-                    <div className="text-green-500 font-semibold text-sm">
-                      ✓ +{quest.fsEarned} FS
+                    <div className="text-neon-500 font-semibold text-sm font-mono tabular-nums">
+                      +{quest.fsEarned} FS
                     </div>
                   )}
                   {isInProgress && (

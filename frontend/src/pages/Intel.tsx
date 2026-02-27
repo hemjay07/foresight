@@ -122,8 +122,8 @@ function HighlightCard({
             {tweet.influencer.tier}
           </span>
           {draftCount > 0 && (
-            <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium whitespace-nowrap flex-shrink-0">
-              🏆{draftCount}
+            <span className="text-[10px] px-1 py-0.5 rounded bg-gold-500/10 text-gold-400 font-mono font-medium whitespace-nowrap flex-shrink-0 flex items-center gap-0.5">
+              <Trophy size={9} weight="fill" />{draftCount}
             </span>
           )}
           {onTeam && <Trophy size={11} weight="fill" className="text-amber-400 flex-shrink-0" />}
@@ -134,7 +134,7 @@ function HighlightCard({
 
         {/* Stats row */}
         <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-3 text-[10px] text-gray-500">
+          <div className="flex items-center gap-3 text-[10px] text-gray-500 font-mono tabular-nums">
             <span className="flex items-center gap-0.5">
               <Heart size={10} className="text-rose-400/60" /> {formatNumber(tweet.likes)}
             </span>
@@ -153,10 +153,10 @@ function HighlightCard({
             <button
               onClick={onScout}
               disabled={scouting}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
                 scouted
-                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                  : 'bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-400'
+                  ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-400'
+                  : 'border border-transparent text-gray-500 hover:bg-gray-800 hover:border-gray-700 hover:text-gray-300'
               }`}
             >
               {scouting ? (
@@ -464,8 +464,8 @@ export default function Intel() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                <Newspaper size={28} weight="fill" className="text-white" />
+              <div className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center">
+                <Newspaper size={28} weight="fill" className="text-gray-300" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">CT Intelligence</h1>
@@ -478,13 +478,13 @@ export default function Intel() {
             {isConnected && (
               <div className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
                 rewardEarned
-                  ? 'bg-emerald-500/10 border border-emerald-500/30'
+                  ? 'bg-neon-500/10 border border-neon-500/30 shadow-glow-neon'
                   : 'bg-gold-500/10 border border-gold-500/30'
               }`}>
                 {rewardEarned ? (
                   <>
-                    <CheckCircle size={16} weight="fill" className="text-emerald-400" />
-                    <span className="text-sm text-emerald-400 font-medium">
+                    <CheckCircle size={16} weight="fill" className="text-neon-500" />
+                    <span className="text-sm text-neon-500 font-medium font-mono">
                       +{fsAmount || FS_REWARD} FS earned!
                     </span>
                   </>
@@ -524,7 +524,7 @@ export default function Intel() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     activeTab === tab.id
-                      ? 'bg-cyan-500 text-gray-950'
+                      ? 'bg-gray-700 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-gray-800'
                   }`}
                 >
@@ -601,7 +601,7 @@ export default function Intel() {
             {/* Loading State */}
             {loading && (
               <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-12 text-center">
-                <div className="animate-spin w-10 h-10 border-3 border-cyan-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                <div className="animate-spin w-10 h-10 border-2 border-gold-500 border-t-transparent rounded-full mx-auto mb-3"></div>
                 <p className="text-gray-400">Loading feed...</p>
               </div>
             )}
@@ -657,7 +657,7 @@ export default function Intel() {
                 {emerging.length > 0 && tierFilter === 'all' && timeFilter !== '1h' && (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <TrendUp size={18} weight="fill" className="text-cyan-400" />
+                      <TrendUp size={18} weight="fill" className="text-neon-500" />
                       <span className="text-sm font-semibold text-white">Emerging Movers</span>
                       <span className="text-xs text-gray-500">Breaking out in the last hour · relative to audience</span>
                     </div>
@@ -695,7 +695,7 @@ export default function Intel() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-neon-500 animate-pulse"></div>
                         Live
                       </div>
                     </div>
@@ -748,7 +748,7 @@ export default function Intel() {
 
                               <p className="text-sm text-gray-300 mb-2">{tweet.text}</p>
 
-                              <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <div className="flex items-center gap-4 text-xs text-gray-500 font-mono tabular-nums">
                                 <span className="flex items-center gap-1">
                                   <Heart size={12} className="text-pink-500/70" />
                                   {formatNumber(tweet.likes)}
@@ -777,10 +777,10 @@ export default function Intel() {
                                   <button
                                     onClick={() => toggleScout(tweet.influencer.id, tweet.influencer.name)}
                                     disabled={scoutingId === tweet.influencer.id}
-                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                                       isScouted(tweet.influencer.id)
-                                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-                                        : 'bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400'
+                                        ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-400'
+                                        : 'border border-transparent text-gray-500 hover:bg-gray-800 hover:border-gray-700 hover:text-gray-300'
                                     }`}
                                   >
                                     {scoutingId === tweet.influencer.id ? (

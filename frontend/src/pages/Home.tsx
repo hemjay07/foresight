@@ -175,7 +175,7 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
             <div className="relative w-full rounded-2xl overflow-hidden">
               <FormationPreview variant="hero" showStats={true} />
               {/* Contained glow — no overflow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-gold-500/10 via-transparent to-cyan-500/10 pointer-events-none rounded-2xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-gold-500/10 via-transparent to-amber-500/5 pointer-events-none rounded-2xl" />
             </div>
             <a
               href="https://www.usetapestry.dev"
@@ -200,8 +200,8 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
         <div className="md:hidden space-y-3 px-1">
           {[
             { n: 1, title: 'Draft your team', desc: 'Pick 5 CT influencers within your 150pt budget.', color: 'text-gold-400', bg: 'bg-gold-500/10 border-gold-500/20' },
-            { n: 2, title: 'Earn points', desc: 'Scores update based on Twitter engagement daily.', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
-            { n: 3, title: 'Win prizes', desc: 'Top teams win prizes + Foresight Score rewards.', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+            { n: 2, title: 'Earn points', desc: 'Scores update based on Twitter engagement daily.', color: 'text-gray-300', bg: 'bg-gray-700/40 border-gray-600/40' },
+            { n: 3, title: 'Win prizes', desc: 'Top teams win prizes + Foresight Score rewards.', color: 'text-neon-500', bg: 'bg-neon-500/10 border-neon-500/20' },
           ].map(step => (
             <div key={step.n} className="flex items-center gap-4 p-4 rounded-xl bg-gray-900/50 border border-gray-800">
               <div className={`w-10 h-10 rounded-lg border ${step.bg} flex items-center justify-center ${step.color} font-bold text-base shrink-0`}>
@@ -226,17 +226,17 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
             </div>
           </div>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-gray-600/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
             <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold mb-4">2</div>
+              <div className="w-10 h-10 rounded-lg bg-gray-700/40 border border-gray-600/40 flex items-center justify-center text-gray-300 font-bold mb-4">2</div>
               <h3 className="text-lg font-semibold text-white mb-2">Earn points</h3>
               <p className="text-gray-400 text-sm">Your team scores based on their Twitter engagement — likes, retweets, followers.</p>
             </div>
           </div>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
             <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 font-bold mb-4">3</div>
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold mb-4">3</div>
               <h3 className="text-lg font-semibold text-white mb-2">Win prizes</h3>
               <p className="text-gray-400 text-sm">Top teams win prizes. Build your Foresight Score for exclusive rewards.</p>
             </div>
@@ -256,7 +256,7 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
                     <Star size={16} className="text-gold-400" weight="fill" />
                     <span className="text-sm font-semibold text-white">Your Progress</span>
                   </div>
-                  <span className="text-xs text-gray-400 font-mono">
+                  <span className="text-xs text-gray-400 font-mono tabular-nums">
                     {xp.toLocaleString()} XP
                   </span>
                 </div>
@@ -265,7 +265,7 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
                     {xpInfo.levelInfo.label}
                   </span>
                   {xpInfo.nextLevel && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 font-mono tabular-nums">
                       {xpInfo.xpToNext.toLocaleString()} XP to {xpInfo.nextLevel}
                     </span>
                   )}
@@ -312,8 +312,8 @@ function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: bo
             </p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center mx-auto mb-3">
-              <CheckCircle size={20} weight="fill" className="text-cyan-400" />
+            <div className="w-10 h-10 rounded-lg bg-gray-700/40 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle size={20} weight="fill" className="text-gray-300" />
             </div>
             <h3 className="font-semibold text-white mb-1 text-sm">Social Graph</h3>
             <p className="text-xs text-gray-500">Follow players, like teams, and build your reputation</p>

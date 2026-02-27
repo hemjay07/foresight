@@ -412,8 +412,8 @@ export default function Profile() {
             <p className="text-sm text-gray-500">View and edit your drafted teams</p>
           </div>
           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-3">
-              <ChartBar size={24} weight="fill" className="text-cyan-400" />
+            <div className="w-12 h-12 rounded-lg bg-gray-700/60 flex items-center justify-center mx-auto mb-3">
+              <ChartBar size={24} weight="fill" className="text-gray-300" />
             </div>
             <h3 className="font-semibold text-white mb-1">Stats & XP</h3>
             <p className="text-sm text-gray-500">Track your performance over time</p>
@@ -506,12 +506,13 @@ export default function Profile() {
               <div className="flex items-center gap-1.5">
                 <Star size={16} className="text-yellow-400" />
                 <span className="text-gray-400">Level</span>
-                <span className="text-white font-medium">{xpInfo.level}</span>
+                <span className="text-white font-medium font-mono tabular-nums">{xpInfo.level}</span>
               </div>
               {stats.voteStreak > 0 && (
                 <div className="flex items-center gap-1.5">
                   <Fire size={16} className="text-orange-400" />
-                  <span className="text-white font-medium">{stats.voteStreak} day streak</span>
+                  <span className="text-white font-medium font-mono tabular-nums">{stats.voteStreak}</span>
+                  <span className="text-gray-400">day streak</span>
                 </div>
               )}
             </div>
@@ -590,15 +591,15 @@ export default function Profile() {
                 {/* Stats Row */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-gray-800/40 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{socialCounts.followers}</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-white">{socialCounts.followers}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Followers</div>
                   </div>
                   <div className="bg-gray-800/40 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{socialCounts.following}</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-white">{socialCounts.following}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Following</div>
                   </div>
                   <div className="bg-gray-800/40 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-gold-400">
+                    <div className="text-2xl font-bold font-mono tabular-nums text-gold-400">
                       {tapestryContent.filter(i => i.properties?.type === 'draft_team').length}
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">Teams on-chain</div>
@@ -631,7 +632,7 @@ export default function Profile() {
             ) : (
               <div className="p-5">
                 <p className="text-sm text-gray-500">
-                  Sign in to link your on-chain identity. Your draft teams and contest scores will be published to Solana via Tapestry — permanently verifiable by anyone.
+                  Your scores and rankings work without this. Optionally connect a Tapestry profile to record your draft teams permanently on Solana — verifiable by anyone.
                 </p>
               </div>
             )}
@@ -644,8 +645,8 @@ export default function Profile() {
           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                  <Crown size={24} className="text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-gold-500/20 flex items-center justify-center">
+                  <Crown size={24} className="text-gold-400" />
                 </div>
                 <div>
                   <div className="text-sm text-gray-400">Experience Level</div>
@@ -653,7 +654,7 @@ export default function Profile() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-cyan-400">{formatXP(stats.xp)}</div>
+                <div className="text-2xl font-bold font-mono tabular-nums text-gold-400">{formatXP(stats.xp)}</div>
                 <div className="text-sm text-gray-500">Total XP</div>
               </div>
             </div>
@@ -662,11 +663,11 @@ export default function Profile() {
               <div>
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-gray-400">Progress to {xpInfo.nextLevel}</span>
-                  <span className="text-cyan-400">{xpInfo.xpToNext} XP to go</span>
+                  <span className="text-gray-400 font-mono tabular-nums">{xpInfo.xpToNext} XP to go</span>
                 </div>
                 <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
+                    className="h-full bg-gold-500 rounded-full transition-all duration-500"
                     style={{ width: `${xpInfo.progress}%` }}
                   />
                 </div>
@@ -705,7 +706,7 @@ export default function Profile() {
                         <span className={`text-sm font-medium truncate ${quest.isCompleted ? 'text-gray-500 line-through' : 'text-white'}`}>
                           {quest.name}
                         </span>
-                        <span className="text-xs text-gold-400 shrink-0">+{quest.fsReward} FS</span>
+                        <span className="text-xs text-gold-400 shrink-0 font-mono tabular-nums">+{quest.fsReward} FS</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
@@ -740,9 +741,9 @@ export default function Profile() {
                   </div>
                   <div className="text-right">
                     {myTeam.rank && (
-                      <div className="text-3xl font-bold text-yellow-400">#{myTeam.rank}</div>
+                      <div className="text-3xl font-bold font-mono tabular-nums text-gold-400">#{myTeam.rank}</div>
                     )}
-                    <div className="text-2xl font-bold text-gold-400">{myTeam.total_score || 0} pts</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-gold-400">{myTeam.total_score || 0} pts</div>
                   </div>
                 </div>
 
@@ -750,7 +751,7 @@ export default function Profile() {
                 <div className="mt-4 pt-4 border-t border-gray-800">
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="text-gray-400">Budget Used</span>
-                    <span className="text-white font-medium">{myTeam.total_budget_used}/{myTeam.max_budget}</span>
+                    <span className="text-white font-medium font-mono tabular-nums">{myTeam.total_budget_used}/{myTeam.max_budget}</span>
                   </div>
                   <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                     <div
@@ -812,14 +813,14 @@ export default function Profile() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Binoculars size={20} weight="fill" className="text-cyan-400" />
+                    <Binoculars size={20} weight="fill" className="text-gray-400" />
                     Scouted Influencers
                   </h3>
                   <p className="text-sm text-gray-400">Your watchlist for draft research</p>
                 </div>
                 <Link
                   to="/feed"
-                  className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                  className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
                 >
                   Scout More
                   <CaretRight size={14} />
@@ -896,7 +897,7 @@ export default function Profile() {
                       </span>
                       <Link
                         to="/compete?tab=contests"
-                        className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                        className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
                       >
                         Draft
                         <CaretRight size={12} />
@@ -915,7 +916,7 @@ export default function Profile() {
               </p>
               <Link
                 to="/feed"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-lg text-white font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-gray-200 font-medium transition-colors"
               >
                 <Binoculars size={20} />
                 Browse Intel
@@ -1002,7 +1003,7 @@ export default function Profile() {
                             <span>{new Date(entry.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           )}
                           {entry.totalPlayers && <span>{entry.totalPlayers} players</span>}
-                          {!hasResult && <span className="text-cyan-400 capitalize">{entry.status}</span>}
+                          {!hasResult && <span className="text-gray-400 capitalize">{entry.status}</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-4 shrink-0 ml-3">
@@ -1080,7 +1081,7 @@ export default function Profile() {
                                 <div className="text-xs text-gray-500 mt-0.5">Activity</div>
                               </div>
                               <div className="bg-gray-800/40 rounded-lg p-2 text-center">
-                                <div className="text-sm font-bold text-cyan-400">{Math.round(entry.scoreBreakdown.engagement)}</div>
+                                <div className="text-sm font-bold font-mono tabular-nums text-gray-200">{Math.round(entry.scoreBreakdown.engagement)}</div>
                                 <div className="text-xs text-gray-500 mt-0.5">Engage</div>
                               </div>
                               <div className="bg-gray-800/40 rounded-lg p-2 text-center">
@@ -1201,8 +1202,8 @@ export default function Profile() {
             className="flex items-center justify-between p-4 bg-gray-900/50 border border-gray-800 rounded-xl hover:border-gray-700 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                <Medal size={20} className="text-cyan-400" />
+              <div className="w-10 h-10 rounded-lg bg-gold-500/15 flex items-center justify-center">
+                <Medal size={20} className="text-gold-400" />
               </div>
               <div>
                 <div className="font-medium text-white">View XP Leaderboard</div>

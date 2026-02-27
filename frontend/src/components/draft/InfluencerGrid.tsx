@@ -151,7 +151,7 @@ export default function InfluencerGrid({
                   <span className={`text-sm font-bold ${config.color}`}>{config.label}</span>
                   <span className="text-xs text-gray-500">{items.length} players</span>
                 </div>
-                <span className="text-xs text-gray-500">{priceRange}</span>
+                <span className="text-xs text-gray-500 font-mono tabular-nums">{priceRange}</span>
               </div>
 
               {/* Influencer Cards */}
@@ -189,7 +189,7 @@ export default function InfluencerGrid({
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-white truncate">@{inf.handle}</p>
-                          <p className={`text-sm font-bold ${config.color}`}>{inf.price} pts</p>
+                          <p className={`text-sm font-bold font-mono tabular-nums ${config.color}`}>{inf.price} pts</p>
                         </div>
                       </div>
 

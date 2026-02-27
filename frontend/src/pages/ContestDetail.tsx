@@ -577,23 +577,23 @@ export default function ContestDetail() {
         {myEntry ? (
           <div className={`${
             contest.status === 'finalized'
-              ? 'bg-gold-500/10 border border-gold-500/30'
-              : 'bg-green-500/10 border border-green-500/30'
+              ? 'bg-gold-500/5 border-l-4 border-l-gold-400 border border-gray-800'
+              : 'bg-neon-500/5 border-l-4 border-l-neon-500 border border-gray-800'
           } rounded-xl p-4 mb-6 flex items-center justify-between`}>
             <div className="flex items-center gap-3">
               {contest.status === 'finalized'
                 ? <Trophy size={24} weight="fill" className="text-gold-400" />
-                : <CheckCircle size={24} weight="fill" className="text-green-400" />
+                : <CheckCircle size={24} weight="fill" className="text-neon-500" />
               }
               <div>
                 <p className="font-bold text-white">
                   {contest.status === 'finalized' ? 'Contest Ended' : "You're In!"}
                 </p>
-                <p className={`text-sm ${contest.status === 'finalized' ? 'text-gold-300' : 'text-green-300'}`}>
+                <p className={`text-sm font-mono tabular-nums ${contest.status === 'finalized' ? 'text-gold-400/80' : 'text-neon-500/80'}`}>
                   {contest.status === 'finalized'
-                    ? `Final Rank: #${myEntry.rank || '-'} | Score: ${myEntry.score ? parseFloat(String(myEntry.score)).toFixed(1) : '-'} pts`
-                    : (myEntry.rank ? `Current Rank: #${myEntry.rank}` : 'Scoring in progress...') +
-                      (myEntry.score && parseFloat(String(myEntry.score)) > 0 ? ` | Score: ${parseFloat(String(myEntry.score)).toFixed(1)} pts` : '')
+                    ? `Final Rank: #${myEntry.rank || '-'} · Score: ${myEntry.score ? parseFloat(String(myEntry.score)).toFixed(1) : '-'} pts`
+                    : (myEntry.rank ? `Rank #${myEntry.rank}` : 'Scoring in progress') +
+                      (myEntry.score && parseFloat(String(myEntry.score)) > 0 ? ` · ${parseFloat(String(myEntry.score)).toFixed(1)} pts` : '')
                   }
                 </p>
               </div>
@@ -601,7 +601,7 @@ export default function ContestDetail() {
             {contest.status === 'open' && (
               <button
                 onClick={handleEnterContest}
-                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg font-semibold transition-colors"
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 rounded-lg font-semibold transition-colors text-sm"
               >
                 Edit Team
               </button>
@@ -704,7 +704,7 @@ export default function ContestDetail() {
                         {entry.rank === 1 ? (
                           <span className="font-mono font-bold text-gold-400">#1</span>
                         ) : entry.rank === 2 ? (
-                          <span className="font-mono font-bold text-cyan-400">#2</span>
+                          <span className="font-mono font-bold text-gray-300">#2</span>
                         ) : entry.rank === 3 ? (
                           <span className="font-mono font-bold text-emerald-400">#3</span>
                         ) : (
@@ -773,16 +773,19 @@ export default function ContestDetail() {
             {/* ── Hero Win Banner — visible FIRST, no scrolling required ── */}
             {contest?.status === 'finalized' && myEntry?.prizeAmount && parseFloat(String(myEntry.prizeAmount)) > 0 && (
               <div className="mb-6 p-5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-green-500/10 border border-emerald-500/30 text-center">
-                <div className="text-4xl mb-2">
-                  {myEntry.rank === 1 ? '🥇' : myEntry.rank === 2 ? '🥈' : myEntry.rank === 3 ? '🥉' : '🏆'}
+                <div className="flex items-center justify-center mb-2">
+                  {myEntry.rank === 1
+                    ? <Crown size={48} weight="fill" className="text-gold-400" />
+                    : myEntry.rank === 2
+                    ? <Medal size={48} weight="fill" className="text-gray-300" />
+                    : myEntry.rank === 3
+                    ? <Medal size={48} weight="fill" className="text-amber-600" />
+                    : <Trophy size={48} weight="fill" className="text-neon-500" />}
                 </div>
-                <p className="text-lg font-bold text-emerald-400 mb-1">
-                  {myEntry.rank === 1 ? 'You placed #1! You Won!' :
-                   myEntry.rank === 2 ? 'You placed #2! You Won!' :
-                   myEntry.rank === 3 ? 'You placed #3! You Won!' :
-                   `You placed #${myEntry.rank}! Prize Earned!`}
+                <p className="text-lg font-bold text-white mb-1 font-mono tabular-nums">
+                  {myEntry.rank && myEntry.rank <= 3 ? `#${myEntry.rank} — You Won!` : `Rank #${myEntry.rank} — Prize Earned!`}
                 </p>
-                <p className="text-3xl font-bold text-white mb-1">
+                <p className="text-3xl font-bold font-mono tabular-nums text-white mb-1">
                   ${(parseFloat(String(myEntry.prizeAmount)) * solPrice).toFixed(2)}
                 </p>
                 <p className="text-sm text-gray-400 font-mono mb-4">
@@ -812,10 +815,10 @@ export default function ContestDetail() {
                     )}
                   </div>
                 )}
-                <div className="mt-4 pt-4 border-t border-emerald-500/20 text-sm text-gray-400">
-                  <span>Final Score: {myEntry.score ? parseFloat(String(myEntry.score)).toFixed(1) : '-'} pts</span>
+                <div className="mt-4 pt-4 border-t border-emerald-500/20 text-sm text-gray-400 font-mono tabular-nums">
+                  <span>Score: {myEntry.score ? parseFloat(String(myEntry.score)).toFixed(1) : '-'} pts</span>
                   <span className="mx-2">·</span>
-                  <span>Rank #{myEntry.rank} / {entries.length}</span>
+                  <span>Rank #{myEntry.rank} of {entries.length}</span>
                 </div>
               </div>
             )}
@@ -999,15 +1002,15 @@ export default function ContestDetail() {
           {/* Next Week banner — show for finalized recurring leagues */}
           {contest?.status === 'finalized' &&
             (contest.typeCode === 'FREE_LEAGUE' || contest.typeCode?.includes('WEEKLY')) && (
-            <div className="mt-4 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center gap-3">
-              <CalendarBlank size={18} className="text-cyan-400 flex-shrink-0" />
+            <div className="mt-4 p-3 rounded-xl bg-gray-800/60 border border-gray-700 flex items-center gap-3">
+              <CalendarBlank size={18} className="text-gray-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white">Next week's league begins soon</p>
                 <p className="text-xs text-gray-400">Check the contests page for the next round.</p>
               </div>
               <button
                 onClick={() => navigate('/compete?tab=contests')}
-                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 text-sm font-medium transition-colors"
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium transition-colors"
               >
                 View
               </button>
@@ -1095,9 +1098,11 @@ export default function ContestDetail() {
             {/* State 4: Success */}
             {claimModalState === 'success' && (
               <div className="p-6 text-center">
-                <div className="text-4xl mb-3">✅</div>
+                <div className="flex items-center justify-center mb-3">
+                  <CheckCircle size={40} weight="fill" className="text-neon-500" />
+                </div>
                 <h3 className="text-xl font-bold text-white mb-1">Prize Claimed!</h3>
-                <p className="text-3xl font-bold text-emerald-400 mb-1">
+                <p className="text-3xl font-bold font-mono tabular-nums text-neon-500 mb-1">
                   ${(parseFloat(String(myEntry.prizeAmount)) * solPrice).toFixed(2)}
                 </p>
                 <p className="text-gray-400 text-sm mb-4">is now in your wallet</p>
