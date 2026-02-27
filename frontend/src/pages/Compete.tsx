@@ -25,6 +25,7 @@ import {
   Calendar,
   CheckCircle,
   MagnifyingGlass,
+  Archive,
 } from '@phosphor-icons/react';
 import { getNumericLevel } from '../utils/xp';
 import FoundingMemberBadge from '../components/FoundingMemberBadge';
@@ -95,6 +96,7 @@ interface Contest {
   status: string;
   isFree: boolean;
   lockTime: string;
+  endTime?: string;
   teamSize: number;
   hasCaptain: boolean;
   isSignatureLeague?: boolean;
@@ -155,6 +157,7 @@ export default function Compete() {
   const [xpLeaders, setXpLeaders] = useState<XPLeaderUser[]>([]);
   const [userPosition, setUserPosition] = useState<{ rank: number; percentile: number } | null>(null);
   const [contests, setContests] = useState<Contest[]>([]);
+  const [archivedContests, setArchivedContests] = useState<Contest[]>([]);
   const [myEntries, setMyEntries] = useState<MyEntry[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [followStates, setFollowStates] = useState<Record<string, boolean>>({});
@@ -292,8 +295,9 @@ export default function Compete() {
   const fetchContestsData = async () => {
     try {
       setLoading(true);
-      const [contestsRes, entriesRes] = await Promise.all([
+      const [contestsRes, archivedRes, entriesRes] = await Promise.all([
         axios.get(`${API_URL}/api/v2/contests`, { params: { active: 'true' } }),
+        axios.get(`${API_URL}/api/v2/contests`, { params: { status: 'finalized' } }),
         isConnected && localStorage.getItem('authToken')
           ? axios.get(`${API_URL}/api/v2/me/entries`, {
               headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
@@ -301,6 +305,8 @@ export default function Compete() {
           : Promise.resolve({ data: { entries: [] } }),
       ]);
       setContests(contestsRes.data.contests || []);
+      // Most recent finalized first (already ordered by created_at desc from backend)
+      setArchivedContests((archivedRes.data.contests || []).slice(0, 10));
       setMyEntries(entriesRes.data.entries || []);
     } catch (error) {
       console.error('Error fetching contests:', error);
@@ -377,6 +383,12 @@ export default function Compete() {
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     if (days > 0) return `${days}d ${hours}h`;
     return `${hours}h`;
+  };
+
+  const formatEndDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const handleEnterContest = (contest: Contest) => {
@@ -1185,12 +1197,86 @@ export default function Compete() {
             </div>
           )}
 
-          {/* Empty state — only show if truly nothing to display */}
-          {!loading && filteredContests.length === 0 && signatureContests.length === 0 && (
+          {/* Empty state — only show when no active AND no archive */}
+          {!loading && filteredContests.length === 0 && signatureContests.length === 0 && archivedContests.length === 0 && (
             <div className="text-center py-16">
               <Trophy size={48} className="mx-auto mb-4 text-gray-600" />
               <h3 className="text-xl font-bold text-white mb-2">No contests available</h3>
               <p className="text-gray-400">Check back soon for new contests!</p>
+            </div>
+          )}
+
+          {/* "Coming soon" callout when no active contests but archive exists */}
+          {!loading && filteredContests.length === 0 && signatureContests.length === 0 && archivedContests.length > 0 && (
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-gold-500/10 border border-gold-500/30 mb-2">
+              <div className="p-2.5 rounded-lg bg-gold-500/20 shrink-0">
+                <Clock size={20} weight="fill" className="text-gold-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white text-sm">Next contest coming soon</p>
+                <p className="text-xs text-gray-400 mt-0.5">New weekly contests launch every Monday · Check back soon</p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Past Contests Archive ──────────────────────────────────────── */}
+          {!loading && archivedContests.length > 0 && (
+            <div className="mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Archive size={15} weight="fill" className="text-gray-500" />
+                <span className="text-sm font-bold text-gray-400">Past Contests</span>
+                <span className="text-xs text-gray-600 font-medium">({archivedContests.length})</span>
+              </div>
+              <div className="space-y-2">
+                {archivedContests.map((contest) => {
+                  const cfg = CONTEST_CONFIG[contest.typeCode] || CONTEST_CONFIG.WEEKLY_STARTER;
+                  const Icon = cfg.icon;
+                  const myEntry = myEntries.find(e => e.contestId === contest.id);
+
+                  return (
+                    <button
+                      key={contest.id}
+                      onClick={() => navigate(`/contest/${contest.id}`)}
+                      className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-900/60 border border-gray-800/60 hover:border-gray-700 hover:bg-gray-800/50 transition-all text-left group"
+                    >
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${cfg.gradient} opacity-60 shrink-0`}>
+                        <Icon size={16} weight="fill" className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-300 text-sm truncate leading-tight">
+                          {contest.name || contest.typeName}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-600">
+                            {contest.endTime ? formatEndDate(contest.endTime) : 'Ended'}
+                          </span>
+                          <span className="text-gray-700">·</span>
+                          <span className="text-xs text-gray-600">{contest.playerCount} players</span>
+                          {contest.isFree && (
+                            <span className="text-[10px] font-bold text-emerald-500/70 bg-emerald-500/10 px-1 py-0.5 rounded">FREE</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {myEntry && (
+                          <div className="text-right">
+                            {myEntry.rank && (
+                              <div className="text-xs font-bold text-gray-400">#{myEntry.rank}</div>
+                            )}
+                            {myEntry.score > 0 && (
+                              <div className="text-[10px] text-gray-600">{myEntry.score.toFixed(0)}pts</div>
+                            )}
+                          </div>
+                        )}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-gray-500 border border-gray-700">
+                          FINAL
+                        </span>
+                        <CaretRight size={14} className="text-gray-700 group-hover:text-gray-500 transition-colors" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
