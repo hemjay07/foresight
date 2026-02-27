@@ -855,7 +855,7 @@ export default function Profile() {
                         </div>
                         <div className="text-sm text-gray-400">@{item.influencer.handle}</div>
                         <div className="flex items-center gap-4 mt-2 text-xs">
-                          <span className="text-gold-400 font-medium">${item.influencer.price}</span>
+                          <span className="text-gold-400 font-medium">{item.influencer.price} pts</span>
                           <span className="text-gray-500">{item.influencer.totalPoints} pts</span>
                           {item.influencer.followers > 0 && (
                             <span className="text-gray-500">

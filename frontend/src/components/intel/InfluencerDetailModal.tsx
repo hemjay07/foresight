@@ -193,7 +193,7 @@ export default function InfluencerDetailModal({
               <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                 <span className={getConsistencyColor()}>{getConsistencyLabel()}</span>
                 <span>•</span>
-                <span>${influencer.price} price</span>
+                <span>{influencer.price} pts</span>
               </div>
             </div>
           </div>

@@ -164,7 +164,7 @@ function HighlightCard({
               ) : scouted ? (
                 <><Check size={10} weight="bold" />Scouted</>
               ) : (
-                <><Binoculars size={10} />Scout ${tweet.influencer.price}</>
+                <><Binoculars size={10} />Scout {tweet.influencer.price}pts</>
               )}
             </button>
           )}
@@ -793,7 +793,7 @@ export default function Intel() {
                                     ) : (
                                       <>
                                         <Binoculars size={12} />
-                                        Scout · ${tweet.influencer.price}
+                                        Scout · {tweet.influencer.price} pts
                                       </>
                                     )}
                                   </button>

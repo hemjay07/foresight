@@ -56,7 +56,7 @@ const TIER_STYLES: Record<string, { bg: string; text: string; border: string }> 
 // Stats to compare
 const COMPARISON_STATS = [
   { key: 'totalPoints', label: 'Total Points', icon: Star, format: (v: number) => v.toLocaleString() },
-  { key: 'price', label: 'Price', icon: Trophy, format: (v: number) => `$${v}` },
+  { key: 'price', label: 'Draft Cost', icon: Trophy, format: (v: number) => `${v} pts` },
   { key: 'followers', label: 'Followers', icon: Users, format: (v: number) => formatNumber(v) },
   { key: 'engagementRate', label: 'Engagement', icon: Lightning, format: (v: number) => `${v.toFixed(2)}%` },
   { key: 'weeklyTrend', label: '7-Day Trend', icon: ChartLine, format: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%` },
@@ -305,7 +305,7 @@ export default function ComparisonView({ influencerIds, onClose }: ComparisonVie
                     </p>
                     <p>
                       <span className="text-emerald-400">Best Value:</span>{' '}
-                      <span className="text-white">@{bestValue.handle}</span> at ${bestValue.price} ({(bestValue.totalPoints / bestValue.price).toFixed(1)} pts/$)
+                      <span className="text-white">@{bestValue.handle}</span> at {bestValue.price} pts ({(bestValue.totalPoints / bestValue.price).toFixed(1)} pts/pt)
                     </p>
                     {bestGrowth.weeklyTrend > 0 && (
                       <p>

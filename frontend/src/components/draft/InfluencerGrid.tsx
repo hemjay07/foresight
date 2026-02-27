@@ -140,7 +140,7 @@ export default function InfluencerGrid({
 
           const config = TIER_CONFIG[tier];
           const priceRange = items.length > 0
-            ? `$${Math.min(...items.map((i) => i.price))} - $${Math.max(...items.map((i) => i.price))}`
+            ? `${Math.min(...items.map((i) => i.price))} - ${Math.max(...items.map((i) => i.price))} pts`
             : '';
 
           return (
@@ -189,7 +189,7 @@ export default function InfluencerGrid({
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-white truncate">@{inf.handle}</p>
-                          <p className={`text-sm font-bold ${config.color}`}>${inf.price}</p>
+                          <p className={`text-sm font-bold ${config.color}`}>{inf.price} pts</p>
                         </div>
                       </div>
 

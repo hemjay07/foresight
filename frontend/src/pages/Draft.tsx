@@ -559,7 +559,7 @@ export default function Draft() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Your Team</h2>
               <span className={`text-sm font-medium ${remainingBudget < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                ${remainingBudget} left
+                {remainingBudget} pts left
               </span>
             </div>
             <FormationTeam
@@ -621,7 +621,7 @@ export default function Draft() {
               <h2 className="text-lg font-semibold text-white">Select Your Team</h2>
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-400">
                 <Info size={16} />
-                <span>Budget: <span className="text-white font-medium">${MAX_BUDGET}</span></span>
+                <span>Budget: <span className="text-white font-medium">{MAX_BUDGET} pts</span></span>
               </div>
             </div>
             <InfluencerGrid

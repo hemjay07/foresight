@@ -175,11 +175,11 @@ export default function InfluencerProfileCard({
             )}
           </div>
 
-          {/* Price + pts/$ */}
+          {/* Draft cost */}
           <div className="text-right flex-shrink-0">
-            <div className="text-xl font-bold text-white leading-tight">${influencer.price}</div>
+            <div className="text-xl font-bold text-white leading-tight">{influencer.price} <span className="text-sm font-normal text-gray-400">pts</span></div>
             <div className="text-[10px] font-medium mt-0.5 text-gray-500">
-              {ptsPerDollar > 0 ? `${ptsPerDollar} pts/$` : ''}
+              {ptsPerDollar > 0 ? `${ptsPerDollar} pts/pt` : ''}
             </div>
           </div>
         </div>

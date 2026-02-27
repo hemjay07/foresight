@@ -222,7 +222,7 @@ function CompactPlayerSlot({ player, isCaptain, onRemove, onSetCaptain }: Compac
           <span className={`text-[8px] px-1 rounded font-bold ${tierStyle.text}`}>
             {player.tier}
           </span>
-          <span className="text-[8px] text-gray-400">${player.price}</span>
+          <span className="text-[8px] text-gray-400">{player.price}pt</span>
         </div>
       </div>
     </div>

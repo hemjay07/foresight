@@ -144,7 +144,7 @@ export default function InfluencerDetailModal({
             <StatCard
               icon={<Coins size={16} />}
               label="Draft Cost"
-              value={`$${influencer.price}`}
+              value={`${influencer.price} pts`}
               color="text-emerald-400"
             />
           </div>
@@ -160,10 +160,10 @@ export default function InfluencerDetailModal({
                 <>Strong performer with {influencer.engagement_rate ? `${influencer.engagement_rate.toFixed(1)}% engagement` : 'above-average engagement'}. {influencer.total_points ? `${influencer.total_points} career points` : 'Reliable scorer'} — good captain candidate if budget is tight.</>
               )}
               {influencer.tier === 'B' && (
-                <>Mid-tier value pick at <span className="text-emerald-400">${influencer.price}</span>. {influencer.total_points ? `${influencer.total_points} pts` : 'Solid'} — pairs well with an S or A-tier captain to stay under budget.</>
+                <>Mid-tier value pick at <span className="text-emerald-400">{influencer.price} pts</span>. {influencer.total_points ? `${influencer.total_points} pts` : 'Solid'} — pairs well with an S or A-tier captain to stay under budget.</>
               )}
               {influencer.tier === 'C' && (
-                <>Budget pick at <span className="text-emerald-400">${influencer.price}</span> — lowest draft cost in the pool. Stack 3-4 of these to free up budget for an elite captain. <span className="text-gray-500">Lower points ceiling.</span></>
+                <>Budget pick at <span className="text-emerald-400">{influencer.price} pts</span> — lowest draft cost in the pool. Stack 3-4 of these to free up budget for an elite captain. <span className="text-gray-500">Lower points ceiling.</span></>
               )}
             </p>
           </div>
@@ -199,7 +199,7 @@ export default function InfluencerDetailModal({
                 }}
                 className="flex-1 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-400 font-medium rounded-lg"
               >
-                Add to Team (${influencer.price})
+                Add to Team ({influencer.price} pts)
               </button>
             ) : (
               <button
