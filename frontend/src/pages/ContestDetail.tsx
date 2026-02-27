@@ -3,14 +3,14 @@
  * Shows contest info, entries, leaderboard, and user's entry
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   Trophy, Users, Clock, Coins, Crown, ArrowLeft,
   Timer, ChartLineUp, Medal, Gift, Lock, Play, Lightning,
   CheckCircle, Star, Fire, CaretRight, Wallet, ArrowSquareOut,
-  XLogo, X, CalendarBlank
+  XLogo, X, CalendarBlank, Sparkle, Hourglass
 } from '@phosphor-icons/react';
 import { useToast } from '../contexts/ToastContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
@@ -149,6 +149,8 @@ export default function ContestDetail() {
   const [claimTxSignature, setClaimTxSignature] = useState<string | null>(null);
   const [claimExplorerUrl, setClaimExplorerUrl] = useState<string | null>(null);
   const [solPrice, setSolPrice] = useState<number>(145); // SOL/USD fallback
+  const [justFinalized, setJustFinalized] = useState(false); // "Results are in!" reveal banner
+  const prevStatusRef = React.useRef<string | null>(null);
 
   // Fetch live SOL price
   useEffect(() => {
@@ -164,23 +166,44 @@ export default function ContestDetail() {
     }
   }, [id, address]);
 
-  // Auto-refresh leaderboard every 30 seconds
+  // Adaptive polling: 5s when scoring (imminent results), 10s when locked, 30s otherwise
   useEffect(() => {
     if (!id || loading) return;
-    const interval = setInterval(async () => {
+
+    const getInterval = () => {
+      if (!contest) return 30000;
+      if (contest.status === 'scoring') return 5000;
+      if (contest.status === 'locked') return 10000;
+      return 30000;
+    };
+
+    const poll = async () => {
       try {
         const [entriesRes, contestRes] = await Promise.all([
           axios.get(`${API_URL}/api/v2/contests/${id}/entries`),
           axios.get(`${API_URL}/api/v2/contests/${id}`),
         ]);
+        const newContest = contestRes.data.contest;
+        // Detect fresh finalization → trigger "Results are in!" banner
+        if (
+          newContest?.status === 'finalized' &&
+          prevStatusRef.current &&
+          prevStatusRef.current !== 'finalized'
+        ) {
+          setJustFinalized(true);
+          setTimeout(() => setJustFinalized(false), 8000);
+        }
+        prevStatusRef.current = newContest?.status ?? null;
         setEntries(entriesRes.data.entries || []);
-        setContest(contestRes.data.contest);
+        setContest(newContest);
       } catch {
         // Silently fail on refresh — don't disrupt the user
       }
-    }, 30000);
+    };
+
+    const interval = setInterval(poll, getInterval());
     return () => clearInterval(interval);
-  }, [id, loading]);
+  }, [id, loading, contest?.status]);
 
   useEffect(() => {
     if (contest) {
@@ -458,6 +481,14 @@ export default function ContestDetail() {
                   <p className="text-xs text-gray-400 mb-1">Status</p>
                   <div className="text-lg font-bold text-gray-500">Cancelled</div>
                 </>
+              ) : contest.status === 'scoring' ? (
+                <>
+                  <p className="text-xs text-gray-400 mb-1">Status</p>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    <span className="text-sm font-bold text-blue-400">Calculating...</span>
+                  </div>
+                </>
               ) : (
                 <>
                   <p className="text-xs text-gray-400 mb-1">
@@ -471,8 +502,30 @@ export default function ContestDetail() {
             </div>
           </div>
 
-          {/* Countdown urgency banner — shown when < 24h remaining */}
-          {contest.status !== 'finalized' && msRemaining > 0 && msRemaining < 24 * 60 * 60 * 1000 && (
+          {/* "Results are in!" reveal banner — shown for 8s after fresh finalization */}
+          {justFinalized && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 animate-pulse">
+              <Sparkle size={18} className="text-emerald-400 shrink-0" weight="fill" />
+              <div className="flex-1 min-w-0">
+                <span className="text-emerald-400 font-bold text-sm">Results are in! </span>
+                <span className="text-gray-300 text-sm">Final scores have been calculated. Check the leaderboard!</span>
+              </div>
+            </div>
+          )}
+
+          {/* "Calculating Results..." banner — shown during scoring status */}
+          {contest.status === 'scoring' && !justFinalized && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/30">
+              <Hourglass size={18} className="text-blue-400 shrink-0 animate-spin" weight="fill" />
+              <div className="flex-1 min-w-0">
+                <span className="text-blue-400 font-semibold text-sm">Calculating results... </span>
+                <span className="text-gray-400 text-sm">Scores are being tallied. Page updates every 5 seconds.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Countdown urgency banner — shown when < 24h remaining and still open/locked */}
+          {(contest.status === 'open' || contest.status === 'locked') && msRemaining > 0 && msRemaining < 24 * 60 * 60 * 1000 && (
             <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
               <Timer size={18} className="text-amber-400 shrink-0" weight="fill" />
               <div className="flex-1 min-w-0">
