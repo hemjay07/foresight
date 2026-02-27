@@ -375,13 +375,13 @@ export default function Progress() {
                       variant="minimal"
                     />
                   </div>
-                  <div className="text-4xl font-bold text-white">{(fsData.totalScore ?? 0).toLocaleString()}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${tierConfig.bg} ${tierConfig.color}`}>
+                  <div className="text-4xl font-mono font-bold tabular-nums text-white leading-none">{(fsData.totalScore ?? 0).toLocaleString()}<span className="text-base font-sans font-normal text-gray-400 ml-1.5">FS</span></div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-widest ${tierConfig.bg} ${tierConfig.color}`}>
                       {fsData.tier || 'bronze'}
                     </span>
                     {(fsData.effectiveMultiplier ?? 1) > 1 && (
-                      <span className="text-xs text-green-400">{fsData.effectiveMultiplier.toFixed(2)}x</span>
+                      <span className="text-xs font-mono font-bold text-neon-500">{fsData.effectiveMultiplier.toFixed(2)}x boost</span>
                     )}
                     <TierGuide
                       currentTier={fsData.tier}
@@ -393,18 +393,18 @@ export default function Progress() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="text-center p-3 rounded-xl bg-gray-800/50">
-                  <div className="text-xs text-gray-500 mb-1">This Week</div>
-                  <div className="text-lg font-bold text-white">+{(fsData.weekScore ?? 0).toLocaleString()}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">This Week</div>
+                  <div className="text-lg font-mono font-bold text-neon-500 tabular-nums">+{(fsData.weekScore ?? 0).toLocaleString()}</div>
                 </div>
                 <div className="text-center p-3 rounded-xl bg-gray-800/50">
-                  <div className="text-xs text-gray-500 mb-1">All-Time Rank</div>
-                  <div className="text-lg font-bold text-white">{fsData.allTimeRank ? `#${fsData.allTimeRank}` : '-'}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">All-Time</div>
+                  <div className="text-lg font-mono font-bold text-gold-400 tabular-nums">{fsData.allTimeRank ? `#${fsData.allTimeRank}` : '—'}</div>
                 </div>
                 <div className="text-center p-3 rounded-xl bg-gray-800/50">
-                  <div className="text-xs text-gray-500 mb-1">Season</div>
-                  <div className="text-lg font-bold text-gold-400">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Season</div>
+                  <div className="text-lg font-mono font-bold text-white tabular-nums">
                     {(fsData.seasonScore ?? 0).toLocaleString()}
                   </div>
                 </div>
@@ -415,7 +415,7 @@ export default function Progress() {
               <div className="mt-6 pt-6 border-t border-gray-800">
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-gray-400">Progress to {fsData.tierProgress.nextTier}</span>
-                  <span className={tierConfig.color}>{(fsData.tierProgress.fsToNextTier ?? 0).toLocaleString()} FS to go</span>
+                  <span className={`font-mono font-bold tabular-nums ${tierConfig.color}`}>{(fsData.tierProgress.fsToNextTier ?? 0).toLocaleString()} FS to go</span>
                 </div>
                 <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                   <div className={`h-full bg-gradient-to-r ${tierConfig.gradient} rounded-full`} style={{ width: `${getTierProgress()}%` }} />
