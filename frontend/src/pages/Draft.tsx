@@ -528,15 +528,15 @@ export default function Draft() {
               <div className="hidden sm:flex items-center gap-3 text-sm text-gray-400">
                 <span className="flex items-center gap-1">
                   <Coins size={14} />
-                  {contest.isFree ? 'Free Entry' : contest.entryFeeFormatted}
+                  <span className="font-mono">{contest.isFree ? 'Free' : contest.entryFeeFormatted}</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <Trophy size={14} />
-                  {contest.prizePoolFormatted} Prize
+                  <span className="font-mono text-gold-400">{contest.prizePoolFormatted}</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <Users size={14} />
-                  {contest.playerCount} entered
+                  <span className="font-mono">{contest.playerCount}</span> players
                 </span>
               </div>
               <p className="sm:hidden text-xs text-gray-400">
@@ -565,7 +565,7 @@ export default function Draft() {
           <div className="lg:hidden">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Your Team</h2>
-              <span className={`text-sm font-medium ${remainingBudget < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+              <span className={`text-sm font-mono font-bold tabular-nums ${remainingBudget < 0 ? 'text-rose-400' : remainingBudget <= 20 ? 'text-gold-400' : 'text-gray-300'}`}>
                 {remainingBudget} pts left
               </span>
             </div>
@@ -628,7 +628,7 @@ export default function Draft() {
               <h2 className="text-lg font-semibold text-white">Select Your Team</h2>
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-400">
                 <Info size={16} />
-                <span>Budget: <span className="text-white font-medium">{MAX_BUDGET} pts</span></span>
+                <span>Budget: <span className="text-white font-mono font-bold">{MAX_BUDGET} pts</span></span>
               </div>
             </div>
             <InfluencerGrid

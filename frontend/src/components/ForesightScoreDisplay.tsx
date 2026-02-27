@@ -217,7 +217,7 @@ export default function ForesightScoreDisplay({
       <div className={`flex items-center gap-2 ${className}`}>
         <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${tierConfig.bg} ${tierConfig.border} border`}>
           <TierIcon size={14} weight="fill" className={tierConfig.color} />
-          <span className={`text-sm font-bold ${tierConfig.color}`}>
+          <span className={`text-sm font-mono font-bold ${tierConfig.color}`}>
             {fsData.totalScore.toLocaleString()} FS
           </span>
         </div>
@@ -235,19 +235,20 @@ export default function ForesightScoreDisplay({
               <TierIcon size={24} weight="fill" className={tierConfig.color} />
             </div>
             <div>
-              <div className="text-xs text-gray-400 uppercase tracking-wide">Foresight Score</div>
-              <div className={`text-xl font-bold ${tierConfig.color}`}>
+              <div className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">Foresight Score</div>
+              <div className={`text-2xl font-mono font-bold ${tierConfig.color} tabular-nums`}>
                 {fsData.totalScore.toLocaleString()}
+                <span className="text-sm font-sans font-normal text-gray-400 ml-1">FS</span>
               </div>
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-xs px-2 py-0.5 rounded ${tierConfig.bg} ${tierConfig.color} font-medium uppercase`}>
+            <div className={`text-xs px-2 py-0.5 rounded ${tierConfig.bg} ${tierConfig.color} font-semibold uppercase tracking-wide`}>
               {fsData.tier}
             </div>
             {fsData.allTimeRank && (
-              <div className="text-xs text-gray-500 mt-1">
-                Rank #{fsData.allTimeRank}
+              <div className="text-xs font-mono text-gray-500 mt-1">
+                #{fsData.allTimeRank}
               </div>
             )}
           </div>
@@ -263,37 +264,39 @@ export default function ForesightScoreDisplay({
       <div className={`bg-gradient-to-r ${tierConfig.gradient} p-4 border-b border-gray-800`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl ${tierConfig.bg} border ${tierConfig.border} flex items-center justify-center`}>
+            <div className={`w-12 h-12 rounded-xl ${tierConfig.bg} border ${tierConfig.border} flex items-center justify-center shrink-0`}>
               <TierIcon size={28} weight="fill" className={tierConfig.color} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-0.5 rounded ${tierConfig.bg} ${tierConfig.color} font-semibold uppercase`}>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className={`text-[10px] px-2 py-0.5 rounded ${tierConfig.bg} ${tierConfig.color} font-semibold uppercase tracking-widest`}>
                   {fsData.tier}
                 </span>
                 {fsData.isFoundingMember && (
-                  <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium flex items-center gap-1">
-                    <Star size={10} weight="fill" />
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold flex items-center gap-1">
+                    <Star size={9} weight="fill" />
                     Founder #{fsData.foundingMemberNumber}
                   </span>
                 )}
               </div>
-              <div className={`text-2xl font-bold ${tierConfig.color} mt-0.5`}>
-                {fsData.totalScore.toLocaleString()} <span className="text-sm font-normal text-gray-400">FS</span>
+              {/* Hero score number — monospace, big */}
+              <div className={`text-3xl font-mono font-bold tabular-nums leading-none ${tierConfig.color}`}>
+                {fsData.totalScore.toLocaleString()}
+                <span className="text-sm font-sans font-normal text-gray-400 ml-1.5">FS</span>
               </div>
             </div>
           </div>
 
           {/* Multiplier display */}
           {fsData.effectiveMultiplier > 1 && (
-            <div className="text-right">
-              <div className="text-xs text-gray-400 mb-0.5">Active Boost</div>
-              <div className="flex items-center gap-1 text-green-400 font-bold">
-                <Lightning size={16} weight="fill" />
+            <div className="text-right shrink-0">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Boost</div>
+              <div className="flex items-center gap-1 text-neon-500 font-mono font-bold">
+                <Lightning size={14} weight="fill" />
                 {fsData.effectiveMultiplier.toFixed(2)}x
               </div>
               {fsData.multiplierDaysRemaining > 0 && (
-                <div className="text-xs text-gray-500">{fsData.multiplierDaysRemaining}d left</div>
+                <div className="text-[10px] text-gray-600 font-mono">{fsData.multiplierDaysRemaining}d left</div>
               )}
             </div>
           )}
@@ -302,46 +305,44 @@ export default function ForesightScoreDisplay({
 
       {/* Progress to next tier */}
       {fsData.tierProgress.nextTier && (
-        <div className="p-4 border-b border-gray-800">
-          <div className="flex items-center justify-between text-xs mb-2">
-            <span className="text-gray-400">Progress to {fsData.tierProgress.nextTier}</span>
-            <span className="text-gray-500">
-              {fsData.tierProgress.fsToNextTier.toLocaleString()} FS needed
+        <div className="px-4 py-3 border-b border-gray-800/60">
+          <div className="flex items-center justify-between text-[11px] mb-1.5">
+            <span className="text-gray-400">→ {fsData.tierProgress.nextTier}</span>
+            <span className="font-mono text-gray-500">
+              {fsData.tierProgress.fsToNextTier.toLocaleString()} FS to go
             </span>
           </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full bg-gradient-to-r from-gold-500 to-gold-400 transition-all duration-500`}
+              className={`h-full rounded-full bg-gradient-to-r from-gold-500 to-gold-400 transition-all duration-700`}
               style={{ width: `${Math.min(100, fsData.tierProgress.progress)}%` }}
             />
-          </div>
-          <div className="flex justify-between text-xs text-gray-600 mt-1">
-            <span>{fsData.tierProgress.currentThreshold.toLocaleString()}</span>
-            <span>{fsData.tierProgress.nextThreshold.toLocaleString()}</span>
           </div>
         </div>
       )}
 
-      {/* Stats grid */}
-      <div className="p-4 grid grid-cols-3 gap-4">
+      {/* Stats grid — all numbers monospace */}
+      <div className="p-4 grid grid-cols-3 gap-3">
         <div className="text-center">
-          <div className="text-xs text-gray-500 mb-1">This Week</div>
-          <div className="font-bold text-white">{fsData.weekScore.toLocaleString()}</div>
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">This Week</div>
+          <div className="font-mono font-bold text-white tabular-nums">
+            +{fsData.weekScore.toLocaleString()}
+          </div>
           {fsData.weekRank && (
-            <div className="text-xs text-gray-500">#{fsData.weekRank}</div>
+            <div className="text-[10px] font-mono text-gray-500 mt-0.5">#{fsData.weekRank}</div>
           )}
         </div>
         <div className="text-center border-x border-gray-800">
-          <div className="text-xs text-gray-500 mb-1">Season</div>
-          <div className="font-bold text-white">{fsData.seasonScore.toLocaleString()}</div>
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Season</div>
+          <div className="font-mono font-bold text-white tabular-nums">{fsData.seasonScore.toLocaleString()}</div>
           {fsData.seasonRank && (
-            <div className="text-xs text-gray-500">#{fsData.seasonRank}</div>
+            <div className="text-[10px] font-mono text-gray-500 mt-0.5">#{fsData.seasonRank}</div>
           )}
         </div>
         <div className="text-center">
-          <div className="text-xs text-gray-500 mb-1">All-Time Rank</div>
-          <div className="font-bold text-white">
-            {fsData.allTimeRank ? `#${fsData.allTimeRank}` : '-'}
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">All-Time</div>
+          <div className="font-mono font-bold text-white tabular-nums">
+            {fsData.allTimeRank ? `#${fsData.allTimeRank}` : '—'}
           </div>
         </div>
       </div>
@@ -349,26 +350,26 @@ export default function ForesightScoreDisplay({
       {/* Tapestry verification badge */}
       <div className="px-4 pb-2">
         <p className="text-[10px] text-gray-600 flex items-center gap-1">
-          <Sparkle size={10} weight="fill" className="text-gold-400/50" />
-          Scores stored on Tapestry Protocol — verifiable on Solana
+          <Sparkle size={9} weight="fill" className="text-gold-400/50" />
+          Scores verified on Tapestry Protocol · Solana
         </p>
       </div>
 
       {/* Footer with links */}
       {showLeaderboardLink && (
-        <div className="p-4 pt-0 flex gap-2">
+        <div className="px-4 pb-4 pt-0 flex gap-2">
           <Link
-            to="/leaderboard?tab=fs"
+            to="/compete?tab=rankings&type=fs"
             className="flex-1 btn-secondary btn-sm justify-center"
           >
-            <Trophy size={16} />
-            Leaderboard
+            <Trophy size={14} />
+            Rankings
           </Link>
           <Link
-            to="/quests"
+            to="/progress"
             className="flex-1 btn-secondary btn-sm justify-center"
           >
-            <Fire size={16} />
+            <Fire size={14} />
             Earn More
           </Link>
         </div>

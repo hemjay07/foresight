@@ -182,7 +182,7 @@ export default function FormationPreview({
                 <span className="text-[10px] text-gold-400 font-semibold">
                   {variant === 'team' && influencer.total_points !== undefined
                     ? `${influencer.total_points} pts`
-                    : `$${influencer.price || 25}`}
+                    : `${Math.round(influencer.price || 25)} pts`}
                 </span>
               </div>
             )}

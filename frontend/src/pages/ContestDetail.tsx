@@ -494,7 +494,7 @@ export default function ContestDetail() {
                   <p className="text-xs text-gray-400 mb-1">
                     {contest.status === 'open' ? 'Locks in' : 'Ends in'}
                   </p>
-                  <div className={`text-2xl font-bold ${config.color}`}>
+                  <div className={`text-2xl font-mono font-bold tabular-nums ${config.color}`}>
                     {timeRemaining}
                   </div>
                 </>
@@ -532,42 +532,43 @@ export default function ContestDetail() {
                 <span className="text-amber-400 font-semibold text-sm">Final stretch! </span>
                 <span className="text-gray-300 text-sm">
                   {contest.status === 'open' ? 'Contest locks in ' : 'Scoring ends in '}
-                  <span className="font-bold text-amber-400">{timeRemaining}</span>
-                  {myEntry?.rank && ` · You're currently #${myEntry.rank}`}
+                  <span className="font-mono font-bold text-amber-400">{timeRemaining}</span>
+                  {myEntry?.rank && <span> · You're <span className="font-mono font-bold text-amber-400">#{myEntry.rank}</span></span>}
                 </span>
               </div>
             </div>
           )}
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-black/20 rounded-xl p-4 text-center">
-              <Coins size={24} className={`mx-auto mb-2 ${config.color}`} />
-              <p className="text-lg font-bold text-emerald-400">
-                ${(contest.prizePool * solPrice).toFixed(2)}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <Coins size={20} className={`mx-auto mb-1.5 ${config.color}`} />
+              <p className="text-base font-mono font-bold text-gold-400 tabular-nums">
+                {contest.prizePoolFormatted}
               </p>
-              <p className="text-xs text-gray-500 font-mono">{contest.prizePoolFormatted}</p>
-              <p className="text-xs text-gray-400">Prize Pool</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Prize Pool</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-4 text-center">
-              <Users size={24} className={`mx-auto mb-2 ${config.color}`} />
-              <p className="text-lg font-bold text-white">{contest.playerCount}</p>
-              <p className="text-xs text-gray-400">Entries</p>
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <Users size={20} className={`mx-auto mb-1.5 ${config.color}`} />
+              <p className="text-base font-mono font-bold text-white tabular-nums">{contest.playerCount}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Entries</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-4 text-center">
-              <Wallet size={24} className={`mx-auto mb-2 ${config.color}`} />
-              <p className="text-lg font-bold text-white">{contest.entryFeeFormatted}</p>
-              <p className="text-xs text-gray-400">Entry Fee</p>
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <Wallet size={20} className={`mx-auto mb-1.5 ${config.color}`} />
+              <p className={`text-base font-mono font-bold tabular-nums ${contest.isFree ? 'text-emerald-400' : 'text-white'}`}>
+                {contest.isFree ? 'FREE' : contest.entryFeeFormatted}
+              </p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Entry</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-4 text-center">
-              <Star size={24} className={`mx-auto mb-2 ${config.color}`} />
-              <p className="text-lg font-bold text-white">{contest.teamSize}</p>
-              <p className="text-xs text-gray-400">Team Size</p>
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <Star size={20} className={`mx-auto mb-1.5 ${config.color}`} />
+              <p className="text-base font-mono font-bold text-white tabular-nums">{contest.teamSize}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Team Size</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-4 text-center">
-              <Crown size={24} className={`mx-auto mb-2 ${config.color}`} />
-              <p className="text-lg font-bold text-white">{contest.hasCaptain ? 'Yes' : 'No'}</p>
-              <p className="text-xs text-gray-400">Captain</p>
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <Crown size={20} className={`mx-auto mb-1.5 ${config.color}`} />
+              <p className="text-base font-bold text-white">{contest.hasCaptain ? 'Yes' : 'No'}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Captain</p>
             </div>
           </div>
         </div>
@@ -700,20 +701,14 @@ export default function ContestDetail() {
                       }`}
                     >
                       <div className="col-span-1">
-                        {isFinalized && entry.rank && entry.rank <= 3 ? (
-                          <span className="text-xl leading-none">
-                            {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉'}
-                          </span>
-                        ) : entry.rank && entry.rank <= 3 ? (
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                            entry.rank === 1 ? 'bg-yellow-500 text-gray-900' :
-                            entry.rank === 2 ? 'bg-gray-300 text-gray-900' :
-                            'bg-amber-600 text-white'
-                          }`}>
-                            {entry.rank}
-                          </div>
+                        {entry.rank === 1 ? (
+                          <span className="font-mono font-bold text-gold-400">#1</span>
+                        ) : entry.rank === 2 ? (
+                          <span className="font-mono font-bold text-cyan-400">#2</span>
+                        ) : entry.rank === 3 ? (
+                          <span className="font-mono font-bold text-emerald-400">#3</span>
                         ) : (
-                          <span className="text-gray-400">#{entry.rank || index + 1}</span>
+                          <span className="font-mono text-sm text-gray-500">#{entry.rank || index + 1}</span>
                         )}
                       </div>
                       <div className="col-span-5">
@@ -743,21 +738,21 @@ export default function ContestDetail() {
                         </div>
                       </div>
                       <div className="col-span-2 text-right">
-                        <span className="font-bold text-white">{entry.score ? parseFloat(String(entry.score)).toFixed(1) : '-'}</span>
-                        <span className="text-gray-500 text-sm"> pts</span>
+                        <span className="font-mono font-bold text-white tabular-nums">{entry.score ? parseFloat(String(entry.score)).toFixed(1) : '—'}</span>
+                        <span className="text-gray-600 text-xs ml-0.5">pts</span>
                       </div>
                       <div className="col-span-1 text-right">
                         {entry.prizeAmount && parseFloat(String(entry.prizeAmount)) > 0 ? (
                           <div>
-                            <span className="text-emerald-400 font-bold text-sm">
+                            <span className="text-neon-500 font-mono font-bold text-sm tabular-nums">
                               {parseFloat(String(entry.prizeAmount)).toFixed(3)}
                             </span>
                             {isMe && isFinalized && !myEntry?.claimed && (
-                              <div className="text-[10px] text-emerald-300 mt-0.5">↑ Claim</div>
+                              <div className="text-[10px] text-neon-500/70 mt-0.5">↑ Claim</div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-500">-</span>
+                          <span className="text-gray-600 text-sm">—</span>
                         )}
                       </div>
                     </div>

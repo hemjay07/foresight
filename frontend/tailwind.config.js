@@ -100,6 +100,17 @@ export default {
         },
 
         // Semantic shortcuts
+        // Neon Green — War Room: real-time updates, wins, "live" alerts
+        neon: {
+          50:  '#F0FFF4',
+          100: '#C6F6D5',
+          200: '#9AE6B4',
+          300: '#68D391',
+          400: '#48BB78',
+          500: '#10F981',  // Primary neon
+          600: '#00D084',
+        },
+
         success: {
           light: '#34D399',
           DEFAULT: '#10B981',
@@ -187,6 +198,8 @@ export default {
         'gold-intense': '0 0 30px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.2)',
         'cyan': '0 0 20px rgba(6, 182, 212, 0.25), 0 0 40px rgba(6, 182, 212, 0.1)',
         'success': '0 0 20px rgba(16, 185, 129, 0.25), 0 0 40px rgba(16, 185, 129, 0.1)',
+        'neon': '0 0 20px rgba(16, 249, 129, 0.4), 0 0 40px rgba(16, 249, 129, 0.2)',
+        'neon-intense': '0 0 40px rgba(16, 249, 129, 0.6), 0 0 80px rgba(16, 249, 129, 0.3)',
       },
 
       // Transitions
@@ -219,6 +232,10 @@ export default {
         'shimmer': 'shimmer 2s linear infinite',
         'pulse-gold': 'pulseGold 2s ease-in-out infinite',
         'glow': 'glow 2s ease-in-out infinite alternate',
+        // War Room — real-time update animations
+        'pulse-neon': 'pulseNeon 0.5s ease-in-out 2',
+        'pulse-neon-loop': 'pulseNeon 1.5s ease-in-out infinite',
+        'intense-pulse': 'intensePulse 1s ease-in-out',
       },
 
       keyframes: {
@@ -249,6 +266,14 @@ export default {
         glow: {
           '0%': { opacity: '0.5' },
           '100%': { opacity: '1' },
+        },
+        pulseNeon: {
+          '0%, 100%': { boxShadow: '0 0 10px rgba(16, 249, 129, 0.2)', color: 'inherit' },
+          '50%': { boxShadow: '0 0 30px rgba(16, 249, 129, 0.6)', color: 'rgb(16 249 129)' },
+        },
+        intensePulse: {
+          '0%, 100%': { boxShadow: '0 0 20px rgba(16, 249, 129, 0.3)' },
+          '50%': { boxShadow: '0 0 60px rgba(16, 249, 129, 0.8)' },
         },
       },
 

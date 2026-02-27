@@ -48,6 +48,26 @@
 }
 
 @layer components {
+  /* ===== WAR ROOM — NEON GLOW UTILITIES ===== */
+  .shadow-glow-neon {
+    box-shadow: 0 0 20px rgba(16, 249, 129, 0.4),
+                0 0 40px rgba(16, 249, 129, 0.2);
+  }
+
+  .shadow-glow-neon-intense {
+    box-shadow: 0 0 40px rgba(16, 249, 129, 0.6),
+                0 0 80px rgba(16, 249, 129, 0.3);
+  }
+
+  .live-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full bg-neon-500 animate-pulse-neon-loop;
+  }
+
+  /* Mono number helper — all stats use this */
+  .stat-number {
+    @apply font-mono font-bold tabular-nums;
+  }
+
   /* ===== CONTAINER SYSTEM ===== */
   .container-app {
     @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
