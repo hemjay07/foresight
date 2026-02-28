@@ -164,6 +164,7 @@ export default function Compete() {
   const [solPrice, setSolPrice] = useState<number>(145);
   const [selectedContestId, setSelectedContestId] = useState<number | null>(null);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+  const [prizeRules, setPrizeRules] = useState<{ rank: number; percentage: number; label: string }[]>([]);
 
   // Fetch live SOL price
   useEffect(() => {
@@ -362,6 +363,14 @@ export default function Compete() {
     () => [...allBrowsableContests, ...archivedContests].find(c => c.id === selectedContestId) ?? null,
     [allBrowsableContests, archivedContests, selectedContestId]
   );
+
+  // Fetch prize rules when a contest is selected
+  useEffect(() => {
+    if (!selectedContestId) { setPrizeRules([]); return; }
+    axios.get(`${API_URL}/api/v2/contests/${selectedContestId}`)
+      .then(res => setPrizeRules(res.data.prizeRules || []))
+      .catch(() => setPrizeRules([]));
+  }, [selectedContestId]);
 
   const filteredFsLeaders = useMemo(() => {
     // Step 1: friends filter (reactive to followingIds — avoids race condition on load)
@@ -1309,6 +1318,39 @@ export default function Compete() {
                           </li>
                         </ul>
                       </div>
+
+                      {/* Prize Breakdown */}
+                      {prizeRules.length > 0 && (
+                        <div className="px-6 py-4 border-b border-gray-800/60">
+                          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Prizes</h4>
+                          <div className="space-y-1">
+                            {prizeRules.map((rule) => {
+                              const pool = selectedContest.prizePool || 0;
+                              const amt = pool * rule.percentage / 100;
+                              return (
+                                <div key={rule.rank} className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    {rule.rank === 1 && <Medal size={12} weight="fill" className="text-gold-400" />}
+                                    {rule.rank === 2 && <Medal size={12} weight="fill" className="text-gray-400" />}
+                                    {rule.rank === 3 && <Medal size={12} weight="fill" className="text-amber-700" />}
+                                    {rule.rank > 3 && <span className="w-3" />}
+                                    {rule.rank === 0 && <span className="w-3" />}
+                                    <span className={rule.rank === 1 ? 'text-gold-400 font-medium' : 'text-gray-400'}>
+                                      {rule.rank === 0 ? 'Others' : rule.label}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-gray-600">{rule.percentage}%</span>
+                                    <span className={`font-mono tabular-nums ${rule.rank === 1 ? 'text-gold-400' : 'text-gray-500'}`}>
+                                      {amt.toFixed(3)} SOL
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
 
                       {/* CTA */}
                       <div className="p-6">
