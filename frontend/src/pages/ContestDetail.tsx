@@ -139,6 +139,7 @@ export default function ContestDetail() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [myEntry, setMyEntry] = useState<MyEntry | null>(null);
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
+  const [prizeRules, setPrizeRules] = useState<{ rank: number; percentage: number; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'myteam'>('leaderboard');
   const [teamViewMode, setTeamViewMode] = useState<'formation' | 'grid'>('formation');
@@ -264,6 +265,7 @@ export default function ContestDetail() {
       setContest(contestRes.data.contest);
       setEntries(entriesRes.data.entries || []);
       setInfluencers(influencersRes.data.influencers || []);
+      setPrizeRules(contestRes.data.prizeRules || []);
 
       // Fetch user's entry if connected
       if (token && address) {
@@ -571,6 +573,43 @@ export default function ContestDetail() {
               <p className="text-[10px] text-gray-500 mt-0.5">Captain</p>
             </div>
           </div>
+
+          {/* Prize Breakdown */}
+          {prizeRules.length > 0 && (
+            <div className="mt-4 bg-black/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy size={16} className={config.color} />
+                <h3 className="text-sm font-semibold text-gray-300">Prize Distribution</h3>
+              </div>
+              <div className="space-y-1.5">
+                {prizeRules.map((rule) => {
+                  const prizePool = contest.prizePool || 0;
+                  const amount = (prizePool * rule.percentage / 100);
+                  const isRest = rule.rank === 0;
+                  return (
+                    <div key={rule.rank} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        {rule.rank === 1 && <Medal size={14} weight="fill" className="text-gold-400" />}
+                        {rule.rank === 2 && <Medal size={14} weight="fill" className="text-gray-300" />}
+                        {rule.rank === 3 && <Medal size={14} weight="fill" className="text-amber-700" />}
+                        {rule.rank > 3 && <span className="w-3.5" />}
+                        {isRest && <span className="w-3.5" />}
+                        <span className={`font-medium ${rule.rank === 1 ? 'text-gold-400' : 'text-gray-300'}`}>
+                          {isRest ? 'Others' : rule.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500 text-xs">{rule.percentage}%</span>
+                        <span className={`font-mono tabular-nums ${rule.rank === 1 ? 'text-gold-400' : 'text-gray-400'}`}>
+                          {amount.toFixed(3)} SOL
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Entry Status / CTA */}
