@@ -482,6 +482,52 @@ export function getCronJobsStatus(): any[] {
     });
   }
 
+  // Prized contest crons always run regardless of scoring mode
+  jobs.push(
+    {
+      name: 'Prized Contest Lock Check',
+      schedule: 'Every 5 minutes',
+      cron: '*/5 * * * *',
+      status: 'active',
+      description: 'Lock open prized contests past their lock_time (or cancel if under min_players)',
+    },
+    {
+      name: 'Prized Contest Scoring',
+      schedule: 'Every hour',
+      cron: '0 * * * *',
+      status: 'active',
+      description: 'Score and finalize locked prized contests past their end_time',
+    },
+    {
+      name: 'Contest Finalization',
+      schedule: 'Every hour (at :30)',
+      cron: '30 * * * *',
+      status: 'active',
+      description: 'Finalize ended fantasy contests and trigger quest achievements',
+    },
+    {
+      name: 'Weekly Prized Contests Creation',
+      schedule: 'Sunday 18:00 UTC',
+      cron: '0 18 * * 0',
+      status: 'active',
+      description: 'Auto-create weekly prized contests for the upcoming week',
+    },
+    {
+      name: 'Daily Flash Contest Creation',
+      schedule: 'Daily at 00:00 UTC',
+      cron: '0 0 * * *',
+      status: 'active',
+      description: 'Auto-create daily flash contest',
+    },
+    {
+      name: 'CT Feed Refresh',
+      schedule: 'Every 4 hours',
+      cron: '0 */4 * * *',
+      status: 'active',
+      description: 'Refresh CT Feed tweets from top influencers',
+    }
+  );
+
   return jobs;
 }
 
