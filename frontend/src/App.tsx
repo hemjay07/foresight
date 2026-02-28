@@ -165,7 +165,7 @@ function AppContent() {
           <Route path="/referrals" element={<Referrals />} />
 
           {/* Game Features */}
-          <Route path="/draft" element={<Draft />} />
+          <Route path="/draft/:contestId" element={<Draft />} />
           <Route path="/contest/:id" element={<ContestDetail />} />
 
           {/* Legacy redirects */}

@@ -8,11 +8,11 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   Trophy, ArrowLeft, ArrowRight, Lock, CheckCircle, Warning,
-  Timer, Coins, Users, Info, Wallet, X
+  Timer, Coins, Users, Info, Wallet, X, LinkSimple
 } from '@phosphor-icons/react';
 import FormationTeam from '../components/draft/FormationTeam';
 import InfluencerGrid from '../components/draft/InfluencerGrid';
@@ -82,10 +82,8 @@ const MAX_BUDGET = 150;
 export default function Draft() {
   const { address, isConnected, login } = useAuth();
   const { showToast } = useToast();
-  const [searchParams] = useSearchParams();
+  const { contestId } = useParams<{ contestId: string }>();
   const navigate = useNavigate();
-
-  const contestId = searchParams.get('contestId');
 
   // State
   const [contest, setContest] = useState<Contest | null>(null);
@@ -464,11 +462,34 @@ export default function Draft() {
         <div className="max-w-sm mx-auto px-4 w-full">
           {/* Header */}
           <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2"><Trophy size={24} weight="fill" className="text-gold-400" /> You're in!</h2>
-            <p className="text-gray-400 text-sm">
-              Share your lineup on Twitter
-            </p>
+            {tapestryPublished ? (
+              <>
+                <h2 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2">
+                  <LinkSimple size={22} className="text-gold-400" />
+                  Team Locked on Solana
+                </h2>
+                <p className="text-gray-400 text-sm">Your picks are immutable on-chain</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2">
+                  <Trophy size={24} weight="fill" className="text-gold-400" />
+                  You're in!
+                </h2>
+                <p className="text-gray-400 text-sm">Share your lineup on Twitter</p>
+              </>
+            )}
           </div>
+
+          {/* Draft Receipt — proof of on-chain submission (above share) */}
+          {tapestryPublished && (
+            <DraftReceipt
+              entryId={submittedEntryId ?? undefined}
+              captainHandle={selectedPicks.find(p => p.id === captainId)?.handle ?? null}
+              teamSize={selectedPicks.length}
+              className="mb-3"
+            />
+          )}
 
           {/* Formation card + share buttons */}
           <ShareTeamCard
@@ -488,15 +509,6 @@ export default function Draft() {
             variant="share-only"
             className="mb-3"
           />
-
-          {tapestryPublished && (
-            <DraftReceipt
-              entryId={submittedEntryId ?? undefined}
-              captainHandle={selectedPicks.find(p => p.id === captainId)?.handle ?? null}
-              teamSize={selectedPicks.length}
-              className="mb-3"
-            />
-          )}
 
           {/* Secondary: View Contest */}
           <button
@@ -579,6 +591,7 @@ export default function Draft() {
               onAutoFill={handleAutoFill}
               onClearAll={handleClearAll}
               teamSize={teamSize}
+              showTapestryBadge={isAuthenticated}
             />
 
             {/* Mobile Transfer Status */}
@@ -603,7 +616,7 @@ export default function Draft() {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-gray-950 font-bold rounded-lg flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-gold-500 hover:bg-gold-400 text-gray-950 font-bold rounded-lg flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
@@ -656,6 +669,7 @@ export default function Draft() {
               onAutoFill={handleAutoFill}
               onClearAll={handleClearAll}
               teamSize={teamSize}
+              showTapestryBadge={isAuthenticated}
             />
 
             {/* Transfer status — shown when user has an existing entry */}
@@ -699,7 +713,7 @@ export default function Draft() {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-gray-950 font-bold rounded-lg flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-3 bg-gold-500 hover:bg-gold-400 text-gray-950 font-bold rounded-lg flex items-center justify-center gap-2 transition-all"
                 >
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
@@ -713,16 +727,6 @@ export default function Draft() {
               )}
             </div>
 
-            {/* Help Text */}
-            <div className="mt-4 p-3 bg-gray-800/30 rounded-lg">
-              <h3 className="text-sm font-medium text-white mb-2">How Scoring Works</h3>
-              <ul className="text-xs text-gray-400 space-y-1">
-                <li>• Points earned from influencer engagement</li>
-                <li>• Captain earns <span className="text-gold-400 font-medium">2.0× points</span></li>
-                <li>• Scores update weekly on Sundays</li>
-                <li>• Top performers win prizes</li>
-              </ul>
-            </div>
           </div>
         </div>
       </div>
@@ -786,7 +790,7 @@ export default function Draft() {
                 <button
                   onClick={() => { setShowFreeConfirmModal(false); doSubmit(); }}
                   disabled={submitting}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:opacity-90 text-gray-950 font-bold transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-gold-500 hover:bg-gold-400 text-gray-950 font-bold transition-all flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
@@ -863,7 +867,7 @@ export default function Draft() {
                 <button
                   onClick={doSubmit}
                   disabled={submitting}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:opacity-90 text-gray-950 font-bold transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-gold-500 hover:bg-gold-400 text-gray-950 font-bold transition-all flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />

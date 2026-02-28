@@ -166,6 +166,11 @@ export default function ScoutingPanel({ contestId, className = '' }: ScoutingPan
               ))}
             </div>
           )}
+
+          {/* Tapestry attribution */}
+          <div className="px-4 py-2 border-t border-gray-700/30 flex items-center justify-center">
+            <span className="text-[10px] text-gray-600">via Tapestry Social Graph</span>
+          </div>
         </div>
       )}
     </div>

@@ -1,23 +1,22 @@
 /**
- * Home - Landing Page
- *
- * Same experience for all users (connected or not)
- * - Formation view as hero visual (key differentiator)
- * - Single clear CTA that changes based on connection state
- * - Dashboard functionality moved to Profile page
+ * Home — Landing Page
+ * Show the product, don't explain it.
  */
 
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   ArrowRight,
-  Trophy,
-  CheckCircle,
   SignIn,
-  Play,
   Star,
   Lightning,
+  Crown,
+  Timer,
+  Trophy,
+  Users,
+  ChartLineUp,
+  Target,
 } from '@phosphor-icons/react';
 import FormationPreview from '../components/FormationPreview';
 import ActivityFeedCard from '../components/ActivityFeedCard';
@@ -26,372 +25,419 @@ import { getXPLevel } from '../utils/xp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// ============ LANDING PAGE ============
+// ─── Countdown ───────────────────────────────────────────────────────────────
 
-function LandingPage({ isConnected, login, xp, teamsOnChain }: { isConnected: boolean; login: () => void; xp: number; teamsOnChain: number | null }) {
-  const xpInfo = xp > 0 ? getXPLevel(xp) : null;
+function useContestCountdown() {
+  const [countdown, setCountdown] = useState('');
+  useEffect(() => {
+    function calc() {
+      const now = new Date();
+      const day = now.getUTCDay();
+      const daysToSun = day === 0 ? 7 : 7 - day;
+      const target = new Date(now);
+      target.setUTCDate(now.getUTCDate() + daysToSun);
+      target.setUTCHours(23, 59, 0, 0);
+      if (target.getTime() <= now.getTime()) target.setUTCDate(target.getUTCDate() + 7);
+      const diff = target.getTime() - now.getTime();
+      const d = Math.floor(diff / 86_400_000);
+      const h = Math.floor((diff % 86_400_000) / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      setCountdown(d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`);
+    }
+    calc();
+    const id = setInterval(calc, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return countdown;
+}
 
-  const ctaButton = isConnected ? (
-    <Link to="/compete?tab=contests" className="flex items-center justify-center gap-2 w-full sm:w-auto sm:px-8 py-4 rounded-xl bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-gray-950 font-bold text-base transition-colors">
-      Start Playing <ArrowRight size={20} weight="bold" />
-    </Link>
-  ) : (
-    <button onClick={login} className="flex items-center justify-center gap-2 w-full sm:w-auto sm:px-8 py-4 rounded-xl bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-gray-950 font-bold text-base transition-colors">
-      <SignIn size={20} weight="bold" />
-      Sign In to Play
-      <ArrowRight size={20} weight="bold" />
-    </button>
+// ─── Contest Panel ────────────────────────────────────────────────────────────
+
+function ContestPanel({
+  isConnected, login, countdown, prizeFormatted, teamsOnChain,
+}: {
+  isConnected: boolean; login: () => void; countdown: string;
+  prizeFormatted: string | null; teamsOnChain: number | null;
+}) {
+  return (
+    <div className="mt-8 rounded-2xl overflow-hidden border border-gray-800">
+      <div className="grid grid-cols-3 divide-x divide-gray-800 bg-gray-900">
+        <div className="px-4 py-3.5">
+          <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Prize Pool</p>
+          <p className="text-sm font-mono font-bold text-white tabular-nums">{prizeFormatted ?? '—'}</p>
+        </div>
+        <div className="px-4 py-3.5">
+          <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Entry</p>
+          <p className="text-sm font-mono font-bold text-white">Free</p>
+        </div>
+        <div className="px-4 py-3.5">
+          <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+            <Timer size={9} />Closes
+          </p>
+          <p className="text-sm font-mono font-bold text-white tabular-nums">{countdown || '—'}</p>
+        </div>
+      </div>
+      <div className="border-t border-gray-800 bg-gray-950 px-4 py-3.5">
+        {isConnected ? (
+          <Link to="/compete?tab=contests"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-gray-950 font-bold text-sm transition-colors duration-150">
+            Enter Contest <ArrowRight size={16} weight="bold" />
+          </Link>
+        ) : (
+          <button onClick={login}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-gray-950 font-bold text-sm transition-colors duration-150">
+            <SignIn size={16} weight="bold" /> Sign In to Play
+          </button>
+        )}
+        {teamsOnChain != null && teamsOnChain > 0 && (
+          <p className="text-center text-[10px] font-mono text-gray-600 mt-2 tabular-nums">
+            {teamsOnChain.toLocaleString()} teams competing this week
+          </p>
+        )}
+      </div>
+    </div>
   );
+}
+
+// ─── Leaderboard Preview ──────────────────────────────────────────────────────
+
+const LEADERBOARD_DATA = [
+  { rank: 1, handle: 'saylor', name: 'Saylor', score: 847, team: ['S', 'A', 'A', 'B', 'C'] },
+  { rank: 2, handle: 'blknoiz06', name: 'Ansem', score: 721, team: ['S', 'A', 'B', 'B', 'C'] },
+  { rank: 3, handle: 'zachxbt', name: 'ZachXBT', score: 698, team: ['A', 'A', 'A', 'B', 'C'] },
+  { rank: 4, handle: 'Pentosh1', name: 'Pentoshi', score: 654, team: ['S', 'A', 'B', 'C', 'C'] },
+  { rank: 5, handle: 'CryptoKaleo', name: 'Kaleo', score: 612, team: ['A', 'A', 'B', 'B', 'C'] },
+];
+
+function LeaderboardPreview({ visible }: { visible: boolean }) {
+  const tierColor = (t: string) =>
+    t === 'S' ? 'text-gold-400' : t === 'A' ? 'text-gray-300' : t === 'B' ? 'text-gray-500' : 'text-gray-600';
+
+  return (
+    <div className={`bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden transition-[opacity,transform] duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-800">
+        <div className="flex items-center gap-2">
+          <Trophy size={14} className="text-gold-400" weight="fill" />
+          <span className="text-xs font-semibold text-white">This Week</span>
+        </div>
+        <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">Live Rankings</span>
+      </div>
+
+      <div className="divide-y divide-gray-800/60">
+        {LEADERBOARD_DATA.map((row, i) => (
+          <div
+            key={row.rank}
+            className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-800/30 transition-colors duration-150"
+            style={{ transitionDelay: visible ? `${i * 40}ms` : '0ms' }}
+          >
+            <span className={`text-xs font-mono font-bold w-5 tabular-nums ${
+              row.rank === 1 ? 'text-gold-400' : row.rank <= 3 ? 'text-gray-300' : 'text-gray-600'
+            }`}>
+              {row.rank}
+            </span>
+            <img
+              src={`https://unavatar.io/twitter/${row.handle}`}
+              alt={row.name}
+              className="w-7 h-7 rounded-full bg-gray-800 object-cover shrink-0"
+              loading="lazy"
+            />
+            <div className="flex-1 min-w-0">
+              <span className="text-xs font-medium text-white block truncate">{row.name}</span>
+              <div className="flex gap-0.5 mt-0.5">
+                {row.team.map((t, j) => (
+                  <span key={j} className={`text-[8px] font-mono font-bold ${tierColor(t)}`}>{t}</span>
+                ))}
+              </div>
+            </div>
+            <span className="text-xs font-mono font-bold text-white tabular-nums">{row.score}</span>
+          </div>
+        ))}
+
+        {/* Your spot */}
+        <div className="flex items-center gap-3 px-5 py-2.5 bg-gold-500/5">
+          <span className="text-xs font-mono w-5 text-gold-400 tabular-nums">?</span>
+          <div className="w-7 h-7 rounded-full bg-gold-500/10 border border-dashed border-gold-500/30 flex items-center justify-center shrink-0">
+            <Users size={12} className="text-gold-400/60" />
+          </div>
+          <span className="text-xs text-gold-400 flex-1">Your team here</span>
+          <span className="text-xs font-mono text-gold-500/50 tabular-nums">—</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Scoring Explainer ────────────────────────────────────────────────────────
+
+const SCORING_CATS = [
+  { label: 'Activity',   val: 32, max: 35 },
+  { label: 'Engagement', val: 54, max: 60 },
+  { label: 'Growth',     val: 38, max: 40 },
+  { label: 'Viral',      val: 21, max: 25 },
+];
+
+function ScoringExplainer({ visible, animate }: { visible: boolean; animate: boolean }) {
+  return (
+    <div
+      className={`bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden transition-[opacity,transform] duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      style={{ transitionDelay: visible ? '80ms' : '0ms' }}
+    >
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-800">
+        <div className="flex items-center gap-2">
+          <ChartLineUp size={14} className="text-gray-400" weight="bold" />
+          <span className="text-xs font-semibold text-white">How Scoring Works</span>
+        </div>
+        <span className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">Daily</span>
+      </div>
+
+      <div className="px-5 py-4 space-y-3">
+        {SCORING_CATS.map((cat, i) => {
+          const pct = Math.round((cat.val / cat.max) * 100);
+          return (
+            <div key={cat.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">{cat.label}</span>
+                <span className="text-[10px] font-mono text-gray-300 tabular-nums">
+                  {cat.val}<span className="text-gray-600">/{cat.max}</span>
+                </span>
+              </div>
+              <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full bg-gold-500/60 rounded-full ${animate ? 'animate-bar-fill' : ''}`}
+                  style={{ width: `${pct}%`, animationDelay: animate ? `${200 + i * 60}ms` : '0ms' }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Captain bonus + total */}
+      <div className="px-5 py-3.5 border-t border-gray-800 bg-gray-950/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Crown size={12} className="text-gold-400" weight="fill" />
+            <span className="text-[10px] text-gray-400">Captain earns <strong className="text-white">2×</strong> points</span>
+          </div>
+          <span className="text-sm font-mono font-bold text-gold-400 tabular-nums">145 pts</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Landing Page ─────────────────────────────────────────────────────────────
+
+function LandingPage({
+  isConnected, login, xp, teamsOnChain, countdown, prizeFormatted,
+}: {
+  isConnected: boolean; login: () => void; xp: number;
+  teamsOnChain: number | null; countdown: string; prizeFormatted: string | null;
+}) {
+  const xpInfo = xp > 0 ? getXPLevel(xp) : null;
+  const showcaseRef = useRef<HTMLDivElement>(null);
+  const [showcaseVisible, setShowcaseVisible] = useState(false);
+
+  useEffect(() => {
+    const el = showcaseRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setShowcaseVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <div className="max-w-6xl mx-auto">
 
-      {/* ─── MOBILE HERO (hidden on lg+) ─── */}
-      <section className="lg:hidden pt-8 pb-10 px-1">
-        {/* Live badge */}
+      {/* ═══════════════════════ MOBILE HERO ════════════════════════════ */}
+      <section className="lg:hidden pt-8 pb-6 px-1">
         <div className="flex items-center gap-2 mb-5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 text-xs text-gold-400 font-medium">
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500" />
             </span>
-            Live on Solana
+            Live · Solana Devnet
           </div>
-          <a
-            href="https://www.usetapestry.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700 text-[10px] text-gray-400"
-          >
+          <a href="https://www.usetapestry.dev" target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-800/80 border border-gray-700 text-[10px] text-gray-400">
             <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="" className="w-3 h-3 rounded-sm invert opacity-70" />
             Tapestry
           </a>
         </div>
 
-        {/* Headline */}
-        <h1 className="text-4xl font-bold text-white mb-3 leading-tight">
+        <h1 className="text-4xl font-bold text-white mb-3 leading-tight tracking-tight">
           Fantasy league for{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">
-            Crypto Twitter
-          </span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Crypto Twitter</span>
         </h1>
-
-        {/* Subheadline */}
-        <p className="text-base text-gray-400 mb-6 leading-relaxed">
-          Draft CT influencers, earn points from their engagement, win prizes.
+        <p className="text-sm text-gray-400 mb-0 leading-relaxed">
+          Pick 5 CT influencers. Score their weekly engagement. Compete for SOL.
         </p>
 
-        {/* CTA */}
-        {ctaButton}
+        <ContestPanel isConnected={isConnected} login={login} countdown={countdown}
+          prizeFormatted={prizeFormatted} teamsOnChain={teamsOnChain} />
 
-        {/* Trust signals — 3 compact items on one line */}
-        <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1 shrink-0">
-            <CheckCircle size={13} className="text-emerald-500 shrink-0" weight="fill" /> Free
-          </span>
-          <span className="flex items-center gap-1 shrink-0">
-            <CheckCircle size={13} className="text-emerald-500 shrink-0" weight="fill" /> Real prizes
-          </span>
-          <span className="flex items-center gap-1 shrink-0">
-            <CheckCircle size={13} className="text-emerald-500 shrink-0" weight="fill" /> On Solana
-          </span>
-        </div>
-
-        {/* Team slots teaser */}
-        <div className="mt-8 p-4 rounded-2xl bg-gray-900/60 border border-gray-800">
-          <p className="text-[10px] uppercase tracking-widest text-gray-600 mb-4 text-center">Build your dream team</p>
-          <div className="flex items-center justify-between gap-2">
-            {[
-              { tier: 'S', label: 'Captain', ringClass: 'ring-gold-400/60', bgClass: 'bg-gold-500/15 border-gold-500/50', textClass: 'text-gold-400' },
-              { tier: 'A', label: '', ringClass: 'ring-cyan-400/40', bgClass: 'bg-cyan-500/10 border-cyan-500/40', textClass: 'text-cyan-400' },
-              { tier: 'A', label: '', ringClass: 'ring-cyan-400/40', bgClass: 'bg-cyan-500/10 border-cyan-500/40', textClass: 'text-cyan-400' },
-              { tier: 'B', label: '', ringClass: 'ring-emerald-400/40', bgClass: 'bg-emerald-500/10 border-emerald-500/40', textClass: 'text-emerald-400' },
-              { tier: 'C', label: '', ringClass: 'ring-gray-500/30', bgClass: 'bg-gray-700/30 border-gray-600/40', textClass: 'text-gray-400' },
-            ].map((slot, i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
-                <div className={`w-12 h-12 rounded-full border-2 ${slot.bgClass} flex items-center justify-center ${i === 0 ? 'ring-2 ring-offset-1 ring-offset-gray-900 ' + slot.ringClass : ''}`}>
-                  <span className={`text-xs font-bold ${slot.textClass}`}>{slot.tier}</span>
-                </div>
-                {slot.label && (
-                  <span className="text-[9px] text-gold-400 font-medium uppercase tracking-wide">CPT</span>
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-[11px] text-gray-600 mt-3">150pt budget · pick 5 players · 1 captain</p>
+        {/* Compact formation teaser */}
+        <div className="mt-6">
+          <FormationPreview variant="compact" showStats={false} />
         </div>
       </section>
 
-      {/* ─── DESKTOP HERO (hidden on mobile) ─── */}
-      <section className="hidden lg:block pt-10 pb-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left: Copy */}
-          <div className="text-left">
-            <div className="flex items-center gap-2 mb-6">
+      {/* ═══════════════════════ DESKTOP HERO ═══════════════════════════ */}
+      <section className="hidden lg:block pt-12 pb-8">
+        <div className="grid lg:grid-cols-[1.1fr_1.2fr] gap-12 items-start">
+          <div>
+            <div className="flex items-center gap-2 mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-500/10 border border-gold-500/20 text-sm text-gold-400 font-medium">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500" />
                 </span>
-                Live on Solana
+                Live · Solana Devnet
               </div>
-              <a
-                href="https://www.usetapestry.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800/80 border border-gray-700 text-xs text-gray-400 hover:border-gray-600 hover:text-gray-200 transition-colors"
-              >
+              <a href="https://www.usetapestry.dev" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800/80 border border-gray-700 text-xs text-gray-400 hover:border-gray-600 hover:text-gray-200 transition-colors duration-150">
                 <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="Tapestry" className="w-3.5 h-3.5 rounded-sm invert opacity-70" />
-                Powered by Tapestry Protocol
+                Tapestry Protocol
               </a>
             </div>
 
-            <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-              Fantasy league for{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">
-                Crypto Twitter
-              </span>
+            <h1 className="text-5xl xl:text-6xl font-bold text-white leading-[1.05] tracking-tight mb-5">
+              Fantasy league<br />for{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Crypto Twitter</span>
             </h1>
-
-            <p className="text-xl text-gray-400 mb-8 max-w-lg">
-              Draft 5 CT influencers. Earn points from their engagement. Climb the leaderboard.
+            <p className="text-lg text-gray-400 leading-relaxed max-w-sm mb-0">
+              Pick 5 CT influencers. Score their weekly engagement. Compete for SOL prizes.
             </p>
 
-            {ctaButton}
+            <ContestPanel isConnected={isConnected} login={login} countdown={countdown}
+              prizeFormatted={prizeFormatted} teamsOnChain={teamsOnChain} />
 
-            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5"><CheckCircle size={15} className="text-emerald-500" weight="fill" />Free to play</span>
-              <span className="flex items-center gap-1.5"><CheckCircle size={15} className="text-emerald-500" weight="fill" />Win real prizes</span>
-              <span className="flex items-center gap-1.5"><CheckCircle size={15} className="text-emerald-500" weight="fill" />No deposit required</span>
-              <span className="flex items-center gap-1.5">
-                <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="" className="w-3.5 h-3.5 rounded-sm invert opacity-50" />
-                <span className="text-gray-400">Teams on Tapestry</span>
-              </span>
-            </div>
+            <p className="text-[10px] font-mono text-gray-700 mt-4">
+              Solana Devnet · Moving to mainnet post-launch · Teams on-chain via Tapestry
+            </p>
           </div>
 
-          {/* Right: Formation Preview */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative w-full rounded-2xl overflow-hidden">
-              <FormationPreview variant="hero" showStats={true} />
-              {/* Contained glow — no overflow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-gold-500/10 via-transparent to-amber-500/5 pointer-events-none rounded-2xl" />
-            </div>
-            <a
-              href="https://www.usetapestry.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              <img src="https://cdn.prod.website-files.com/67814d9fc76ba46748750247/6793b4f682781f7c980f8921_Favicon31_black.png" alt="Tapestry" className="w-4 h-4 rounded-sm invert opacity-60" />
-              <span>Teams sealed on-chain · Tapestry Protocol</span>
-            </a>
+          <div>
+            <FormationPreview variant="hero" showStats={true} />
           </div>
         </div>
       </section>
 
-      {/* ─── HOW IT WORKS ─── */}
-      <section className="py-10 md:py-16 border-t border-gray-800/50">
-        <h2 className="text-xl md:text-3xl font-bold text-white text-center mb-6 md:mb-12">
-          How it works
-        </h2>
+      {/* ═══════════════════ GAME LOOP STRIP ════════════════════════════ */}
+      <div className="border-t border-gray-800/50 py-4">
+        <div className="flex items-center justify-center gap-3 md:gap-6 text-[11px] font-mono text-gray-500 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5">
+            <Target size={12} className="text-gold-400" weight="bold" />
+            <span className="hidden sm:inline">Draft 5 picks</span>
+            <span className="sm:hidden">Draft</span>
+          </span>
+          <span className="text-gray-700">→</span>
+          <span className="flex items-center gap-1.5">
+            <ChartLineUp size={12} className="text-gray-400" weight="bold" />
+            <span className="hidden sm:inline">Score daily</span>
+            <span className="sm:hidden">Score</span>
+          </span>
+          <span className="text-gray-700">→</span>
+          <span className="flex items-center gap-1.5">
+            <Trophy size={12} className="text-gold-400" weight="fill" />
+            <span className="hidden sm:inline">Win SOL weekly</span>
+            <span className="sm:hidden">Win</span>
+          </span>
+          <span className="text-gray-800 hidden md:inline">·</span>
+          <span className="text-gray-700 hidden md:inline">Resets Sunday 23:59 UTC</span>
+        </div>
+      </div>
 
-        {/* Mobile: compact list */}
-        <div className="md:hidden space-y-3 px-1">
-          {[
-            { n: 1, title: 'Draft your team', desc: 'Pick 5 CT influencers within your 150pt budget.', color: 'text-gold-400', bg: 'bg-gold-500/10 border-gold-500/20' },
-            { n: 2, title: 'Earn points', desc: 'Scores update based on Twitter engagement daily.', color: 'text-gray-300', bg: 'bg-gray-700/40 border-gray-600/40' },
-            { n: 3, title: 'Win prizes', desc: 'Top teams win prizes + Foresight Score rewards.', color: 'text-neon-500', bg: 'bg-neon-500/10 border-neon-500/20' },
-          ].map(step => (
-            <div key={step.n} className="flex items-center gap-4 p-4 rounded-xl bg-gray-900/50 border border-gray-800">
-              <div className={`w-10 h-10 rounded-lg border ${step.bg} flex items-center justify-center ${step.color} font-bold text-base shrink-0`}>
-                {step.n}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-white text-sm">{step.title}</h3>
-                <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{step.desc}</p>
-              </div>
-            </div>
-          ))}
+      {/* ═══════════════════ PRODUCT SHOWCASE ═══════════════════════════ */}
+      <section className="py-8" ref={showcaseRef}>
+        {/* Mobile: vertical stack */}
+        <div className="md:hidden space-y-4 px-1">
+          <LeaderboardPreview visible={showcaseVisible} />
+          <ScoringExplainer visible={showcaseVisible} animate={showcaseVisible} />
         </div>
 
-        {/* Desktop: cards */}
-        <div className="hidden md:grid md:grid-cols-3 gap-8">
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-gold-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 font-bold mb-4">1</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Draft your team</h3>
-              <p className="text-gray-400 text-sm">Pick 5 CT influencers within your 150-point budget. Mix S-tier legends with rising stars.</p>
-            </div>
-          </div>
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-gray-600/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-gray-700/40 border border-gray-600/40 flex items-center justify-center text-gray-300 font-bold mb-4">2</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Earn points</h3>
-              <p className="text-gray-400 text-sm">Your team scores based on their Twitter engagement — likes, retweets, followers.</p>
-            </div>
-          </div>
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-transparent rounded-xl blur opacity-0 group-hover:opacity-100 transition" />
-            <div className="relative bg-gray-900/50 border border-gray-800 rounded-xl p-6">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold mb-4">3</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Win prizes</h3>
-              <p className="text-gray-400 text-sm">Top teams win prizes. Build your Foresight Score for exclusive rewards.</p>
-            </div>
-          </div>
+        {/* Desktop: asymmetric 2-col — leaderboard is the star */}
+        <div className="hidden md:grid md:grid-cols-[1.3fr_1fr] gap-4 items-start">
+          <LeaderboardPreview visible={showcaseVisible} />
+          <ScoringExplainer visible={showcaseVisible} animate={showcaseVisible} />
         </div>
       </section>
 
-      {/* XP Progression + Activity Feed — only for logged-in users */}
+      {/* ═══════════════════ XP + ACTIVITY (connected) ══════════════════ */}
       {isConnected && (
-        <section className="py-16 border-t border-gray-800/50">
-          <div className="max-w-lg mx-auto space-y-4">
-            {/* XP Progression Card */}
+        <section className="py-8 border-t border-gray-800/50">
+          <div className="grid md:grid-cols-2 gap-4">
             {xpInfo && (
-              <div className="rounded-xl bg-gray-900/60 border border-gray-700 p-4">
+              <div className="rounded-xl bg-gray-900 border border-gray-800 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Star size={16} className="text-gold-400" weight="fill" />
                     <span className="text-sm font-semibold text-white">Your Progress</span>
                   </div>
-                  <span className="text-xs text-gray-400 font-mono tabular-nums">
-                    {xp.toLocaleString()} XP
-                  </span>
+                  <span className="text-xs font-mono text-gray-400 tabular-nums">{xp.toLocaleString()} XP</span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-gold-400 uppercase tracking-wide">
-                    {xpInfo.levelInfo.label}
-                  </span>
+                  <span className="text-xs font-bold text-gold-400 uppercase tracking-wide">{xpInfo.levelInfo.level}</span>
                   {xpInfo.nextLevel && (
-                    <span className="text-xs text-gray-500 font-mono tabular-nums">
+                    <span className="text-xs font-mono text-gray-500 tabular-nums">
                       {xpInfo.xpToNext.toLocaleString()} XP to {xpInfo.nextLevel}
                     </span>
                   )}
                 </div>
-                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-gold-500 to-amber-500 rounded-full transition-all duration-500"
-                    style={{ width: `${xpInfo.progress}%` }}
-                  />
+                <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-gold-500 to-amber-500 rounded-full transition-all duration-500"
+                    style={{ width: `${xpInfo.progress}%` }} />
                 </div>
-                <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
                   <Lightning size={12} className="text-gold-400" />
                   Draft a team, complete quests, and win contests to earn XP
                 </div>
               </div>
             )}
-
             <ActivityFeedCard />
           </div>
         </section>
       )}
 
-      {/* Powered by Tapestry */}
-      <section className="py-16 border-t border-gray-800/50">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-            Built on Solana's Social Graph
-          </h2>
-          <p className="text-gray-400 max-w-lg mx-auto">
-            Every team, score, and social connection is stored on-chain via Tapestry Protocol.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-10 h-10 rounded-lg bg-gold-500/10 flex items-center justify-center mx-auto mb-3">
-              <CheckCircle size={20} weight="fill" className="text-gold-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1 text-sm">On-chain Teams</h3>
-            <p className="text-xs text-gray-500">
-              {teamsOnChain != null && teamsOnChain > 0
-                ? `${teamsOnChain.toLocaleString()} teams stored as immutable content on Tapestry`
-                : 'Draft teams stored as immutable content on Tapestry'}
-            </p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-10 h-10 rounded-lg bg-gray-700/40 flex items-center justify-center mx-auto mb-3">
-              <CheckCircle size={20} weight="fill" className="text-gray-300" />
-            </div>
-            <h3 className="font-semibold text-white mb-1 text-sm">Social Graph</h3>
-            <p className="text-xs text-gray-500">Follow players, like teams, and build your reputation</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-              <CheckCircle size={20} weight="fill" className="text-emerald-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1 text-sm">Verifiable Scores</h3>
-            <p className="text-xs text-gray-500">Contest results verified on Solana via Tapestry Protocol</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-16 border-t border-gray-800/50">
-        <div className="text-center max-w-xl mx-auto">
-          <div className="w-14 h-14 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mx-auto mb-6">
-            <Trophy size={28} className="text-gold-400" weight="fill" />
-          </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            {isConnected ? 'Draft your dream team' : 'Ready to build your team?'}
-          </h2>
-          <p className="text-gray-400 mb-8">
-            {isConnected
-              ? 'Enter the Hackathon Demo League and prove your CT knowledge.'
-              : 'Join the competition and show CT who\'s got the best picks.'}
-          </p>
-          {isConnected ? (
-            <Link
-              to="/draft?contestId=6&type=FREE_LEAGUE&teamSize=5&hasCaptain=true&isFree=true"
-              className="btn-primary btn-lg inline-flex items-center gap-2"
-            >
-              <Play size={20} weight="fill" />
-              Enter Contest
-            </Link>
-          ) : (
-            <button
-              onClick={login}
-              className="btn-primary btn-lg"
-            >
-              Sign In to Start
-            </button>
-          )}
-        </div>
-      </section>
     </div>
   );
 }
 
-// ============ MAIN COMPONENT ============
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { isConnected, login } = useAuth();
   const [xp, setXp] = useState(0);
   const [teamsOnChain, setTeamsOnChain] = useState<number | null>(null);
+  const [prizeFormatted, setPrizeFormatted] = useState<string | null>(null);
+  const countdown = useContestCountdown();
 
   useEffect(() => {
     if (!isConnected) return;
     const token = localStorage.getItem('authToken');
     if (!token) return;
     axios.get(`${API_URL}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => setXp(r.data.xp || 0))
-      .catch(() => {});
+      .then(r => setXp(r.data.xp || 0)).catch(() => {});
   }, [isConnected]);
 
   useEffect(() => {
-    // Fetch total teams stored on-chain from the active free league player count
     axios.get(`${API_URL}/api/v2/contests?status=open&limit=1`)
       .then(r => {
         const contests = r.data?.contests || r.data?.data || [];
-        const freeLeague = contests.find((c: any) => c.isFree || c.is_free) || contests[0];
-        if (freeLeague?.playerCount ?? freeLeague?.player_count) {
-          setTeamsOnChain(freeLeague.playerCount ?? freeLeague.player_count);
-        }
-      })
-      .catch(() => {});
+        const free = contests.find((c: any) => c.isFree || c.is_free) || contests[0];
+        const count = free?.playerCount ?? free?.player_count;
+        if (count) setTeamsOnChain(count);
+        const prize = free?.prizePoolFormatted ?? free?.prize_pool_formatted;
+        if (prize) setPrizeFormatted(prize);
+      }).catch(() => {});
   }, []);
 
-  return <LandingPage isConnected={isConnected} login={login} xp={xp} teamsOnChain={teamsOnChain} />;
+  return (
+    <LandingPage isConnected={isConnected} login={login} xp={xp}
+      teamsOnChain={teamsOnChain} countdown={countdown} prizeFormatted={prizeFormatted} />
+  );
 }

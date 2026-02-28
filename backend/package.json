@@ -1,7 +1,7 @@
 {
   "name": "foresight-backend",
   "version": "1.0.0",
-  "description": "Backend API for Timecaster platform",
+  "description": "Backend API for Foresight - Fantasy CT League",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -14,7 +14,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "keywords": [
-    "timecaster",
+    "foresight",
     "prediction",
     "fantasy",
     "base"

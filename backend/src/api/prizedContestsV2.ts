@@ -739,11 +739,11 @@ router.post('/contests/:id/enter-test', authenticate, async (req: Request, res: 
 
   try {
     const { id } = req.params;
-    const { team_name, influencer_ids, captain_id } = req.body;
+    const { influencer_ids, captain_id } = req.body;
     const userId = req.user!.userId;
     const walletAddress = req.user!.walletAddress;
 
-    console.log('📥 enter-test request:', { id, team_name, influencer_ids, captain_id, userId, walletAddress, body: req.body });
+    console.log('📥 enter-test request:', { id, influencer_ids, captain_id, userId, walletAddress });
 
     if (!walletAddress) {
       return res.status(400).json({ error: 'No wallet connected' });
@@ -796,7 +796,6 @@ router.post('/contests/:id/enter-test', authenticate, async (req: Request, res: 
       contest_id: id,
       user_id: userId,
       wallet_address: walletAddress.toLowerCase(),
-      team_name: team_name || 'Test Team',
       team_ids: influencer_ids,
       captain_id: contest.has_captain ? captain_id : null,
       paid_amount: entryFee,
@@ -1454,7 +1453,7 @@ router.get('/me/history', authenticate, async (req: Request, res: Response) => {
                 price: parseFloat(inf.price) || 0,
                 isCaptain,
                 points: basePoints,
-                effectivePoints: isCaptain ? Math.round(basePoints * 1.5) : basePoints,
+                effectivePoints: isCaptain ? Math.round(basePoints * 2.0) : basePoints,
               };
             })
             .filter(Boolean)

@@ -302,6 +302,12 @@
  * Utility Animation Classes
  * ======================================== */
 
+/* Bar fill — used on landing page score/budget bars */
+.animate-bar-fill {
+  animation: fillProgress 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: left;
+}
+
 .animate-slide-in-up {
   animation: slideInUp var(--duration-normal) var(--ease-out);
 }

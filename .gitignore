@@ -58,3 +58,18 @@ temp/
 # Archived documentation
 archive_docs/
 .vercel
+
+# Internal docs and design files
+docs/
+.claude/
+screenshots/
+video/
+CLAUDE.md
+PROGRESS.md
+REDESIGN_TRACKER.md
+REDESIGN_PROGRESS.md
+*.md
+!README.md
+!backend/README.md
+!frontend/README.md
+!contracts/README.md

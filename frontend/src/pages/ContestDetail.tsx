@@ -324,7 +324,7 @@ export default function ContestDetail() {
 
   const handleEnterContest = () => {
     if (!contest) return;
-    navigate(`/draft?contestId=${contest.id}&type=${contest.typeCode}&teamSize=${contest.teamSize}&hasCaptain=${contest.hasCaptain}&isFree=${contest.isFree}`);
+    navigate(`/draft/${contest.id}`);
   };
 
   // Step 1: User clicks "Claim Prize" → open confirm modal
@@ -578,18 +578,18 @@ export default function ContestDetail() {
           <div className={`${
             contest.status === 'finalized'
               ? 'bg-gold-500/5 border-l-4 border-l-gold-400 border border-gray-800'
-              : 'bg-neon-500/5 border-l-4 border-l-neon-500 border border-gray-800'
+              : 'bg-emerald-500/5 border-l-4 border-l-emerald-500 border border-gray-800'
           } rounded-xl p-4 mb-6 flex items-center justify-between`}>
             <div className="flex items-center gap-3">
               {contest.status === 'finalized'
                 ? <Trophy size={24} weight="fill" className="text-gold-400" />
-                : <CheckCircle size={24} weight="fill" className="text-neon-500" />
+                : <CheckCircle size={24} weight="fill" className="text-emerald-400" />
               }
               <div>
                 <p className="font-bold text-white">
                   {contest.status === 'finalized' ? 'Contest Ended' : "You're In!"}
                 </p>
-                <p className={`text-sm font-mono tabular-nums ${contest.status === 'finalized' ? 'text-gold-400/80' : 'text-neon-500/80'}`}>
+                <p className={`text-sm font-mono tabular-nums ${contest.status === 'finalized' ? 'text-gold-400/80' : 'text-emerald-400/80'}`}>
                   {contest.status === 'finalized'
                     ? `Final Rank: #${myEntry.rank || '-'} · Score: ${myEntry.score ? parseFloat(String(myEntry.score)).toFixed(1) : '-'} pts`
                     : (myEntry.rank ? `Rank #${myEntry.rank}` : 'Scoring in progress') +
@@ -610,8 +610,8 @@ export default function ContestDetail() {
         ) : contest.status === 'open' ? (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg bg-gradient-to-br ${config.gradient}`}>
-                <Play size={18} weight="fill" className="text-white" />
+              <div className="p-2 rounded-lg bg-gold-500/10">
+                <Play size={18} weight="fill" className="text-gold-400" />
               </div>
               <div>
                 <p className="font-bold text-white">Ready to compete?</p>
@@ -744,11 +744,11 @@ export default function ContestDetail() {
                       <div className="col-span-1 text-right">
                         {entry.prizeAmount && parseFloat(String(entry.prizeAmount)) > 0 ? (
                           <div>
-                            <span className="text-neon-500 font-mono font-bold text-sm tabular-nums">
+                            <span className="text-gold-400 font-mono font-bold text-sm tabular-nums">
                               {parseFloat(String(entry.prizeAmount)).toFixed(3)}
                             </span>
                             {isMe && isFinalized && !myEntry?.claimed && (
-                              <div className="text-[10px] text-neon-500/70 mt-0.5">↑ Claim</div>
+                              <div className="text-[10px] text-gold-400/70 mt-0.5">↑ Claim</div>
                             )}
                           </div>
                         ) : (
@@ -772,7 +772,7 @@ export default function ContestDetail() {
           <div className="bg-gray-800/50 rounded-2xl border border-gray-700 p-6">
             {/* ── Hero Win Banner — visible FIRST, no scrolling required ── */}
             {contest?.status === 'finalized' && myEntry?.prizeAmount && parseFloat(String(myEntry.prizeAmount)) > 0 && (
-              <div className="mb-6 p-5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-green-500/10 border border-emerald-500/30 text-center">
+              <div className="mb-6 p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center">
                 <div className="flex items-center justify-center mb-2">
                   {myEntry.rank === 1
                     ? <Crown size={48} weight="fill" className="text-gold-400" />
@@ -780,7 +780,7 @@ export default function ContestDetail() {
                     ? <Medal size={48} weight="fill" className="text-gray-300" />
                     : myEntry.rank === 3
                     ? <Medal size={48} weight="fill" className="text-amber-600" />
-                    : <Trophy size={48} weight="fill" className="text-neon-500" />}
+                    : <Trophy size={48} weight="fill" className="text-emerald-400" />}
                 </div>
                 <p className="text-lg font-bold text-white mb-1 font-mono tabular-nums">
                   {myEntry.rank && myEntry.rank <= 3 ? `#${myEntry.rank} — You Won!` : `Rank #${myEntry.rank} — Prize Earned!`}
@@ -794,7 +794,7 @@ export default function ContestDetail() {
                 {myEntry.canClaim && !myEntry.claimed && (
                   <button
                     onClick={handleClaimPrize}
-                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold rounded-xl text-lg transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20 animate-pulse hover:animate-none"
+                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl text-lg transition-colors flex items-center justify-center gap-3"
                   >
                     <Coins size={24} weight="fill" />
                     Claim Prize
@@ -826,7 +826,7 @@ export default function ContestDetail() {
             {/* No-prize finalized state */}
             {contest?.status === 'finalized' && myEntry && (!myEntry.prizeAmount || parseFloat(String(myEntry.prizeAmount)) === 0) && (
               <div className="mb-6 p-4 rounded-xl bg-gray-800/80 border border-gray-700 flex items-start gap-4">
-                <div className="text-3xl">🎖️</div>
+                <Medal size={32} weight="fill" className="text-gray-400" />
                 <div className="flex-1">
                   <p className="font-bold text-white mb-1">Contest Ended</p>
                   <p className="text-sm text-gray-300 mb-3">
@@ -896,7 +896,7 @@ export default function ContestDetail() {
                     team={teamForFormation}
                     showStats={true}
                     showEdit={contest?.status === 'open'}
-                    onEdit={() => navigate(`/draft?contestId=${id}&type=${contest?.typeCode}&teamSize=${contest?.teamSize}&hasCaptain=${contest?.hasCaptain}&isFree=${contest?.isFree}`)}
+                    onEdit={() => navigate(`/draft/${id}`)}
                   />
                 )}
 
@@ -1099,10 +1099,10 @@ export default function ContestDetail() {
             {claimModalState === 'success' && (
               <div className="p-6 text-center">
                 <div className="flex items-center justify-center mb-3">
-                  <CheckCircle size={40} weight="fill" className="text-neon-500" />
+                  <CheckCircle size={40} weight="fill" className="text-emerald-400" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-1">Prize Claimed!</h3>
-                <p className="text-3xl font-bold font-mono tabular-nums text-neon-500 mb-1">
+                <p className="text-3xl font-bold font-mono tabular-nums text-gold-400 mb-1">
                   ${(parseFloat(String(myEntry.prizeAmount)) * solPrice).toFixed(2)}
                 </p>
                 <p className="text-gray-400 text-sm mb-4">is now in your wallet</p>

@@ -69,7 +69,7 @@ export default function InfluencerDetailModal({
         </button>
 
         {/* Profile Header */}
-        <div className={`p-6 ${tier.bg} border-b ${tier.border}`}>
+        <div className="p-6 bg-gray-900 border-b border-gray-800">
           <div className="flex items-center gap-4">
             {influencer.profile_image_url ? (
               <img
@@ -154,7 +154,7 @@ export default function InfluencerDetailModal({
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Scouting Report</h3>
             <p className="text-sm text-gray-300 leading-relaxed">
               {influencer.tier === 'S' && (
-                <>Elite-tier. {influencer.follower_count ? `${formatNumber(influencer.follower_count)} followers` : 'Massive following'} with high viral ceiling. Best suited for your <span className="text-gold-400 font-medium">Captain slot</span> where they earn 1.5× points.</>
+                <>Elite-tier. {influencer.follower_count ? `${formatNumber(influencer.follower_count)} followers` : 'Massive following'} with high viral ceiling. Best suited for your <span className="text-gold-400 font-medium">Captain slot</span> where they earn 2.0x points.</>
               )}
               {influencer.tier === 'A' && (
                 <>Strong performer with {influencer.engagement_rate ? `${influencer.engagement_rate.toFixed(1)}% engagement` : 'above-average engagement'}. {influencer.total_points ? `${influencer.total_points} career points` : 'Reliable scorer'} — good captain candidate if budget is tight.</>
@@ -223,7 +223,7 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label:
         {icon}
         <span className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</span>
       </div>
-      <span className="text-base font-bold text-white">{value}</span>
+      <span className="text-base font-bold text-white font-mono tabular-nums">{value}</span>
     </div>
   );
 }

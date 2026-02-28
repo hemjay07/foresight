@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Crown, Users } from '@phosphor-icons/react';
+import { Crown, Users, PencilSimple } from '@phosphor-icons/react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -94,30 +94,22 @@ export default function FormationPreview({
     switch (tier) {
       case 'S':
         return {
-          bg: 'bg-gradient-to-br from-gold-400 to-amber-600',
-          border: 'border-gold-400',
-          glow: 'shadow-[0_0_20px_rgba(245,158,11,0.5)]',
+          border: 'border-gold-500',
           badge: 'bg-gold-500 text-gray-950',
         };
       case 'A':
         return {
-          bg: 'bg-gradient-to-br from-cyan-500 to-blue-600',
-          border: 'border-cyan-400',
-          glow: 'shadow-[0_0_15px_rgba(6,182,212,0.4)]',
+          border: 'border-cyan-500',
           badge: 'bg-cyan-500 text-white',
         };
       case 'B':
         return {
-          bg: 'bg-gradient-to-br from-emerald-500 to-teal-600',
-          border: 'border-emerald-400',
-          glow: 'shadow-[0_0_15px_rgba(16,185,129,0.4)]',
+          border: 'border-emerald-500',
           badge: 'bg-emerald-500 text-white',
         };
       default:
         return {
-          bg: 'bg-gradient-to-br from-gray-500 to-gray-700',
-          border: 'border-gray-400',
-          glow: '',
+          border: 'border-gray-600',
           badge: 'bg-gray-500 text-white',
         };
     }
@@ -130,7 +122,7 @@ export default function FormationPreview({
     return (
       <div
         key={influencer.id}
-        className={`relative group transition-transform hover:scale-105 ${
+        className={`relative group ${
           loading ? 'animate-pulse' : ''
         }`}
       >
@@ -145,7 +137,7 @@ export default function FormationPreview({
         )}
 
         {/* Player Card */}
-        <div className={`relative ${colors.bg} p-0.5 rounded-xl ${colors.glow} transition-all`}>
+        <div className={`relative border-2 ${colors.border} rounded-xl transition-colors`}>
           <div className={`bg-gray-900 rounded-xl ${isLarge ? 'p-3 w-28 md:w-32' : 'p-2 w-20'}`}>
             {/* Avatar */}
             <div className={`relative mx-auto mb-2 ${isLarge ? 'w-14 h-14 md:w-16 md:h-16' : 'w-10 h-10'}`}>
@@ -203,11 +195,9 @@ export default function FormationPreview({
       {showEdit && onEdit && (
         <button
           onClick={onEdit}
-          className="absolute top-4 right-4 z-20 px-4 py-2 bg-gold-500 hover:bg-gold-600 text-gray-950 font-medium rounded-lg transition-colors flex items-center gap-2"
+          className="absolute top-4 right-4 z-20 px-4 py-2 border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200 font-medium rounded-lg transition-colors flex items-center gap-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256">
-            <path fill="currentColor" d="M227.31 73.37L182.63 28.68a16 16 0 0 0-22.63 0L36.69 152a16 16 0 0 0-4.47 9.06L24 218.67a8 8 0 0 0 9.26 9.26l57.69-8.14a16 16 0 0 0 9.06-4.47L223.31 96a16 16 0 0 0 0-22.63ZM92.69 208L40 215.93l8-52.69l104-104l44.69 44.69Z"/>
-          </svg>
+          <PencilSimple size={16} />
           Edit Team
         </button>
       )}
@@ -215,8 +205,8 @@ export default function FormationPreview({
       {/* Pitch Background */}
       <div className={`relative rounded-2xl overflow-hidden ${containerHeight}`}>
         {/* Gradient Background — rich emerald pitch feel */}
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/60 via-gray-900/80 to-gray-950"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.08)_0%,transparent_70%)]"></div>
+        <div className="absolute inset-0 bg-gray-900"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.02)_0%,transparent_70%)]"></div>
 
         {/* Pitch Lines */}
         <div className="absolute inset-0 pointer-events-none">
@@ -232,21 +222,21 @@ export default function FormationPreview({
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 md:w-56 h-16 border-t border-l border-r border-white/[0.05] rounded-t-full"></div>
         </div>
 
-        {/* Formation: 2-1-2 Layout */}
+        {/* Formation: 1-2-2 Pyramid */}
         <div className="relative z-10 h-full flex items-center justify-center py-8">
           <div className="space-y-8 md:space-y-10">
-            {/* Top Row - 2 Forwards (S-tier + A-tier) */}
-            <div className={`flex justify-center ${gap}`}>
-              {renderPlayerCard(influencers[0], 0, true)} {/* Captain - S-tier */}
-              {renderPlayerCard(influencers[1], 1)}
+            {/* Top Row — Captain */}
+            <div className="flex justify-center">
+              {renderPlayerCard(influencers[0], 0, true)}
             </div>
 
-            {/* Middle Row - 1 Midfielder (A-tier) */}
-            <div className="flex justify-center">
+            {/* Mid Row — 2 */}
+            <div className={`flex justify-center ${gap}`}>
+              {renderPlayerCard(influencers[1], 1)}
               {renderPlayerCard(influencers[2], 2)}
             </div>
 
-            {/* Bottom Row - 2 Defenders (B-tier + C-tier) */}
+            {/* Bottom Row — 2 */}
             <div className={`flex justify-center ${gap}`}>
               {renderPlayerCard(influencers[3], 3)}
               {renderPlayerCard(influencers[4], 4)}
