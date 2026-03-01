@@ -49,14 +49,14 @@ Foresight is a fantasy sports platform for Crypto Twitter influencers with two b
 | 2F: Database Security | ✅ Complete | 2 | No SSL, plaintext refresh tokens. SQL injection: SAFE (Knex) |
 | 2G: Infrastructure & Config | ✅ Complete | 5 | SSRF proxy, ngrok CORS, HTTPS, CSP, console.log PII |
 | 3: OWASP Top 10 | ✅ Complete | 5 | 6 FAIL, 3 PARTIAL, 1 PASS. 5 new findings (027-031) |
-| 4: Fix & Harden | 🔄 In Progress | 18 | 18 findings fixed, 1 accepted, 26 remain (smart contracts + complex arch) |
-| 5: Verify & Document | ⬜ Not Started | 0 | Re-scan, smoke test, SECURITY.md |
+| 4: Fix & Harden | ✅ Complete | 39 | 37 fixed, 1 accepted, 2 mitigated (already guarded), 5 deferred |
+| 5: Verify & Document | 🔄 In Progress | 0 | Re-scan, smoke test, SECURITY.md |
 
 ---
 
 ## Findings Summary
 
-**Totals: 18 Fixed, 1 Accepted, 26 Open out of 45 findings**
+**Totals: 37 Fixed, 1 Accepted, 2 Mitigated, 5 Deferred out of 45 findings**
 
 | # | Severity | Category | Short Description | Status |
 |---|----------|----------|-------------------|--------|
@@ -65,46 +65,46 @@ Foresight is a fantasy sports platform for Crypto Twitter influencers with two b
 | 003 | **Critical** | SSRF | Image proxy unvalidated URL | Fixed ✅ |
 | 004 | **Critical** | Authorization | Admin endpoints no role check | Fixed ✅ |
 | 005 | Low | SOL Transactions | Simulated transfers (gated by NODE_ENV) | Accepted |
-| 006 | **Critical** | Secrets | JWT secrets in git history | Open |
-| 007 | High | Auth / Frontend | JWT in localStorage | Open |
+| 006 | **Critical** | Secrets | JWT secrets in git history | Deferred |
+| 007 | High | Auth / Frontend | JWT in localStorage | Deferred |
 | 008 | High | API / DoS | No rate limit on prize claim | Fixed ✅ |
 | 009 | High | Auth | No rate limit on token refresh | Fixed ✅ |
-| 010 | High | Auth | Stolen tokens valid post-logout (7 days) | Open |
+| 010 | High | Auth | Stolen tokens valid post-logout (7 days) | Deferred |
 | 011 | High | Database | No SSL on DB connection | Fixed ✅ |
 | 012 | High | CORS | ngrok allowed in production | Fixed ✅ |
 | 013 | High | Infrastructure | No HTTPS enforcement | Fixed ✅ |
-| 014 | High | SOL Transactions | Contest finalization race condition | Open |
-| 015 | High | Auth / Database | Refresh tokens stored plaintext | Open |
+| 014 | High | SOL Transactions | Contest finalization race condition | Fixed ✅ |
+| 015 | High | Auth / Database | Refresh tokens stored plaintext | Fixed ✅ |
 | 016 | Medium | Auth | JWT algorithm not pinned | Fixed ✅ |
 | 017 | Medium | Input Validation | Duplicate influencers in teams | Fixed ✅ |
 | 018 | Medium | Info Disclosure | Console.log leaks PII/wallets | Fixed ✅ |
-| 019 | Medium | SOL Transactions | 'confirmed' not 'finalized' commitment | Open |
+| 019 | Medium | SOL Transactions | 'confirmed' not 'finalized' commitment | Fixed ✅ |
 | 020 | Medium | Headers | Helmet CSP not configured | Fixed ✅ |
-| 021 | Medium | Frontend | Missing CSRF protection | Open |
+| 021 | Medium | Frontend | Missing CSRF protection | Deferred |
 | 022 | Medium | Input Validation | Unvalidated limit/offset params | Fixed ✅ |
-| 023 | High | Dependencies | jws HMAC signature bypass (via jsonwebtoken) | Open |
+| 023 | High | Dependencies | jws HMAC signature bypass (via jsonwebtoken) | Fixed ✅ |
 | 024 | High | Dependencies | axios DoS via __proto__ | Fixed ✅ |
 | 025 | High | Dependencies | react-router XSS + CSRF | Fixed ✅ |
-| 026 | Medium | Dependencies | Multiple transitive vulns (hono, h3, minimatch, etc.) | Open |
+| 026 | Medium | Dependencies | Multiple transitive vulns (hono, h3, minimatch, etc.) | Deferred |
 | 027 | Medium | Injection | Twitter OAuth redirect unsanitized error param | Fixed ✅ |
-| 028 | Medium | Cryptographic | Twitter access tokens unencrypted in DB | Open |
-| 029 | Medium | Logging | No audit trail for admin/sensitive actions | Open |
-| 030 | Medium | Auth | Expired sessions never garbage-collected | Open |
+| 028 | Medium | Cryptographic | Twitter access tokens unencrypted in DB | Fixed ✅ |
+| 029 | Medium | Logging | No audit trail for admin/sensitive actions | Fixed ✅ |
+| 030 | Medium | Auth | Expired sessions never garbage-collected | Fixed ✅ |
 | 031 | Medium | Auth | Auth rate limiter too lenient (50-100/15min) | Fixed ✅ |
-| 032 | **Critical** | Smart Contract | Double finalization — prizes redistributed | Open |
-| 033 | **Critical** | Smart Contract | Reentrancy on prize claims | Open |
-| 034 | **Critical** | Smart Contract | Rake calculation integer arithmetic bug | Open |
-| 035 | High | Smart Contract | No duplicate validation in rankings array | Open |
-| 036 | High | Smart Contract | emergencyWithdraw() rug-pull vector | Open |
-| 037 | High | Smart Contract | Unsafe .transfer() in 3 contracts | Open |
-| 038 | High | Smart Contract | Prize pool underflow on small contests | Open |
-| 039 | High | Smart Contract | Contest finalized before end time | Open |
-| 040 | Medium | Smart Contract | No min duration lock→end | Open |
-| 041 | Medium | Smart Contract | Single-step ownership transfer | Open |
-| 042 | Medium | Smart Contract | Unbounded allPlayers array DoS | Open |
-| 043 | Medium | Smart Contract | ReputationEngine division-by-zero | Open |
-| 044 | Medium | Smart Contract | Treasury zero-fee distribution | Open |
-| 045 | Medium | Smart Contract | QuestRewards budget exceeds balance | Open |
+| 032 | **Critical** | Smart Contract | Double finalization — prizes redistributed | Fixed ✅ |
+| 033 | **Critical** | Smart Contract | Reentrancy on prize claims | Fixed ✅ |
+| 034 | **Critical** | Smart Contract | Rake calculation integer arithmetic bug | Fixed ✅ |
+| 035 | High | Smart Contract | No duplicate validation in rankings array | Fixed ✅ |
+| 036 | High | Smart Contract | emergencyWithdraw() rug-pull vector | Fixed ✅ |
+| 037 | High | Smart Contract | Unsafe .transfer() in 3 contracts | Fixed ✅ |
+| 038 | High | Smart Contract | Prize pool underflow on small contests | Fixed ✅ |
+| 039 | High | Smart Contract | Contest finalized before end time | Fixed ✅ |
+| 040 | Medium | Smart Contract | No min duration lock→end | Fixed ✅ |
+| 041 | Medium | Smart Contract | Single-step ownership transfer | Fixed ✅ |
+| 042 | Medium | Smart Contract | Unbounded allPlayers array DoS | Mitigated ✅ |
+| 043 | Medium | Smart Contract | ReputationEngine division-by-zero | Mitigated ✅ |
+| 044 | Medium | Smart Contract | Treasury zero-fee distribution | Fixed ✅ |
+| 045 | Medium | Smart Contract | QuestRewards budget exceeds balance | Fixed ✅ |
 
 See `AUDIT_FINDINGS.md` for full details on each finding.
 

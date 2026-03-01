@@ -198,8 +198,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** If multiple cron instances run simultaneously (e.g., horizontal scaling), the same contest could be scored and finalized twice, leading to duplicate prize allocations.
 - **Impact:** Double prize distribution from treasury.
 - **Recommended Fix:** Use PostgreSQL advisory locks or a `processing_lock` column with atomic UPDATE before finalization.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-014 — atomic status transition in cronJobs.ts
+- **Status:** Fixed ✅
 
 ---
 
@@ -212,8 +212,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Refresh tokens are stored as plain strings in the `sessions` table. If the database is breached, all refresh tokens are immediately usable.
 - **Impact:** Database breach = all user sessions compromised for 30-day token lifetime.
 - **Recommended Fix:** Hash refresh tokens with bcrypt before storing. Compare hashes on refresh.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-015 — SHA-256 hash refresh tokens before storing
+- **Status:** Fixed ✅
 
 ---
 
@@ -268,8 +268,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `sendAndConfirmTransaction` uses `'confirmed'` commitment. A network fork could roll back the transaction while the DB marks the prize as claimed.
 - **Impact:** Rare edge case: prize marked claimed but SOL not actually received, or double-spend on fork.
 - **Recommended Fix:** Use `'finalized'` commitment for prize distribution (slower but safer).
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-019 — 'confirmed' → 'finalized' commitment
+- **Status:** Fixed ✅
 
 ---
 
@@ -324,8 +324,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `jws <3.2.3` has improper HMAC signature verification (GHSA-869p-cjfg-cm3x). This is a transitive dependency of `jsonwebtoken@9.0.2`.
 - **Impact:** Potential JWT signature bypass.
 - **Recommended Fix:** Update `jsonwebtoken` to latest, or override `jws` to `>=3.2.3`.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-023 — jsonwebtoken 9.0.2 → 9.0.3, jws 3.2.2 → 4.0.1
+- **Status:** Fixed ✅
 
 ---
 
@@ -403,8 +403,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Twitter access tokens stored as plaintext in the database: `twitter_access_token: tokens.access_token`. If the database is breached, all linked Twitter accounts are compromised.
 - **Impact:** Database breach exposes user Twitter tokens — attacker can post/read as the user.
 - **Recommended Fix:** Encrypt tokens at rest using AES-256-GCM with a server-side key, or use a secrets manager.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-028 — AES-256-GCM encryption for Twitter tokens
+- **Status:** Fixed ✅
 
 ---
 
@@ -417,8 +417,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Admin actions (trigger-scoring, PATCH contests, finalize) don't log WHO made the change, WHEN, or WHAT changed. No immutable audit log exists for sensitive operations like prize claims.
 - **Impact:** Cannot detect or investigate compromise. No accountability.
 - **Recommended Fix:** Add audit logging middleware for all admin + prize endpoints. Log: userId, action, timestamp, IP, before/after values. Store in separate `audit_log` table.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-029 — audit_log table + logAuditEvent utility
+- **Status:** Fixed ✅
 
 ---
 
@@ -431,8 +431,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Sessions are deleted on explicit logout, but expired sessions (30-day refresh tokens) are never cleaned up. The `sessions` table grows indefinitely.
 - **Impact:** Database bloat, potential performance degradation. Expired tokens remain queryable.
 - **Recommended Fix:** Add a cron job to `DELETE FROM sessions WHERE created_at < NOW() - INTERVAL '30 days'`.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-030 — session cleanup in existing cleanup cron
+- **Status:** Fixed ✅
 
 ---
 
@@ -459,8 +459,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `finalizeContest()` checks `contest.status != ContestStatus.LOCKED` but does not prevent a second call after status is set to FINALIZED. Owner can call it again with different rankings to redistribute prizes.
 - **Impact:** Owner (or compromised owner key) can redistribute prizes to different addresses. Complete prize pool theft.
 - **Recommended Fix:** Add `if (contest.status == ContestStatus.FINALIZED) revert ContestAlreadyFinalized();` or use a `prizesClaimed` flag checked before any transfers.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-032 — CEI pattern, set FINALIZED before external call
+- **Status:** Fixed ✅
 
 ---
 
@@ -473,8 +473,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `claimPrize()` sets `entry.claimed = true` before the ETH transfer via `.call{value:}()`, which is the correct Checks-Effects-Interactions pattern. However, `entry.prizeAmount` is NOT zeroed before the transfer. A reentrant contract could potentially exploit other functions that read `prizeAmount` during the callback.
 - **Impact:** Potential fund drain via reentrancy if any other function path reads the non-zeroed `prizeAmount`.
 - **Recommended Fix:** Zero out `entry.prizeAmount` before transfer. Add OpenZeppelin `ReentrancyGuard` to all financial functions.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-033 — zero prizeAmount before external call
+- **Status:** Fixed ✅
 
 ---
 
@@ -487,8 +487,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Platform fee calculation: `(contest.prizePool * contest.rakePercent * 100) / BPS_DENOMINATOR`. The extra `* 100` creates confusion. With `rakePercent = 12` and `BPS_DENOMINATOR = 10000`: `(1e18 * 12 * 100) / 10000 = 0.12 ETH` — happens to be correct. But if `rakePercent` is stored as basis points (e.g., 1200 for 12%), the calculation breaks entirely.
 - **Impact:** Incorrect rake splitting — platform either takes too much or too little from the prize pool.
 - **Recommended Fix:** Standardize to either percentage (divide by 100) or basis points (divide by 10000), not a hybrid. Add unit tests with known values.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-034 — simplified to rakePercent/100
+- **Status:** Fixed ✅
 
 ---
 
@@ -501,8 +501,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `finalizeContest()` iterates `rankedPlayers` and assigns prizes by rank, but only checks `entry.exists`. Does not check for duplicate addresses. Owner could submit `[alice, alice, bob]` — alice gets rank 1 AND rank 2 prizes.
 - **Impact:** Manipulated prize distribution. One player receives multiple rank prizes.
 - **Recommended Fix:** Track `alreadyRanked[player]` in a mapping during the loop. Revert on duplicates.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-035 — duplicate address check in finalizeContest
+- **Status:** Fixed ✅
 
 ---
 
@@ -515,8 +515,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `emergencyWithdraw()` sends entire contract balance to owner with no restrictions. No timelock, no multi-sig requirement, no validation that only platform fees (not user entry fees) are withdrawn.
 - **Impact:** Compromised owner key = complete fund drain of all prize pools and entry fees.
 - **Recommended Fix:** Limit withdrawal to accrued platform fees only. Implement timelock (48h delay). Require multi-sig for emergency operations.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-036 — emergencyWithdraw limited to accumulatedFees
+- **Status:** Fixed ✅
 
 ---
 
@@ -529,8 +529,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Multiple contracts use deprecated `.transfer()` which forwards only 2300 gas. This will fail for smart contract wallets (Safe, Argent) that need more gas in their receive/fallback functions.
 - **Impact:** Users with smart contract wallets cannot claim rewards. Funds locked permanently.
 - **Recommended Fix:** Replace all `.transfer()` with `.call{value:}()` and check return value.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-037 — .transfer() → .call{value:}() in all 3 contracts
+- **Status:** Fixed ✅
 
 ---
 
@@ -543,8 +543,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Prize tier system designed for larger contests (10+ players). With fewer players, the tier BPS allocations mean a significant portion of the pool goes undistributed and remains locked in the contract.
 - **Impact:** Protocol leaks funds on edge cases. 1-player contests lose up to 60% of prize pool.
 - **Recommended Fix:** Add special handling for contests with fewer players than tier slots. Distribute remainder to top ranks or return to treasury.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-038 — micro-contest (<10 players) handling in _calculateWinnersCount
+- **Status:** Fixed ✅
 
 ---
 
@@ -557,8 +557,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** Uses `<` comparison (`block.timestamp < contest.endTime`), allowing finalization exactly at `endTime`. The contest lock is also manual (owner calls `lockContest()`), so if backend submits rankings early, scores may be incomplete.
 - **Impact:** Premature finalization with incomplete scoring data.
 - **Recommended Fix:** Add buffer period. Consider Chainlink Keepers for automated, trustless locking.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-039 — block.timestamp <= endTime (strict after)
+- **Status:** Fixed ✅
 
 ---
 
@@ -570,8 +570,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **File:** `contracts/src/CTDraftPrizedV2.sol:262-272`
 - **Description:** `createContest()` only validates `lockTime <= endTime` but doesn't enforce a minimum gap. A contest could have lockTime and endTime 1 second apart — insufficient time for scoring.
 - **Recommended Fix:** `require(endTime >= lockTime + 1 days)`.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-040 — MIN_CONTEST_DURATION = 1 hour
+- **Status:** Fixed ✅
 
 ---
 
@@ -583,8 +583,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **File:** `contracts/src/CTDraftPrizedV2.sol:719-722` (all contracts)
 - **Description:** Ownership transfer is single-step. If transferred to wrong address, ownership is permanently lost along with all admin capabilities.
 - **Recommended Fix:** Use OpenZeppelin's `Ownable2Step` (propose → accept pattern).
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-041 — pendingOwner + acceptOwnership pattern
+- **Status:** Fixed ✅
 
 ---
 
@@ -597,8 +597,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `allPlayers` array grows without bound. `getAllPlayers()` reads from storage in a loop, which will exceed gas limits once enough users have entered.
 - **Impact:** DoS on `getAllPlayers()`. Off-chain reads still work, but any on-chain function calling this will fail.
 - **Recommended Fix:** Implement pagination or remove on-chain iteration.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** N/A — already paginated with offset/limit parameters
+- **Status:** Mitigated ✅ (pagination already implemented in code)
 
 ---
 
@@ -611,8 +611,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `_calculateMasteryScore()` divides by `totalPlayers` without checking for zero: `((totalPlayers - rep.draftRank) * 30) / totalPlayers`.
 - **Impact:** Revert on division by zero if called before any players exist.
 - **Recommended Fix:** Add `if (totalPlayers == 0) return 0;` guard.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** N/A — guard already exists at line 243: `if (totalPlayers > 0 && rep.draftRank > 0)`
+- **Status:** Mitigated ✅ (guard already exists in code)
 
 ---
 
@@ -624,8 +624,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **File:** `contracts/src/Treasury.sol:69-124`
 - **Description:** `distributeMonthly()` doesn't check if `currentMonthFees == 0`. Calling it with zero fees wastes gas and resets the month counter without distributing anything.
 - **Recommended Fix:** `if (currentMonthFees == 0) revert InsufficientFunds();`
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-044 — require(currentMonthFees > 0)
+- **Status:** Fixed ✅
 
 ---
 
@@ -638,8 +638,8 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 - **Description:** `allocateMonthlyBudget()` allows setting budget up to `MONTHLY_BUDGET_CAP` without checking if the contract actually holds that much ETH. Users could vest rewards that can never be claimed.
 - **Impact:** Phantom rewards — users see vested amounts but claims revert due to insufficient balance.
 - **Recommended Fix:** `require(amount <= address(this).balance)`.
-- **Commit:** N/A
-- **Status:** Open
+- **Commit:** audit: fix FINDING-045 — require(amount <= address(this).balance)
+- **Status:** Fixed ✅
 
 ---
 
@@ -669,45 +669,55 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 | 003 | **Critical** | SSRF | Image proxy unvalidated URL | Fixed ✅ |
 | 004 | **Critical** | Authorization | Admin endpoints no role check | Fixed ✅ |
 | 005 | Low | SOL Transactions | Simulated transfers (gated by NODE_ENV) | Accepted |
-| 006 | **Critical** | Secrets | JWT secrets in git history | Open |
-| 007 | High | Auth / Frontend | JWT in localStorage | Open |
+| 006 | **Critical** | Secrets | JWT secrets in git history | Deferred |
+| 007 | High | Auth / Frontend | JWT in localStorage | Deferred |
 | 008 | High | API / DoS | No rate limit on prize claim | Fixed ✅ |
 | 009 | High | Auth | No rate limit on token refresh | Fixed ✅ |
-| 010 | High | Auth | Stolen tokens valid post-logout | Open |
+| 010 | High | Auth | Stolen tokens valid post-logout | Deferred |
 | 011 | High | Database | No SSL on DB connection | Fixed ✅ |
 | 012 | High | CORS | ngrok allowed in production | Fixed ✅ |
 | 013 | High | Infrastructure | No HTTPS enforcement | Fixed ✅ |
-| 014 | High | SOL Transactions | Contest finalization race condition | Open |
-| 015 | High | Auth / Database | Refresh tokens stored plaintext | Open |
+| 014 | High | SOL Transactions | Contest finalization race condition | Fixed ✅ |
+| 015 | High | Auth / Database | Refresh tokens stored plaintext | Fixed ✅ |
 | 016 | Medium | Auth | JWT algorithm not pinned | Fixed ✅ |
 | 017 | Medium | Input Validation | Duplicate influencers in teams | Fixed ✅ |
 | 018 | Medium | Info Disclosure | Console.log leaks PII | Fixed ✅ |
-| 019 | Medium | SOL Transactions | 'confirmed' not 'finalized' commitment | Open |
+| 019 | Medium | SOL Transactions | 'confirmed' not 'finalized' commitment | Fixed ✅ |
 | 020 | Medium | Headers | Helmet CSP not configured | Fixed ✅ |
-| 021 | Medium | Frontend | Missing CSRF protection | Open |
+| 021 | Medium | Frontend | Missing CSRF protection | Deferred |
 | 022 | Medium | Input Validation | Unvalidated limit/offset params | Fixed ✅ |
-| 023 | High | Dependencies | jws HMAC signature bypass | Open |
+| 023 | High | Dependencies | jws HMAC signature bypass | Fixed ✅ |
 | 024 | High | Dependencies | axios DoS via __proto__ | Fixed ✅ |
 | 025 | High | Dependencies | react-router XSS + CSRF | Fixed ✅ |
-| 026 | Medium | Dependencies | Multiple transitive vulns | Open |
+| 026 | Medium | Dependencies | Multiple transitive vulns | Deferred |
 | 027 | Medium | Injection | Twitter OAuth redirect unsanitized error param | Fixed ✅ |
-| 028 | Medium | Cryptographic | Twitter access tokens unencrypted in DB | Open |
-| 029 | Medium | Logging | No audit trail for admin/sensitive actions | Open |
-| 030 | Medium | Auth | Expired sessions never garbage-collected | Open |
+| 028 | Medium | Cryptographic | Twitter access tokens unencrypted in DB | Fixed ✅ |
+| 029 | Medium | Logging | No audit trail for admin/sensitive actions | Fixed ✅ |
+| 030 | Medium | Auth | Expired sessions never garbage-collected | Fixed ✅ |
 | 031 | Medium | Auth | Auth rate limiter too lenient (50-100/15min) | Fixed ✅ |
-| 032 | **Critical** | Smart Contract | Double finalization — contest can be finalized twice | Open |
-| 033 | **Critical** | Smart Contract | Reentrancy on prize claims (flag set after transfer) | Open |
-| 034 | **Critical** | Smart Contract | Rake calculation integer arithmetic bug | Open |
-| 035 | High | Smart Contract | No duplicate validation in rankings array | Open |
-| 036 | High | Smart Contract | emergencyWithdraw() = owner rug-pull vector | Open |
-| 037 | High | Smart Contract | Unsafe .transfer() in QuestRewards/DailyGauntlet/Arena | Open |
-| 038 | High | Smart Contract | Prize pool underflow on small contests (<10 players) | Open |
-| 039 | High | Smart Contract | Contest can be finalized before end time | Open |
-| 040 | Medium | Smart Contract | No min duration between lock and end time | Open |
-| 041 | Medium | Smart Contract | Single-step ownership transfer (no 2-step) | Open |
-| 042 | Medium | Smart Contract | Unbounded allPlayers array DoS in CTDraft/V2 | Open |
-| 043 | Medium | Smart Contract | ReputationEngine division-by-zero risk | Open |
-| 044 | Medium | Smart Contract | Treasury distributeMonthly allows 0-fee distribution | Open |
-| 045 | Medium | Smart Contract | QuestRewards budget allocation can exceed balance | Open |
+| 032 | **Critical** | Smart Contract | Double finalization — contest can be finalized twice | Fixed ✅ |
+| 033 | **Critical** | Smart Contract | Reentrancy on prize claims (flag set after transfer) | Fixed ✅ |
+| 034 | **Critical** | Smart Contract | Rake calculation integer arithmetic bug | Fixed ✅ |
+| 035 | High | Smart Contract | No duplicate validation in rankings array | Fixed ✅ |
+| 036 | High | Smart Contract | emergencyWithdraw() = owner rug-pull vector | Fixed ✅ |
+| 037 | High | Smart Contract | Unsafe .transfer() in QuestRewards/DailyGauntlet/Arena | Fixed ✅ |
+| 038 | High | Smart Contract | Prize pool underflow on small contests (<10 players) | Fixed ✅ |
+| 039 | High | Smart Contract | Contest can be finalized before end time | Fixed ✅ |
+| 040 | Medium | Smart Contract | No min duration between lock and end time | Fixed ✅ |
+| 041 | Medium | Smart Contract | Single-step ownership transfer (no 2-step) | Fixed ✅ |
+| 042 | Medium | Smart Contract | Unbounded allPlayers array DoS in CTDraft/V2 | Mitigated ✅ |
+| 043 | Medium | Smart Contract | ReputationEngine division-by-zero risk | Mitigated ✅ |
+| 044 | Medium | Smart Contract | Treasury distributeMonthly allows 0-fee distribution | Fixed ✅ |
+| 045 | Medium | Smart Contract | QuestRewards budget allocation can exceed balance | Fixed ✅ |
 
-**Totals: 18 Fixed, 1 Accepted, 26 Open out of 45 findings**
+**Totals: 37 Fixed, 1 Accepted, 2 Mitigated, 5 Deferred out of 45 findings**
+
+### Deferred Items (require architectural changes or operational procedures)
+| # | Severity | Why Deferred |
+|---|----------|-------------|
+| 001 | Critical | Free leagues on-chain — requires new smart contract / program |
+| 006 | Critical | JWT secrets in git history — operational: rotate secrets, consider BFG Repo-Cleaner |
+| 007 | High | JWT in localStorage — requires full auth refactor to httpOnly cookies |
+| 010 | High | Token revocation — requires Redis or DB-backed blacklist |
+| 021 | Medium | CSRF protection — depends on cookie-based auth migration (FINDING-007) |
+| 026 | Medium | Transitive dep vulns — limited control, upstream updates needed |
