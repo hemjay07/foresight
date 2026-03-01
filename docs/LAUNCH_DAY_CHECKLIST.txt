@@ -1,0 +1,346 @@
+===============================================================================
+                    FORESIGHT LAUNCH DAY CHECKLIST
+                         SUNDAY, MARCH 2, 2026
+===============================================================================
+
+PRINT THIS. PIN IT. CHECK IT OFF.
+
+Launch Window: Monday 00:00 UTC → Wednesday 23:59 UTC
+Test Grid: 72 hours of monitoring + incident response
+
+===============================================================================
+SUNDAY, 6:00 PM UTC (6 Hours Before Launch)
+===============================================================================
+
+BACKEND & INFRASTRUCTURE
+[ ] Database migrations applied (`knex migrate:latest`)
+[ ] Backend running on production instance
+[ ] All endpoints health-check passing:
+    [ ] GET /api/health → 200
+    [ ] GET /api/contests → returns list
+    [ ] POST /api/users/register → 200
+    [ ] GET /api/referrals/my-code → 200
+    [ ] POST /api/entries → 200
+    [ ] GET /api/leaderboard → returns ranked list
+    [ ] POST /api/admin/trigger-prized-lock → queues job
+[ ] Database connections stable (no timeouts)
+[ ] SOL airdrop endpoint configured & tested
+[ ] Rate limiting enabled (50 req/min API, 1000/min auth)
+
+FRONTEND
+[ ] Production build passes (`npm run build`)
+[ ] Homepage loads in <2s (mobile 4G)
+[ ] Draft page responsive (mobile + desktop)
+[ ] Leaderboard loads & updates
+[ ] Referral page displays correctly
+[ ] Share buttons functional (X, copy)
+[ ] OG card visible in X compose box
+
+MONITORING & ALERTS
+[ ] Sentry errors configured with >1% threshold alert
+[ ] API response time alerts set (>500ms)
+[ ] Database query alerts set (>200ms)
+[ ] Container memory alert set (>80%)
+[ ] Container CPU alert set (>70% sustained)
+[ ] Disk usage alert set (>85%)
+[ ] Auth failure alert set (>10/min)
+
+ADMIN TOOLS VERIFIED
+[ ] GET /api/admin/contests/1/raw — Test successful
+[ ] PATCH /api/admin/contests/1 — Test successful
+[ ] POST /api/admin/trigger-prized-lock — Test successful
+[ ] POST /api/admin/trigger-prized-scoring — Test successful
+[ ] POST /api/admin/trigger-contest-finalization — Test successful
+
+BACKUP & RECOVERY
+[ ] Database backup automated & recent
+[ ] Backup restore tested (<15 min ETA)
+[ ] Container image accessible (can redeploy <5 min)
+[ ] Secrets safely stored (not in Git)
+[ ] SOL airdrop fallback plan documented
+
+LOAD TESTING
+[ ] Apache Bench / k6 test completed: ab -n 1000 -c 50
+[ ] P95 latency <1000ms
+[ ] No timeouts on 50 concurrent users
+[ ] DB handles load without degradation
+
+===============================================================================
+SUNDAY, 11:00 PM UTC (1 Hour Before Launch)
+===============================================================================
+
+TEAM READINESS
+[ ] Backend lead awake & in Discord voice
+[ ] Frontend lead awake & in Discord voice
+[ ] DevOps / monitoring lead awake & in Discord voice
+[ ] Founder ready to post first launch tweet
+[ ] Discord admin ready to post #announcements
+
+FINAL SYSTEM CHECK
+[ ] All services running (backend, frontend, database)
+[ ] Monitoring dashboards open in separate windows
+[ ] Error tracking dashboard loaded (Sentry)
+[ ] Database console open (for quick queries)
+[ ] Incident response template loaded
+[ ] Admin endpoints verified 1 more time
+
+CONTEST SETUP VERIFICATION
+[ ] Contest exists in DB with correct rules:
+    SELECT * FROM contests WHERE id = 1;
+    → status='open'
+    → lock_time=2026-03-04 00:00:00
+    → end_time=2026-03-06 23:59:59
+    → min_players=1
+[ ] Prize distribution rules set for small contests (1-9 players)
+[ ] Leaderboard view returns empty (no entries yet)
+
+PRE-WRITTEN CONTENT READY
+[ ] Day 0 launch post written & queued
+[ ] Day 0 12h update post ready
+[ ] Day 1 leaderboard post ready
+[ ] Week 2 announcement drafted
+[ ] 10 reply templates prepared
+[ ] Influencer shoutout list prepared
+
+===============================================================================
+MONDAY, 00:00 UTC (LAUNCH TIME)
+===============================================================================
+
+CONTEST GOES LIVE
+[ ] Backend / frontend alive
+[ ] All team members in Discord voice
+[ ] Monitoring dashboards active
+[ ] Founder posts: "🚀 LIVE: Foresight is OPEN"
+[ ] Discord admin posts: "Contest is LIVE"
+[ ] Monitor signup rate: >1/min by minute 5
+
+FIRST 10 MINUTES
+[ ] Error logs clean (tail Sentry)
+[ ] API response times <300ms
+[ ] No database timeouts
+[ ] Signup count increasing
+[ ] Leaderboard responds quickly
+[ ] No critical errors reported
+
+FIRST HOUR
+Every 10 minutes, check:
+[ ] Error rate (target: <0.1%)
+[ ] Signup count (target: >10 by 10min, >30 by 30min, >60 by 60min)
+[ ] Entry count (target: >5 by 30min)
+[ ] Leaderboard loads (refresh homepage)
+
+If any metric off:
+[ ] Check backend logs
+[ ] Check frontend console
+[ ] Check database slow queries
+[ ] Alert team if critical
+[ ] Scale resources if needed
+
+===============================================================================
+MONDAY, 01:00 - 23:00 UTC (Throughout Day)
+===============================================================================
+
+EVERY 4 HOURS
+[ ] Check error rate (Sentry)
+[ ] Check signup/entry trends
+[ ] Check API latency (avg, p95)
+[ ] Check database connections (count)
+[ ] Check container memory/CPU
+[ ] Check Discord members (+30-50 expected)
+[ ] Check X mentions & engagement
+
+EVERY 12 HOURS
+[ ] Full system health check
+[ ] Review logs for warnings
+[ ] Test admin endpoints work
+[ ] Verify leaderboard accuracy (spot-check 3 entries)
+[ ] Check for any exploit attempts
+[ ] Update Discord #live-contest with leaderboard
+[ ] Post X update (leaderboard screenshot)
+
+IF PROBLEMS APPEAR
+[ ] High error rate (>1%) → See LAUNCH_OPS_GUIDE.md Section 3.1
+[ ] Database slow (response >500ms) → See LAUNCH_OPS_GUIDE.md Section 3.2
+[ ] Contest lock fails (past lock_time) → See LAUNCH_OPS_GUIDE.md Section 3.3
+[ ] Scoring fails → See LAUNCH_OPS_GUIDE.md Section 3.4
+[ ] Prize claim fails → See LAUNCH_OPS_GUIDE.md Section 3.5
+
+IF SIGNUPS LAG
+[ ] Verify frontend loads (browser network tab)
+[ ] Check auth flow works (test signup yourself)
+[ ] Post on r/solana
+[ ] Post in relevant crypto Discords
+[ ] Email Discord members: "Reminder: Draft now!"
+
+IF SIGNUPS SURGE (>500 in 12 hours)
+[ ] Celebrate 🎉
+[ ] Scale backend resources (2x CPU/RAM)
+[ ] Monitor database load
+[ ] Post update: "Huge response! Scaling up."
+
+===============================================================================
+TUESDAY, 00:00 - 23:00 UTC
+===============================================================================
+
+CONTEST LOCK TIME: 00:00 UTC TUESDAY
+
+BEFORE LOCK (23:30 UTC MONDAY)
+[ ] Verify no errors in logs
+[ ] Spot-check final entries (count: should be 100+)
+[ ] Verify contest status='open' still
+
+AT LOCK TIME (00:00 UTC TUESDAY)
+[ ] Verify status changed to 'locked' automatically
+[ ] If not locked: POST /api/admin/trigger-prized-lock
+[ ] No new entries accepted
+[ ] Leaderboard frozen
+
+AFTER LOCK (00:00 - 01:00 UTC)
+[ ] Verify lock succeeded (SELECT status FROM contests)
+[ ] Update Discord: "Entries closed. Scoring starting."
+[ ] Monitor scoring job
+
+THROUGHOUT TUESDAY
+[ ] Same 4-hour monitoring as Monday
+[ ] Scoring should complete within 30 min of lock
+[ ] Verify scores non-zero (not all 0s)
+[ ] Check top 3 scores are reasonable (should be 100-200 points)
+[ ] Verify captain 2.0x multiplier applied
+
+IF SCORING BREAKS
+[ ] Check /var/log for errors
+[ ] Rerun: POST /api/admin/trigger-prized-scoring
+[ ] Wait 30 sec, verify leaderboard updated
+[ ] If still wrong: See LAUNCH_OPS_GUIDE.md Section 3.6
+
+PRIZE CLAIMS TESTING
+[ ] Ask someone to claim top 3 prize
+[ ] Verify SOL airdrop succeeds
+[ ] Check transaction on Solana explorer
+[ ] Celebrate with winner in Discord
+
+===============================================================================
+WEDNESDAY, 00:00 - 23:59 UTC (Final Day)
+===============================================================================
+
+THROUGHOUT THE DAY
+[ ] Same monitoring as Monday/Tuesday
+[ ] No changes expected (contest is finalized)
+[ ] Monitor for any player support issues
+[ ] Celebrate wins in Discord #wins
+
+APPROACH CONTEST END (23:00 UTC)
+[ ] Verify all prizes claimed
+[ ] Final leaderboard snapshot
+[ ] Contest results blog post ready
+
+AT CONTEST END (23:59 UTC)
+[ ] Update contest status to 'finalized'
+[ ] Post congratulations to winners
+[ ] Publish blog post
+[ ] Post on X: Final results + link
+[ ] Share metrics in Discord
+[ ] Thank team in Discord #general
+
+POST-CONTEST (Thursday Morning)
+[ ] Prepare post-mortem report (see LAUNCH_OPS_GUIDE.md Section 8)
+[ ] Database optimization (run ANALYZE)
+[ ] Review all logs for issues
+[ ] Prepare Week 2 announcement
+[ ] Full team meeting (Thursday 10am UTC)
+
+===============================================================================
+CRITICAL INCIDENT RESPONSES (Copy-Paste Ready)
+===============================================================================
+
+IF BACKEND DOWN
+→ See LAUNCH_OPS_GUIDE.md Section 3.1 (High Error Rate)
+Discord message:
+"⚠️ We're experiencing high load. Working on it. ETA 5 min. Thanks for patience!"
+
+IF DATABASE DOWN
+→ See LAUNCH_OPS_GUIDE.md Section 3.2 (Database Issues)
+Discord message:
+"Database failover in progress. Back in 15 min."
+
+IF CONTEST LOCK FAILS
+→ See LAUNCH_OPS_GUIDE.md Section 3.3
+Manual trigger: POST /api/admin/trigger-prized-lock
+Discord message:
+"Contest lock took longer than expected. Entries now CLOSED. Scoring starting now."
+
+IF SCORING FAILS
+→ See LAUNCH_OPS_GUIDE.md Section 3.4
+Manual trigger: POST /api/admin/trigger-prized-scoring
+Discord message:
+"Scoring is taking a bit longer. All entries will be scored fairly. ETA 5 min."
+
+IF PRIZE CLAIM FAILS
+→ See LAUNCH_OPS_GUIDE.md Section 3.5
+Discord message:
+"Prize claim had a hiccup. Sending now. Check wallet in 30 sec."
+
+===============================================================================
+SUCCESS SIGNALS BY DAY
+===============================================================================
+
+BY DAY 1:
+✓ 150+ signups
+✓ 50+ entries
+✓ 0 critical bugs
+✓ Influencers posting about it
+✓ <0.5% error rate
+
+BY DAY 2:
+✓ 350+ signups
+✓ 100+ entries
+✓ 150+ Discord members
+✓ 100+ X followers
+✓ First prizes claimed successfully
+
+BY DAY 3:
+✓ 500+ signups (TARGET)
+✓ 150+ entries (TARGET)
+✓ 250+ Discord members
+✓ Contest finalized
+✓ Winners announced
+✓ Blog post published
+
+IF YOU HIT THESE, YOU'VE WON. CELEBRATE.
+
+===============================================================================
+DOCUMENTS TO HAVE HANDY
+===============================================================================
+
+Print & keep on desk:
+[ ] LAUNCH_QUICK_REFERENCE.md (500 lines, copy-paste tweets)
+[ ] LAUNCH_OPS_GUIDE.md (1000 lines, incident responses)
+[ ] This checklist (LAUNCH_DAY_CHECKLIST.txt)
+
+Reference during execution:
+[ ] LAUNCH_PLAYBOOK_2026.md (full strategy, 2500 lines)
+[ ] GROWTH_STRATEGY_SUMMARY.md (executive summary)
+
+Key code references:
+[ ] backend/src/api/referrals.ts (referral logic)
+[ ] frontend/src/pages/Referrals.tsx (referral UI)
+[ ] backend/src/crons/ (contest lifecycle jobs)
+
+===============================================================================
+FINAL REMINDERS
+===============================================================================
+
+[ ] You have the product. It works.
+[ ] You have the plan. It's solid.
+[ ] You have the team. They're ready.
+[ ] You have the community. They're waiting.
+
+SHIP IT. EXECUTE WELL. YOU GOT THIS.
+
+Team lead: ________________    Date: ____________
+
+Checked by: ________________    Time: ____________
+
+===============================================================================
+Last Updated: March 1, 2026 | Status: READY FOR EXECUTION
+===============================================================================
