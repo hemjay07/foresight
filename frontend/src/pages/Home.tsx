@@ -20,6 +20,7 @@ import {
 } from '@phosphor-icons/react';
 import FormationPreview from '../components/FormationPreview';
 import ActivityFeedCard from '../components/ActivityFeedCard';
+import SEO from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
 import { getXPLevel } from '../utils/xp';
 
@@ -251,6 +252,7 @@ function LandingPage({
 
   return (
     <div className="max-w-6xl mx-auto">
+      <SEO path="/" />
 
       {/* ═══════════════════════ MOBILE HERO ════════════════════════════ */}
       <section className="lg:hidden pt-8 pb-6 px-1">

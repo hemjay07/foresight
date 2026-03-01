@@ -11,6 +11,9 @@ export interface AuthState {
   isConnected: boolean;
   address: string | undefined;
   displayAddress: string;
+  email?: string;
+  twitterHandle?: string;
+  displayName: string;
   isBackendAuthed: boolean;
   login: () => void;
   logout: () => void;
@@ -20,6 +23,7 @@ const defaultState: AuthState = {
   isConnected: false,
   address: undefined,
   displayAddress: '',
+  displayName: '',
   isBackendAuthed: false,
   login: () => {},
   logout: () => {},

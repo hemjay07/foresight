@@ -1,8 +1,10 @@
 import LegalPageLayout from '../components/LegalPageLayout';
+import SEO from '../components/SEO';
 
 const Imprint = () => {
   return (
     <LegalPageLayout title="Legal Notice / Imprint">
+      <SEO title="Legal Notice" description="Foresight legal notice and imprint information." path="/imprint" />
       <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
         Legal Notice / Imprint
       </h1>

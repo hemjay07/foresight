@@ -1,0 +1,11 @@
+# Foresight — CT Fantasy League
+# https://ct-foresight.xyz
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://ct-foresight.xyz/sitemap.xml
+
+# Crawl-delay for polite bots
+Crawl-delay: 1

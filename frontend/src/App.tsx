@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
+import { HelmetProvider } from 'react-helmet-async';
 import { useEffect, useMemo, useCallback, useState } from 'react';
 
 import { RealtimeProvider } from './contexts/RealtimeContext';
@@ -54,15 +55,34 @@ function PrivyAuthBridge({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, login, logout: privyLogout } = usePrivy();
   const { syncError, retrySync } = usePrivyAuth();
 
-  const address = useMemo(() => {
-    if (!user) return undefined;
+  const { address, email, twitterHandle } = useMemo(() => {
+    if (!user) return { address: undefined, email: undefined, twitterHandle: undefined };
+
+    // Extract wallet
     const solanaWallet = user.linkedAccounts?.find(
       (a: any) => a.type === 'wallet' && a.chainType === 'solana'
     );
-    if (solanaWallet && 'address' in solanaWallet) return (solanaWallet as any).address as string;
-    const anyWallet = user.linkedAccounts?.find((a: any) => a.type === 'wallet');
-    if (anyWallet && 'address' in anyWallet) return (anyWallet as any).address as string;
-    return undefined;
+    let addr: string | undefined;
+    if (solanaWallet && 'address' in solanaWallet) {
+      addr = (solanaWallet as any).address as string;
+    } else {
+      const anyWallet = user.linkedAccounts?.find((a: any) => a.type === 'wallet');
+      if (anyWallet && 'address' in anyWallet) addr = (anyWallet as any).address as string;
+    }
+
+    // Extract email
+    const emailAccount = user.linkedAccounts?.find((a: any) => a.type === 'email');
+    const em = emailAccount && 'address' in emailAccount
+      ? (emailAccount as any).address as string
+      : undefined;
+
+    // Extract Twitter
+    const twitterAccount = user.linkedAccounts?.find((a: any) => a.type === 'twitter_oauth');
+    const tw = twitterAccount
+      ? ((twitterAccount as any).username || (twitterAccount as any).name || undefined)
+      : undefined;
+
+    return { address: addr, email: em, twitterHandle: tw };
   }, [user]);
 
   const handleLogout = useCallback(async () => {
@@ -70,14 +90,34 @@ function PrivyAuthBridge({ children }: { children: React.ReactNode }) {
     await privyLogout();
   }, [privyLogout]);
 
-  const authState: AuthState = useMemo(() => ({
-    isConnected: ready && authenticated,
-    address,
-    displayAddress: address ? `${address.slice(0, 4)}...${address.slice(-4)}` : '',
-    isBackendAuthed: !!localStorage.getItem('authToken'),
-    login,
-    logout: handleLogout,
-  }), [ready, authenticated, address, login, handleLogout]);
+  const authState: AuthState = useMemo(() => {
+    // Best available display name: @handle > email prefix > truncated wallet > empty
+    const displayName = twitterHandle
+      ? `@${twitterHandle}`
+      : email
+        ? email.split('@')[0]
+        : address
+          ? `${address.slice(0, 4)}...${address.slice(-4)}`
+          : '';
+
+    const displayAddress = address
+      ? `${address.slice(0, 4)}...${address.slice(-4)}`
+      : twitterHandle
+        ? `@${twitterHandle}`
+        : email || '';
+
+    return {
+      isConnected: ready && authenticated,
+      address,
+      displayAddress,
+      email,
+      twitterHandle,
+      displayName,
+      isBackendAuthed: !!localStorage.getItem('authToken'),
+      login,
+      logout: handleLogout,
+    };
+  }, [ready, authenticated, address, email, twitterHandle, login, handleLogout]);
 
   const isSyncing = ready && authenticated && !localStorage.getItem('authToken');
   const [errorDismissed, setErrorDismissed] = useState(false);
@@ -220,20 +260,22 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <ErrorBoundary>
-      <AppProviders>
-        <RealtimeProvider>
-          <NotificationProvider>
-            <ToastProvider>
-              <AchievementToastProvider>
-                <OnboardingProvider>
-                  <AppContent />
-                  <AchievementToastContainer />
-                </OnboardingProvider>
-              </AchievementToastProvider>
-            </ToastProvider>
-          </NotificationProvider>
-        </RealtimeProvider>
-      </AppProviders>
+      <HelmetProvider>
+        <AppProviders>
+          <RealtimeProvider>
+            <NotificationProvider>
+              <ToastProvider>
+                <AchievementToastProvider>
+                  <OnboardingProvider>
+                    <AppContent />
+                    <AchievementToastContainer />
+                  </OnboardingProvider>
+                </AchievementToastProvider>
+              </ToastProvider>
+            </NotificationProvider>
+          </RealtimeProvider>
+        </AppProviders>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }

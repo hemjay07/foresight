@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
-import { Star, Crown, Diamond, Medal, Trophy, Share, XLogo, Copy, Check, Lightning } from '@phosphor-icons/react';
+import { Star, Crown, Diamond, Medal, Trophy, Share, XLogo, Copy, Check, Lightning, X } from '@phosphor-icons/react';
 import { useToast } from '../contexts/ToastContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -369,7 +369,7 @@ export default function ShareableProfileCard({ onClose, showModal = true }: Prop
   const buildTweetText = () => {
     if (!data) return '';
     const rankLabel = TIER_RANK_LABEL[data.tier] || data.tier.toUpperCase();
-    let t = `Just got certified as a ${rankLabel} on @ForesightGame \n\n`;
+    let t = `Just got certified as a ${rankLabel} on @ForesightCT\n\n`;
     t += `${data.totalScore.toLocaleString()} FS`;
     if (data.seasonRank) t += ` \u00B7 Season #${data.seasonRank}`;
     if (data.effectiveMultiplier > 1) t += `\n${data.effectiveMultiplier.toFixed(2)}\u00D7 multiplier`;
@@ -577,7 +577,7 @@ export default function ShareableProfileCard({ onClose, showModal = true }: Prop
         <button
           onClick={handleSave}
           disabled={generating}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm bg-zinc-800 hover:bg-zinc-700 text-white transition-colors disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm bg-gray-800 hover:bg-gray-700 text-white transition-colors disabled:opacity-50"
         >
           <Share size={16} />
           Save Image
@@ -585,14 +585,13 @@ export default function ShareableProfileCard({ onClose, showModal = true }: Prop
       </div>
       <button
         onClick={handleCopyLink}
-        className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 transition-colors"
-        style={{ border: '1px solid #1C1C1E' }}
+        className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-700 transition-colors"
       >
         {copied
           ? <><Check size={14} className="text-green-400" /><span className="text-green-400">Copied!</span></>
           : <><Copy size={14} />Copy profile link</>}
       </button>
-      <p className="text-center text-[11px] text-zinc-700 mt-2 leading-tight">
+      <p className="text-center text-[11px] text-gray-600 mt-2 leading-tight">
         On desktop, certificate saves automatically — attach to your tweet
       </p>
     </div>
@@ -611,8 +610,8 @@ export default function ShareableProfileCard({ onClose, showModal = true }: Prop
       <div className="relative">
         {onClose && (
           <button onClick={onClose}
-            className="absolute -top-10 right-0 text-xs text-zinc-500 hover:text-white transition-colors">
-            Close
+            className="absolute -top-4 -right-4 z-10 w-8 h-8 rounded-full bg-gray-800/80 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+            <X size={16} weight="bold" />
           </button>
         )}
         {content}
@@ -631,7 +630,7 @@ export function ShareProfileButton({ variant = 'primary', className = '' }: {
   if (variant === 'icon') return (
     <>
       <button onClick={() => setShow(true)}
-        className={`p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all ${className}`}>
+        className={`p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all ${className}`}>
         <Share size={20} />
       </button>
       {show && <ShareableProfileCard onClose={() => setShow(false)} />}

@@ -23,6 +23,7 @@ import { getXPLevel, formatXP } from '../utils/xp';
 import { getAvatarUrl } from '../utils/avatar';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../hooks/useAuth';
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -452,6 +453,12 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <SEO
+        title="Profile — Your Fantasy Stats"
+        description="View your Foresight fantasy stats, contest history, team formations, and achievements. Track your Foresight Score and climb the rankings."
+        keywords="fantasy sports profile, crypto fantasy stats, foresight score, CT fantasy achievements"
+        path="/profile"
+      />
       {/* ── Profile Header (compact, no card wrapper) ── */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
         {/* Avatar with gold ring */}

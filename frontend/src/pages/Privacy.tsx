@@ -1,8 +1,10 @@
 import LegalPageLayout from '../components/LegalPageLayout';
+import SEO from '../components/SEO';
 
 const Privacy = () => {
   return (
     <LegalPageLayout title="Privacy Policy">
+      <SEO title="Privacy Policy" description="How Foresight handles your data. We collect minimal information and never sell your personal data." path="/privacy" />
       <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
         Privacy Policy
       </h1>

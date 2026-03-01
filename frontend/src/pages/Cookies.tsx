@@ -1,8 +1,10 @@
 import LegalPageLayout from '../components/LegalPageLayout';
+import SEO from '../components/SEO';
 
 const Cookies = () => {
   return (
     <LegalPageLayout title="Cookie Policy">
+      <SEO title="Cookie Policy" description="Foresight cookie policy — what cookies we use and why." path="/cookies" />
       <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
         Cookie Policy
       </h1>

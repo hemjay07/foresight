@@ -35,6 +35,7 @@ import { useBrowseTimeTracker } from '../hooks/useBrowseTimeTracker';
 import ProfilesTab from '../components/intel/ProfilesTab';
 import RisingStarsTab from '../components/intel/RisingStarsTab';
 import ComparisonTool from '../components/intel/ComparisonTool';
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -458,6 +459,12 @@ export default function Intel() {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      <SEO
+        title="Intel — CT Research Feed"
+        description="Real-time Crypto Twitter intelligence. Track influencer activity, engagement metrics, and rising stars to inform your fantasy draft picks."
+        keywords="crypto twitter feed, CT influencer tracker, crypto influencer analytics, twitter engagement metrics, crypto research tool"
+        path="/feed"
+      />
       <div className="max-w-5xl mx-auto px-4 py-6">
 
         {/* Header */}

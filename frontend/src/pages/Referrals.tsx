@@ -26,6 +26,7 @@ import {
 import { useToast } from '../contexts/ToastContext';
 import { API_URL } from '../config/api';
 import { useAuth } from '../hooks/useAuth';
+import SEO from '../components/SEO';
 
 interface ReferralData {
   referralCode: string;
@@ -105,8 +106,8 @@ export default function Referrals() {
 
     const shareUrl = `${window.location.origin}?ref=${data.referralCode}`;
     const text = data.isFoundingMember
-      ? `I'm Founding Member #${data.foundingMemberNumber} of @ForesightLeague! 👑\n\nJoin the CT Fantasy revolution. Draft influencers, earn points, build your position.\n\n Early supporters will be rewarded 💰`
-      : `Just invited ${data.activeReferralCount} players to @ForesightLeague! 🎮\n\nCT Fantasy is heating up. Get in early.\n\nJoin me:`;
+      ? `I'm Founding Member #${data.foundingMemberNumber} of @ForesightCT! 👑\n\nJoin the CT Fantasy revolution. Draft influencers, earn points, build your position.\n\n Early supporters will be rewarded 💰`
+      : `Just invited ${data.activeReferralCount} players to @ForesightCT! 🎮\n\nCT Fantasy is heating up. Get in early.\n\nJoin me:`;
 
     const twitterUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
     window.open(twitterUrl, '_blank');
@@ -204,6 +205,7 @@ export default function Referrals() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
+      <SEO title="Referrals — Invite & Earn" description="Invite friends to Foresight and earn XP rewards. Become a Founding Member and build your position early." path="/referrals" />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

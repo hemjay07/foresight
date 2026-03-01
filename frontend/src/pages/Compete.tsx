@@ -33,6 +33,7 @@ import TapestryBadge from '../components/TapestryBadge';
 import FollowButton from '../components/FollowButton';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../hooks/useAuth';
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -431,6 +432,12 @@ export default function Compete() {
 
   return (
     <div className="max-w-6xl mx-auto">
+      <SEO
+        title="Compete — Contests & Rankings"
+        description="Join fantasy contests, draft CT influencers, and climb the Foresight leaderboard. Weekly competitions with SOL prizes."
+        keywords="crypto fantasy contest, CT leaderboard, fantasy sports competition, solana prizes, crypto twitter rankings"
+        path="/compete"
+      />
       {/* Row 1: Title + Main Tabs + Contest Filter (when on contests tab) */}
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">

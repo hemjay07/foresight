@@ -16,6 +16,7 @@ import { useAuth } from '../hooks/useAuth';
 import FoundingMemberBadge from '../components/FoundingMemberBadge';
 import FoundingMembersWall from '../components/FoundingMembersWall';
 import TierGuide from '../components/TierGuide';
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -343,6 +344,12 @@ export default function Progress() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <SEO
+        title="Progress — Quests & XP"
+        description="Complete quests, earn XP, and level up in Foresight. Track your daily and weekly challenges for bonus rewards."
+        keywords="crypto fantasy quests, foresight XP, fantasy sports rewards, crypto gaming progress"
+        path="/progress"
+      />
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">

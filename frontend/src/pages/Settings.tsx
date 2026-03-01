@@ -16,6 +16,7 @@ import {
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../hooks/useAuth';
 import { getXPLevel } from '../utils/xp';
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -274,6 +275,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      <SEO title="Settings" description="Manage your Foresight profile, linked accounts, and preferences." path="/settings" />
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-6">
