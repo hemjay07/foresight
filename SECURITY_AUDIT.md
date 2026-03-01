@@ -48,7 +48,7 @@ Foresight is a fantasy sports platform for Crypto Twitter influencers with two b
 | 2E: Frontend Security | ✅ Complete | 3 | localStorage, CSRF, VITE_ prefix clean |
 | 2F: Database Security | ✅ Complete | 2 | No SSL, plaintext refresh tokens. SQL injection: SAFE (Knex) |
 | 2G: Infrastructure & Config | ✅ Complete | 5 | SSRF proxy, ngrok CORS, HTTPS, CSP, console.log PII |
-| 3: OWASP Top 10 | ⬜ Not Started | 0 | A01-A10 systematic check |
+| 3: OWASP Top 10 | ✅ Complete | 5 | 6 FAIL, 3 PARTIAL, 1 PASS. 5 new findings (027-031) |
 | 4: Fix & Harden | ⬜ Not Started | 0 | All fixes with individual commits |
 | 5: Verify & Document | ⬜ Not Started | 0 | Re-scan, smoke test, SECURITY.md |
 
@@ -56,7 +56,7 @@ Foresight is a fantasy sports platform for Crypto Twitter influencers with two b
 
 ## Findings Summary
 
-**Totals: 6 Critical, 12 High, 8 Medium = 26 findings**
+**Totals: 6 Critical, 12 High, 13 Medium = 31 findings**
 
 | # | Severity | Category | Short Description | Status |
 |---|----------|----------|-------------------|--------|
@@ -86,6 +86,11 @@ Foresight is a fantasy sports platform for Crypto Twitter influencers with two b
 | 024 | High | Dependencies | axios DoS via __proto__ | Open |
 | 025 | High | Dependencies | react-router XSS + CSRF | Open |
 | 026 | Medium | Dependencies | Multiple transitive vulns (hono, h3, minimatch, etc.) | Open |
+| 027 | Medium | Injection | Twitter OAuth redirect unsanitized error param | Open |
+| 028 | Medium | Cryptographic | Twitter access tokens unencrypted in DB | Open |
+| 029 | Medium | Logging | No audit trail for admin/sensitive actions | Open |
+| 030 | Medium | Auth | Expired sessions never garbage-collected | Open |
+| 031 | Medium | Auth | Auth rate limiter too lenient (50-100/15min) | Open |
 
 See `AUDIT_FINDINGS.md` for full details on each finding.
 

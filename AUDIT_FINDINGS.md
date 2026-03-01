@@ -380,6 +380,93 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 
 ---
 
+## FINDING-027: Twitter OAuth Redirect With Unsanitized Error Param
+
+- **Severity:** Medium
+- **Category:** Injection
+- **Phase:** 3 (OWASP A03)
+- **File:** `backend/src/api/twitter.ts:186-196`
+- **Description:** Twitter OAuth callback interpolates error messages directly into redirect URLs without sanitization: `res.redirect(\`${FRONTEND_URL}/settings?twitter=error&message=${error}\`)`. While FRONTEND_URL is controlled, the error content from Twitter is not sanitized.
+- **Impact:** Potential for reflected content injection in the redirect URL.
+- **Recommended Fix:** URL-encode the error parameter: `encodeURIComponent(error.message)`.
+- **Commit:** N/A
+- **Status:** Open
+
+---
+
+## FINDING-028: Twitter Access Tokens Stored Unencrypted in DB
+
+- **Severity:** Medium
+- **Category:** Cryptographic Failures
+- **Phase:** 3 (OWASP A02)
+- **File:** `backend/src/api/twitter.ts:250`
+- **Description:** Twitter access tokens stored as plaintext in the database: `twitter_access_token: tokens.access_token`. If the database is breached, all linked Twitter accounts are compromised.
+- **Impact:** Database breach exposes user Twitter tokens — attacker can post/read as the user.
+- **Recommended Fix:** Encrypt tokens at rest using AES-256-GCM with a server-side key, or use a secrets manager.
+- **Commit:** N/A
+- **Status:** Open
+
+---
+
+## FINDING-029: No Audit Trail for Admin/Sensitive Actions
+
+- **Severity:** Medium
+- **Category:** Logging & Monitoring
+- **Phase:** 3 (OWASP A09)
+- **File:** `backend/src/api/admin.ts` (all endpoints)
+- **Description:** Admin actions (trigger-scoring, PATCH contests, finalize) don't log WHO made the change, WHEN, or WHAT changed. No immutable audit log exists for sensitive operations like prize claims.
+- **Impact:** Cannot detect or investigate compromise. No accountability.
+- **Recommended Fix:** Add audit logging middleware for all admin + prize endpoints. Log: userId, action, timestamp, IP, before/after values. Store in separate `audit_log` table.
+- **Commit:** N/A
+- **Status:** Open
+
+---
+
+## FINDING-030: Expired Sessions Never Garbage-Collected
+
+- **Severity:** Medium
+- **Category:** Authentication
+- **Phase:** 3 (OWASP A07)
+- **File:** `backend/src/api/auth.ts`
+- **Description:** Sessions are deleted on explicit logout, but expired sessions (30-day refresh tokens) are never cleaned up. The `sessions` table grows indefinitely.
+- **Impact:** Database bloat, potential performance degradation. Expired tokens remain queryable.
+- **Recommended Fix:** Add a cron job to `DELETE FROM sessions WHERE created_at < NOW() - INTERVAL '30 days'`.
+- **Commit:** N/A
+- **Status:** Open
+
+---
+
+## FINDING-031: Auth Rate Limiter Too Lenient
+
+- **Severity:** Medium
+- **Category:** Authentication
+- **Phase:** 3 (OWASP A04/A07)
+- **File:** `backend/src/middleware/rateLimiter.ts:19-25`
+- **Description:** `authLimiter` allows 50 attempts per 15 minutes in production (100 in dev). Best practice for login endpoints is 5-10 attempts per 15 minutes. Current config allows brute-force of weak credentials.
+- **Impact:** Brute-force attacks feasible at 50 attempts/15min.
+- **Recommended Fix:** Reduce to 10/15min in production. Add exponential backoff after 5 failures. Consider account lockout after 10 consecutive failures.
+- **Commit:** N/A
+- **Status:** Open
+
+---
+
+## OWASP Top 10 (2021) Assessment
+
+| Category | Verdict | Key Findings |
+|----------|---------|--------------|
+| A01: Broken Access Control | **FAIL** | FINDING-004 (admin no auth), no user-level ownership checks |
+| A02: Cryptographic Failures | **FAIL** | FINDING-006 (JWT in git), FINDING-028 (tokens unencrypted), FINDING-011 (no DB SSL) |
+| A03: Injection | **PARTIAL** | FINDING-003 (SSRF), FINDING-027 (redirect param). SQL injection SAFE (Knex parameterized) |
+| A04: Insecure Design | **FAIL** | FINDING-002 (TOCTOU), FINDING-021 (no CSRF), FINDING-031 (weak rate limits) |
+| A05: Security Misconfiguration | **FAIL** | FINDING-020 (no CSP), FINDING-012 (ngrok CORS), FINDING-018 (console.log PII) |
+| A06: Vulnerable Components | **PARTIAL** | FINDING-023/024/025/026 (dep vulns). Direct deps manageable |
+| A07: Authentication Failures | **PARTIAL** | FINDING-007 (localStorage), FINDING-010 (no revocation), FINDING-015 (plaintext refresh) |
+| A08: Data Integrity Failures | **PARTIAL** | No package pinning, HTTPS not enforced. No active exploit path |
+| A09: Logging & Monitoring | **FAIL** | FINDING-029 (no audit trail), FINDING-018 (PII in logs), no alerting |
+| A10: SSRF | **FAIL** | FINDING-003 (image proxy). Critical — immediate fix required |
+
+---
+
 ## Summary Table
 
 | # | Severity | Category | Short Description | Status |
@@ -410,5 +497,10 @@ Each finding follows a standard format. Findings are numbered sequentially and d
 | 024 | High | Dependencies | axios DoS via __proto__ | Open |
 | 025 | High | Dependencies | react-router XSS + CSRF | Open |
 | 026 | Medium | Dependencies | Multiple transitive vulns | Open |
+| 027 | Medium | Injection | Twitter OAuth redirect unsanitized error param | Open |
+| 028 | Medium | Cryptographic | Twitter access tokens unencrypted in DB | Open |
+| 029 | Medium | Logging | No audit trail for admin/sensitive actions | Open |
+| 030 | Medium | Auth | Expired sessions never garbage-collected | Open |
+| 031 | Medium | Auth | Auth rate limiter too lenient (50-100/15min) | Open |
 
-**Totals: 6 Critical, 12 High, 8 Medium = 26 findings**
+**Totals: 6 Critical, 12 High, 13 Medium = 31 findings**
