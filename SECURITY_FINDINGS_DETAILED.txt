@@ -1,0 +1,1406 @@
+================================================================================
+SECURITY REVIEW: Cookie/CSRF Authentication Migration
+Date: 2026-03-01
+Review Scope: 6 files, authentication + CSRF protection
+================================================================================
+
+FINDING SUMMARY:
+- CRITICAL: 5 issues
+- HIGH: 3 issues
+- MEDIUM: 4 issues
+- LOW: 1 issue
+- INFO: 0 issues
+
+TOTAL: 13 actionable findings
+
+================================================================================
+FINDING #1: CSRF Token Exposed in Response Body
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/api/auth.ts
+Line: 329-330
+Severity: CRITICAL
+
+Description:
+  The login endpoint returns the CSRF token in the JSON response body:
+
+  ```
+  sendSuccess(res, {
+    csrfToken,  // ← EXPOSED
+    user: { ... }
+  });
+  ```
+
+  The same token is already sent as a non-httpOnly cookie (readable by JS).
+  Exposing it in the response body is:
+  1. Redundant (client already has it from cookie)
+  2. Dangerous (response bodies get logged to telemetry, Sentry, console logs)
+  3. Violates principle of least privilege (don't expose secrets in response)
+
+Attack Vector:
+  - Error logging middleware captures response: logs include csrfToken
+  - Sentry/DataDog integration captures response: token exposed to third-party
+  - Frontend logs auth response: token in browser console history
+  - Proxy/load balancer logs response: token exposed to infrastructure logs
+
+Risk to Application:
+  If CSRF token is exposed in logs, any system with log access can forge CSRF
+  tokens for other users' browsers. Since the token is in a non-httpOnly cookie,
+  attackers can craft POST requests with matching CSRF header + cookie.
+
+Recommendation:
+  Remove csrfToken from response. Client can read it from cookie via JavaScript:
+
+  ```
+  const csrfToken = document.cookie
+    .split('; ')
+    .find(c => c.startsWith('csrf-token='))
+    ?.split('=')[1];
+  ```
+
+Priority: CRITICAL (fix before any deployment)
+
+================================================================================
+FINDING #2: Refresh Token Path Restriction Breaks in Production
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/api/auth.ts
+Line: 33-39
+Severity: CRITICAL
+
+Description:
+  Refresh token cookie has path restriction:
+
+  ```
+  const REFRESH_COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'lax' as const,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/api/auth/refresh',  // ← ONLY sent to /api/auth/refresh
+  };
+  ```
+
+  HTTP cookie `path` attribute is unreliable in production:
+  1. Different servers may normalize paths differently
+  2. Proxies/load balancers may rewrite paths
+  3. URL variations (trailing slash, query params) affect path matching
+  4. Fragile: if endpoint moves or changes, cookies don't follow
+
+Real-World Breakage:
+  - Endpoint URL: /api/auth/refresh → cookie sent ✓
+  - Endpoint URL: /api/auth/refresh/ → cookie NOT sent (different path)
+  - Endpoint URL: /api/auth/refresh?foo=bar → cookie sent (query param doesn't count)
+  - Reverse proxy rewrites /api/ to /backend/ → cookie NOT sent (path changed)
+  - Future endpoint: /api/auth/refresh-with-new-token → cookie NOT sent
+
+Why This Breaks:
+  The backend expects refresh token in cookie at line 424:
+
+  ```
+  const refreshTokenValue = req.cookies?.refreshToken || req.body?.refreshToken;
+  ```
+
+  If cookie isn't sent due to path mismatch, refreshTokenValue is undefined,
+  and request fails with "Refresh token is required" (400).
+
+Security Risk:
+  This is not a security risk, but a **reliability nightmare** that will be
+  discovered in production when:
+  - URL structure changes
+  - Infrastructure moves to CDN/proxy
+  - Reverse proxy is deployed in front of backend
+  - Multiple servers with different path normalization
+
+Recommendation:
+  Change path to '/', allow all routes to receive the cookie. Refresh token
+  is an httpOnly secret—security is guaranteed by httpOnly + sameSite, not path:
+
+  ```
+  const REFRESH_COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'lax' as const,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/',  // ← Sent to all requests
+  };
+  ```
+
+  The middleware at line 424 will still only use it on /api/auth/refresh,
+  and other endpoints won't try to use it (good practice: don't use tokens
+  outside their designated endpoints).
+
+Priority: CRITICAL (will fail in production)
+
+================================================================================
+FINDING #3: Race Condition in Refresh Token Deduplication
+================================================================================
+File: /Users/mujeeb/foresight/frontend/src/lib/apiClient.ts
+Line: 36-70
+Severity: CRITICAL
+
+Description:
+  When multiple requests fail with 401 simultaneously, the code attempts to
+  deduplicate refresh token calls:
+
+  ```
+  let refreshPromise: Promise<boolean> | null = null;
+
+  // ... in error handler:
+  if (!refreshPromise) {
+    refreshPromise = apiClient
+      .post('/api/auth/refresh')
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  const refreshed = await refreshPromise;
+  ```
+
+  This has a CRITICAL race condition.
+
+Race Condition Scenario:
+  Time T0: Request A hits 401, `!refreshPromise` is TRUE
+  Time T1: Request B hits 401, `!refreshPromise` is TRUE (Promise hasn't been created yet)
+  Time T2: Request A creates refreshPromise (POST /api/auth/refresh)
+  Time T3: Request B checks `!refreshPromise` again, now FALSE, waits for existing Promise
+  Time T4: Request C hits 401, checks `!refreshPromise`, depends on timing
+
+  If T1 < T2 (Request B checks before A creates Promise), both A and B will:
+  - Each create separate refreshPromise calls
+  - Issue DUPLICATE refresh requests to backend
+  - Get DIFFERENT new access tokens + CSRF tokens
+
+  Result: One request retries with token A, another with token B. If CSRF token
+  changed, one gets 403 CSRF error.
+
+Worse: CSRF Token Sync Issue
+  If backend issues a new CSRF token on refresh:
+
+  1. Request A: POST /api/auth/refresh → gets new CSRF token (in cookie + response)
+  2. Request B: WAITS for Request A's Promise
+  3. Promise resolves TRUE (refresh successful)
+  4. Request B retries with OLD CSRF token (from cache)
+  5. Backend: Sees old CSRF token, new access token → 403 CSRF mismatch
+
+  This happens because:
+  - CSRF token is read from `document.cookie` BEFORE refresh (line 13-16)
+  - If frontend caches it in a variable, cached value is stale
+  - apiClient.interceptors.request.use (line 25) reads fresh cookie, but only
+    AFTER the dedup check completes
+
+Attack/Failure Timeline:
+  User makes 2 simultaneous requests under poor network (both timeout):
+
+  T0: POST /api/v2/contests/join (valid CSRF token A, access token expires at T0+1)
+  T1: POST /api/v2/contests/submit (valid CSRF token A, access token expires at T0+1)
+  T2: Both fail with 401 (access token expired at T0+1)
+  T3: Both check !refreshPromise (both TRUE, race condition)
+  T3a: Request 1 creates refreshPromise
+  T3b: Request 2 creates separate refreshPromise (before checking T3a result)
+  T4: Request 1 refreshes: old CSRF A → new CSRF B (in cookie)
+  T5: Request 2 refreshes: old CSRF A → new CSRF B (in cookie)
+  T6a: Request 1 reads CSRF cookie → gets B (correct)
+  T6b: Request 2 reads CSRF cookie → also gets B (correct, lucky)
+  T7: Both requests retry with new token + CSRF B
+  T8: Both succeed
+
+  Lucky in this case, but if timing is different:
+
+  T3a: Request 1 creates refreshPromise
+  T3b: Request 2 waits on Promise from T3a
+  T4: Request 1 POST /api/auth/refresh
+  T5: Request 2 also POST /api/auth/refresh (sends its OWN refresh token)
+  T6: TWO refresh responses come back, both with different new CSRF tokens
+  T7: Request 1 gets new CSRF B, Request 2 gets... which one?
+       Browser processes responses in order they arrive.
+       Last CSRF cookie write wins.
+  T8: Request 1 retries with CSRF B + new access token
+  T9: Request 2 retries with CSRF ? + new access token
+  T10: If CSRF mismatch, 403 error, request fails permanently.
+
+Why Current Code Fails:
+  The issue is that the `!refreshPromise` check is NOT atomic:
+
+  ```
+  if (!refreshPromise) {  // ← Check happens here
+    refreshPromise = ...   // ← Assignment happens here
+  }
+
+  // Multiple concurrent 401s can both see !refreshPromise as true
+  // before either does the assignment
+  ```
+
+  JavaScript has microtask execution, so multiple async functions can all
+  see the same state before one updates it.
+
+Recommendation:
+  Implement a truly atomic dedup pattern:
+
+  ```
+  let refreshPromise: Promise<boolean> | null = null;
+  let isRefreshing = false;
+
+  apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const original = error.config;
+
+      if (
+        error.response?.status === 401 &&
+        !original._retried &&
+        !original.url?.includes('/api/auth/refresh')
+      ) {
+        original._retried = true;
+
+        // Use a mutex-like pattern
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            await apiClient.post('/api/auth/refresh');
+            // CSRF token is in cookie now (set by server response)
+            return apiClient(original);
+          } finally {
+            isRefreshing = false;
+          }
+        } else {
+          // Another request is refreshing, wait a moment then retry
+          // (this is not perfect, but better than race condition)
+          await new Promise(r => setTimeout(r, 100));
+          return apiClient(original);
+        }
+      }
+
+      return Promise.reject(error);
+    },
+  );
+  ```
+
+  Even better: Use a request queue to serialize refresh + retries:
+
+  ```
+  let refreshPromise: Promise<boolean> | null = null;
+  const retryQueue: Array<() => Promise<any>> = [];
+
+  async function drainRetryQueue() {
+    while (retryQueue.length > 0) {
+      const retry = retryQueue.shift();
+      if (retry) {
+        try {
+          await retry();
+        } catch (e) {
+          // Retry failed, move on to next
+        }
+      }
+    }
+  }
+
+  apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const original = error.config;
+
+      if (error.response?.status === 401 && !original._retried) {
+        original._retried = true;
+
+        if (!refreshPromise) {
+          refreshPromise = (async () => {
+            try {
+              await apiClient.post('/api/auth/refresh');
+              // Drain retry queue now that token is fresh
+              await drainRetryQueue();
+              return true;
+            } catch {
+              return false;
+            } finally {
+              refreshPromise = null;
+            }
+          })();
+        }
+
+        const refreshed = await refreshPromise;
+        if (refreshed) {
+          return apiClient(original);
+        }
+      }
+
+      return Promise.reject(error);
+    },
+  );
+  ```
+
+Priority: CRITICAL (race condition will cause 403 errors in production under high load)
+
+================================================================================
+FINDING #4: Unclear CSRF Protection Exemption Logic
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/middleware/csrf.ts
+Line: 20-28
+Severity: HIGH
+
+Description:
+  The CSRF middleware has confusing exemption logic:
+
+  ```
+  // Safe methods don't need CSRF protection
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+
+  // Auth login/verify endpoints are exempt (no session yet)
+  if (req.path === '/api/auth/verify') {
+    return next();
+  }
+
+  // If no access token cookie, this is likely public/unauthenticated — skip
+  if (!req.cookies?.accessToken) {
+    return next();
+  }
+  ```
+
+  The third exemption (line 26) is the problem: "If no accessToken, skip CSRF"
+
+  This creates multiple issues:
+  1. **Not explicit:** Future developers won't know which endpoints are exempt
+  2. **Footgun:** If someone adds a mutation endpoint that doesn't require auth,
+     CSRF is automatically skipped (bad!)
+  3. **Backwards:** Logic says "if no auth, skip CSRF", but should be
+     "if mutation, always check CSRF" (regardless of auth)
+  4. **Multiple exemptions:** Line 21 exempts /api/auth/verify, but what about
+     /api/auth/refresh? Is it exempted? (It's NOT explicitly listed.)
+
+Why This Matters:
+  Consider a hypothetical future endpoint:
+
+  ```
+  // /api/public/subscribe-to-newsletter (POST, no auth required)
+  router.post('/public/subscribe-to-newsletter', asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    await db('newsletter_subscribers').insert({ email });
+    res.json({ success: true });
+  }));
+  ```
+
+  An attacker can CSRF this endpoint:
+
+  ```html
+  <!-- attacker.com -->
+  <form method="POST" action="https://foresight.com/api/public/subscribe-to-newsletter">
+    <input name="email" value="attacker@evil.com">
+    <script>document.forms[0].submit();</script>
+  </form>
+  ```
+
+  The middleware sees:
+  1. Method is POST ✓
+  2. Path is not /api/auth/verify ✓
+  3. No accessToken cookie ✗ → SKIP CSRF CHECK
+  4. Request proceeds, attacker subscribes victim to newsletter
+
+  Result: CSRF attack succeeds because middleware auto-exempts unauthenticated routes.
+
+The `/api/auth/refresh` Issue:
+  Looking at line 21, only `/api/auth/verify` is explicitly exempted.
+  `/api/auth/refresh` is NOT listed.
+
+  Does it work? Let's trace:
+  1. POST /api/auth/refresh
+  2. Line 21: Path is not `/api/auth/verify` → continue
+  3. Line 26: Check if accessToken cookie exists
+
+  On refresh:
+  - Initial refresh (after login): accessToken exists → CSRF check required
+  - Post-401 refresh (interceptor): accessToken expired, but cookie might still be there
+
+  Actually, this might work by accident because:
+  - Frontend sends CSRF token (from cookie) with refresh request
+  - Middleware sees accessToken cookie exists → enforces CSRF check
+  - Frontend had CSRF token from login → CSRF check passes
+
+  But it's not EXPLICIT. Future maintainers might move the refresh endpoint
+  or remove the accessToken check, and suddenly CSRF starts failing on refresh.
+
+Recommendation:
+  Replace implicit exemption logic with explicit list:
+
+  ```
+  const CSRF_EXEMPT_ROUTES = [
+    '/api/auth/verify',      // Login: no session yet
+    '/api/auth/refresh',     // Refresh: token is credential, not cookie-based
+    '/api/auth/logout',      // Logout: should work with expired token too
+  ];
+
+  export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+    // Safe methods don't need CSRF protection
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      return next();
+    }
+
+    // Explicit list of CSRF-exempt routes
+    if (CSRF_EXEMPT_ROUTES.includes(req.path)) {
+      return next();
+    }
+
+    // All other POST/PUT/PATCH/DELETE require CSRF
+    const cookieToken = req.cookies['csrf-token'];
+    const headerToken = req.headers['x-csrf-token'];
+
+    if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+      res.status(403).json({ success: false, error: 'CSRF token mismatch' });
+      return;
+    }
+
+    next();
+  }
+  ```
+
+  Remove the `!req.cookies?.accessToken` check entirely. All state-changing
+  requests should verify CSRF, authenticated or not.
+
+Priority: HIGH (will cause CSRF bypass on future endpoints)
+
+================================================================================
+FINDING #5: Token Auth Accepts Unsafe Fallback
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/middleware/auth.ts
+Line: 18
+Severity: HIGH
+
+Description:
+  The authentication middleware accepts tokens from TWO sources:
+
+  ```
+  const token = req.cookies?.accessToken || extractTokenFromHeader(req.headers.authorization);
+  ```
+
+  This means:
+  1. Try to read from httpOnly cookie (preferred, secure)
+  2. Fallback to Authorization: Bearer <token> header (dangerous)
+
+  Having this fallback undermines all the security benefits of httpOnly cookies.
+
+Why httpOnly Cookies Are Used:
+  - Cannot be stolen by JavaScript (XSS attacks)
+  - Cannot be read or manipulated by cross-origin code
+  - Sent automatically by browser, less prone to handler errors
+
+Why Authorization Headers Are Dangerous:
+  - Can be logged by middleware, proxies, error handlers
+  - Can be captured in network traces
+  - Can be leased in Sentry/monitoring if you log headers
+  - Can be read by JavaScript if it somehow gets access to request/response objects
+  - Encourages clients to leak tokens (custom clients forget to sanitize logs)
+
+The Fallback Problem:
+  If a developer adds a custom client (mobile app, CLI tool, bot) that uses
+  Authorization headers, suddenly that entire client class has:
+  - No CSRF protection (middleware doesn't check CSRF for header-auth requests)
+  - Higher leak risk (headers get logged)
+  - Less secure than cookie-based auth
+
+  Even worse: If you later add browser support for this client (web version),
+  it will work with Authorization headers, and CSRF protection won't apply.
+
+Scenarios Where Header Auth Bypasses CSRF:
+  1. POST /api/v2/contests/join (mutation, needs CSRF)
+  2. Frontend loads custom script that uses Authorization header instead of cookies
+  3. Script sends: Authorization: Bearer <token>, no X-CSRF-Token header
+  4. Middleware checks: `!req.cookies?.accessToken` → TRUE, skips CSRF
+  5. CSRF check at line 33 in csrf.ts is bypassed
+  6. Attacker can CSRF this endpoint by making the victim visit their site
+
+  (Actually, re-reading the code: the CSRF middleware checks line 26:
+  `if (!req.cookies?.accessToken) return next();`
+  This means if there's NO accessToken cookie, CSRF is skipped.
+  So if the frontend uses Authorization header (no cookie), CSRF would be skipped.
+  This is actually the intended behavior for API clients, but it's dangerous
+  if accidentally used from a browser.)
+
+The Real Issue:
+  Having both auth methods available creates confusion:
+  - Are web browsers supposed to use cookies or headers?
+  - Are API clients supposed to use cookies or headers?
+  - What if a browser-based app accidentally uses headers?
+  - What if an API client accidentally uses cookies?
+
+  In your case:
+  - Web browsers SHOULD use cookies (httpOnly, CSRF-protected)
+  - API clients (if any) SHOULD use Authorization headers (CSRF-exempt)
+  - But the code allows mixing, which is a security anti-pattern
+
+Recommendation:
+  Choose one path:
+
+  **Option A: Cookies only for web browsers** (RECOMMENDED)
+  ```
+  export function authenticate(req: Request, res: Response, next: NextFunction): void {
+    const token = req.cookies?.accessToken;
+
+    if (!token) {
+      res.status(401).json({ success: false, error: 'No token provided' });
+      return;
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      res.status(401).json({ success: false, error: 'Invalid or expired token' });
+      return;
+    }
+
+    req.user = payload;
+    next();
+  }
+  ```
+
+  Then, if you need to support API clients:
+  ```
+  export function authenticateApi(req: Request, res: Response, next: NextFunction): void {
+    const token = extractTokenFromHeader(req.headers.authorization);
+
+    if (!token) {
+      res.status(401).json({ success: false, error: 'No token provided' });
+      return;
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      res.status(401).json({ success: false, error: 'Invalid or expired token' });
+      return;
+    }
+
+    req.user = payload;
+    next();
+  }
+  ```
+
+  Use `authenticateApi` only on specific routes that are API-only and don't
+  need CSRF protection:
+  ```
+  // These endpoints are API-only, no CSRF needed
+  router.post('/api/ai/analyze', authenticateApi, someHandler);
+
+  // These endpoints are web-based, CSRF required via cookie auth
+  router.post('/api/v2/contests/join', authenticate, someHandler);
+  ```
+
+  **Option B: Headers only for all clients** (NOT RECOMMENDED for web)
+  If you go this route, you MUST:
+  - Never store token in cookies
+  - Require CSRF even for Authorization header requests
+  - Accept higher risk of token leaks
+  - Is really only suitable for native mobile apps, not web browsers
+
+Priority: HIGH (allows CSRF bypass if header-based auth is accidentally used from browser)
+
+================================================================================
+FINDING #6: Logout Deletes All Sessions
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/api/auth.ts
+Line: 478
+Severity: HIGH
+
+Description:
+  The logout endpoint deletes ALL sessions for a user:
+
+  ```
+  router.post('/logout', authenticate, asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    await db('sessions').where({ user_id: userId }).del();  // ← ALL sessions deleted
+    // ...
+  }));
+  ```
+
+  This logs out the user on ALL devices simultaneously.
+
+Why This Is Bad:
+  1. **Multi-device nightmare:** User logs out on phone, automatically logs out on desktop
+  2. **No device management:** No way to "logout from device X, keep device Y"
+  3. **Sessions table design:** You're storing sessions in DB, probably intending to support multiple per user, but code doesn't use that capability
+  4. **No audit trail:** Can't tell which session/device initiated logout
+  5. **Admin revocation impossible:** No way to revoke a single compromised session without logging out all devices
+
+The Right Pattern:
+  1. Issue a session ID on login (already doing: line 267 in auth.ts)
+  2. Store session ID in a cookie (not currently doing)
+  3. On logout, delete only that session (use session ID from cookie)
+  4. User remains logged in on other devices
+
+  Benefits:
+  - Multi-device support
+  - Device management UI possible (show "logged in on iPhone, Desktop")
+  - Admin can revoke single sessions (security team can logout compromised account from 1 device)
+  - Audit trail (each session has a record)
+
+Current Code Already Has Session ID:
+  Looking at line 266-275:
+  ```
+  await db('sessions').insert({
+    id: uuidv4(),  // ← Session ID is already generated
+    user_id: user.id,
+    access_token: accessToken,
+    refresh_token: hashToken(refreshToken),
+    expires_at: expiresAt,
+    ip_address: req.ip,
+    user_agent: req.get('user-agent'),
+    created_at: db.fn.now(),
+  });
+  ```
+
+  So sessions table has an `id` column. But:
+  1. Session ID is not sent to frontend as a cookie
+  2. Logout doesn't use it
+
+Recommendation:
+  ```
+  // On login (after line 275)
+  res.cookie('sessionId', session.id, {
+    httpOnly: true,
+    secure: IS_PROD,
+    sameSite: 'lax',
+    path: '/',
+  });
+
+  // On logout
+  router.post('/logout', authenticate, asyncHandler(async (req: Request, res: Response) => {
+    const sessionId = req.cookies?.sessionId;
+
+    if (sessionId) {
+      // Delete only this session
+      await db('sessions').where({ id: sessionId }).del();
+    } else {
+      // Fallback: delete all (for legacy clients)
+      const userId = req.user!.userId;
+      await db('sessions').where({ user_id: userId }).del();
+    }
+
+    res.clearCookie('accessToken', { path: '/' });
+    res.clearCookie('refreshToken', { path: '/' });
+    res.clearCookie('csrf-token', { path: '/' });
+    res.clearCookie('sessionId', { path: '/' });
+
+    sendSuccess(res, { message: 'Logged out successfully' });
+  }));
+  ```
+
+Priority: HIGH (degraded UX for multi-device users)
+
+================================================================================
+FINDING #7: No Refresh Token Rotation
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/utils/auth.ts
+Severity: HIGH
+
+Description:
+  Refresh tokens are issued once and reused indefinitely:
+
+  ```
+  // auth.ts line 255
+  const refreshToken = createRefreshToken({...});
+
+  // Line 270
+  refresh_token: hashToken(refreshToken),  // ← Stored in DB, never updated
+
+  // ... then in refresh endpoint (line 419-467):
+  const newAccessToken = createAccessToken({...});
+
+  // Line 458-460
+  await db('sessions')
+    .where({ id: session.id })
+    .update({ access_token: newAccessToken });  // ← New access token, but same refresh token
+  ```
+
+  Every time the refresh endpoint is called, the SAME refresh token is used.
+  Once a refresh token is compromised, it's valid for its entire 30-day lifespan.
+
+Why This Is Bad:
+  **Industry standard for sensitive tokens is rotation on use.**
+
+  If refresh token is leaked:
+  - Via DB breach → attacker has 30 days to use it
+  - Via network sniff → attacker has 30 days to use it
+  - Via XSS (despite httpOnly) → attacker has 30 days to use it
+  - Via log file → attacker has 30 days to use it
+
+  With rotation:
+  - Attacker can use compromised token ONCE
+  - Token is immediately invalidated
+  - Remaining window: seconds, not 30 days
+
+Current Implementation Doesn't Detect Reuse:
+  When a user calls `/api/auth/refresh`:
+  1. Provide refresh token from cookie
+  2. Validate against hash in DB (line 437)
+  3. Issue new access token
+  4. DO NOT issue new refresh token
+  5. DO NOT invalidate old refresh token
+
+  If an attacker obtains the refresh token:
+  1. Call `/api/auth/refresh` with stolen token
+  2. Refresh succeeds
+  3. Attacker can keep calling `/api/auth/refresh` indefinitely
+  4. Backend has no way to know the token was stolen (both legitimate user and attacker use same token)
+
+Attack Timeline:
+  1. User logs in: refresh token = ABCD1234
+  2. Attacker breaches DB, steals ABCD1234
+  3. User calls /api/auth/refresh normally → succeeds
+  4. Attacker calls /api/auth/refresh with ABCD1234 → succeeds (backend sees same token)
+  5. Backend can't tell which session is legitimate
+  6. Both user and attacker keep using same token for 30 days
+
+  With rotation:
+  1. User logs in: refresh token = ABCD1234
+  2. Attacker breaches DB, steals ABCD1234
+  3. User calls /api/auth/refresh normally:
+     - Provides ABCD1234
+     - Backend validates and refreshes
+     - Backend issues new token: EFGH5678
+     - Backend deletes ABCD1234 from DB
+  4. Attacker calls /api/auth/refresh with ABCD1234:
+     - Backend looks up ABCD1234 → not found (was invalidated)
+     - Refresh fails with 401
+     - This is the attack detection moment
+
+Recommendation:
+  Implement refresh token rotation:
+
+  ```
+  // In auth.ts, refresh endpoint
+  router.post('/refresh', authLimiter, asyncHandler(async (req: Request, res: Response) => {
+    const refreshTokenValue = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (!refreshTokenValue) {
+      throw new AppError('Refresh token is required', 400);
+    }
+
+    const payload = verifyToken(refreshTokenValue);
+    if (!payload) {
+      throw new AppError('Invalid or expired refresh token', 401);
+    }
+
+    const session = await db('sessions')
+      .where({ refresh_token: hashToken(refreshTokenValue) })
+      .first();
+
+    if (!session) {
+      throw new AppError('Session not found', 401);
+    }
+
+    if (new Date(session.expires_at) < new Date()) {
+      await db('sessions').where({ id: session.id }).del();
+      // ... clear cookies
+      throw new AppError('Session expired', 401);
+    }
+
+    // Create NEW access token and NEW refresh token
+    const newAccessToken = createAccessToken({
+      userId: payload.userId,
+      walletAddress: payload.walletAddress,
+      role: payload.role,
+    });
+
+    const newRefreshToken = createRefreshToken({
+      userId: payload.userId,
+      walletAddress: payload.walletAddress,
+      role: payload.role,
+    });
+
+    // Update session with BOTH new tokens
+    await db('sessions')
+      .where({ id: session.id })
+      .update({
+        access_token: newAccessToken,
+        refresh_token: hashToken(newRefreshToken),  // ← New hash, old token invalidated
+        updated_at: db.fn.now(),
+      });
+
+    // Set new access token cookie
+    res.cookie('accessToken', newAccessToken, ACCESS_COOKIE_OPTIONS);
+
+    // Set new refresh token cookie
+    res.cookie('refreshToken', newRefreshToken, REFRESH_COOKIE_OPTIONS);
+
+    sendSuccess(res, { refreshed: true });
+  }));
+  ```
+
+  Also, add a table index for faster refresh token lookups:
+  ```sql
+  CREATE INDEX idx_sessions_refresh_token ON sessions(refresh_token);
+  ```
+
+Priority: HIGH (extends compromise window from seconds to 30 days)
+
+================================================================================
+FINDING #8: Infinite Retry Loop Without Backoff
+================================================================================
+File: /Users/mujeeb/foresight/frontend/src/hooks/usePrivyAuth.ts
+Line: 71-76
+Severity: HIGH
+
+Description:
+  When backend sync fails with network error:
+
+  ```
+  setSyncError('network_error');
+  hasAttemptedAuth.current = false;
+  setTimeout(() => {
+    if (!isBackendAuthed) {
+      syncWithBackend();
+    }
+  }, 4000);
+  ```
+
+  This retries every 4 seconds indefinitely with no:
+  - Exponential backoff
+  - Maximum retry limit
+  - User notification
+
+Why This Is Bad:
+  1. **Battery drain:** Mobile device keeps retrying indefinitely every 4 seconds
+  2. **Network spam:** User on slow network gets hammered with requests
+  3. **No failure detection:** User can be stuck in retry loop for hours
+  4. **Confusing UX:** UI looks normal but background is spamming network
+
+Scenario:
+  - User on weak WiFi (frequent 500ms timeouts)
+  - Backend has brief outage (1 hour)
+  - Frontend immediately starts retrying every 4 seconds
+  - User puts phone down, battery drains over 1 hour from constant requests
+  - Even if user closes the app, retries might continue (depends on framework)
+
+Also: Dependency Issue at Line 72:
+  ```
+  setTimeout(() => {
+    if (!isBackendAuthed) {  // ← This captures initial value, not current
+      syncWithBackend();
+    }
+  }, 4000);
+  ```
+
+  The `isBackendAuthed` variable in the timeout closure is the value at
+  line 71, not the current value. If another process sets `isBackendAuthed = true`
+  between line 71 and the timeout firing, the check still passes.
+
+Recommendation:
+  Implement exponential backoff with max retries:
+
+  ```
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
+  const BASE_DELAY = 1000;  // 1 second
+  const MAX_DELAY = 30000;  // 30 seconds
+
+  const syncWithBackend = useCallback(async () => {
+    if (hasAttemptedAuth.current) return;
+    hasAttemptedAuth.current = true;
+    setSyncError(null);
+
+    try {
+      const privyToken = await getAccessToken();
+      if (!privyToken) {
+        setSyncError('no_privy_token');
+        hasAttemptedAuth.current = false;
+        return;
+      }
+
+      // Try to use existing session
+      try {
+        const meResponse = await apiClient.get('/api/auth/me');
+        if (meResponse.status === 200) {
+          setIsBackendAuthed(true);
+          retryCountRef.current = 0;
+          return;
+        }
+      } catch {
+        // Continue to sync
+      }
+
+      // Sync with backend
+      const response = await apiClient.post('/api/auth/verify', { privyToken });
+      if (response.data?.success) {
+        setIsBackendAuthed(true);
+        retryCountRef.current = 0;  // Reset on success
+        window.location.reload();
+      } else {
+        setSyncError('unexpected_response');
+        hasAttemptedAuth.current = false;
+      }
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const msg = error?.response?.data?.error || error?.message || 'Unknown error';
+
+      if (status === 429) {
+        setSyncError('rate_limited');
+        // Don't retry on rate limit; let user wait
+        hasAttemptedAuth.current = false;
+      } else {
+        // Network error or 5xx
+        retryCountRef.current++;
+
+        if (retryCountRef.current <= MAX_RETRIES) {
+          // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s, 30s, ...
+          const delayMs = Math.min(BASE_DELAY * Math.pow(2, retryCountRef.current - 1), MAX_DELAY);
+
+          console.log(`[PrivyAuth] Retry ${retryCountRef.current}/${MAX_RETRIES} in ${delayMs}ms`);
+          setSyncError('retrying');
+
+          setTimeout(() => {
+            hasAttemptedAuth.current = false;
+            syncWithBackend();
+          }, delayMs);
+        } else {
+          // Max retries exceeded
+          setSyncError('max_retries_exceeded');
+          hasAttemptedAuth.current = false;
+        }
+      }
+    }
+  }, [getAccessToken]);
+  ```
+
+Priority: HIGH (kills battery and network on persistent failures)
+
+================================================================================
+FINDING #9: CSRF Token Comparison Not Constant-Time
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/middleware/csrf.ts
+Line: 33
+Severity: MEDIUM
+
+Description:
+  CSRF token comparison uses standard equality:
+
+  ```
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    res.status(403).json({ success: false, error: 'CSRF token mismatch' });
+  }
+  ```
+
+  Standard `!==` operator can leak timing information about the comparison.
+
+Why This Matters:
+  A timing attack against `!==` works like this:
+
+  1. Attacker wants to forge a CSRF token
+  2. Token is 64 hex characters: `a1b2c3d4...`
+  3. Attacker tries: `00000000...` (all zeros)
+     - Comparison: '0' !== 'a' → FAIL immediately (microsecond 1)
+  4. Attacker tries: `a0000000...` (correct first char, then zeros)
+     - Comparison: 'a' === 'a' ✓, '0' !== '1' → FAIL (microsecond 2)
+  5. By measuring response time, attacker learns: "your token starts with 'a'"
+  6. Attacker repeats for each character until they have the full token
+
+  Total time to forge 64-character token via timing attack:
+  - 64 chars × 16 possible values (0-F hex) × multiple attempts = thousands of requests
+  - Impractical if server has rate limiting (you do: authLimiter)
+  - Impractical if CSRF token is non-reusable (after use, new token issued)
+
+Why This Is Low Priority (But Still Bad):
+  1. **Requires stable network timing:** Latency variance > timing signal
+  2. **Requires rate limiting bypass:** authLimiter protects against brute force
+  3. **Requires token persistence:** If token changes on each request, impossible to forge
+  4. **More theoretical than practical** BUT security best practice is constant-time comparison
+
+  Your code DOES have:
+  - Rate limiting (authLimiter on sensitive endpoints)
+  - CSRF tokens likely expire and rotate
+  - So practical attack difficulty is HIGH
+
+  But the **correct practice** is constant-time comparison anyway.
+
+Recommendation:
+  Use crypto.timingSafeEqual for security-sensitive comparisons:
+
+  ```
+  import crypto from 'crypto';
+
+  if (!cookieToken || !headerToken) {
+    res.status(403).json({ success: false, error: 'CSRF token mismatch' });
+    return;
+  }
+
+  try {
+    // Constant-time comparison
+    crypto.timingSafeEqual(
+      Buffer.from(cookieToken),
+      Buffer.from(headerToken)
+    );
+  } catch {
+    // timingSafeEqual throws if buffers are different length
+    res.status(403).json({ success: false, error: 'CSRF token mismatch' });
+    return;
+  }
+
+  next();
+  ```
+
+Priority: MEDIUM (theoretical but correct practice)
+
+================================================================================
+FINDING #10: No Logging on Token Validation Failure
+================================================================================
+File: /Users/mujeeb/foresight/backend/src/middleware/auth.ts
+Line: 25-29
+Severity: MEDIUM
+
+Description:
+  When token validation fails, there's no logging:
+
+  ```
+  const payload = verifyToken(token);
+
+  if (!payload) {
+    res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    return;
+  }
+  ```
+
+  Silent failure makes it impossible to detect:
+  - Brute force attacks (attacker trying many tokens)
+  - Token forgery (attacker crafting tokens)
+  - Key compromise (tokens signed with wrong key = major incident)
+  - Token tampering (legitimate tokens modified)
+
+Why This Matters:
+  In production, token validation failures might be:
+  1. **Expected:** User's token expired (normal, happens daily)
+  2. **Suspicious:** Attacker trying random tokens (brute force)
+  3. **Critical:** Tokens signed with old key (key rotation failed)
+
+  Without logging, you can't:
+  - Detect attacks in progress
+  - Debug token issues
+  - Audit security events
+  - Alert on anomalies (e.g., 1000 failed validations from single IP)
+
+Scenarios Where Logging Is Critical:
+  1. **Attacker brute-forces tokens:**
+     - Normal: 1-2 failed validations per user per day
+     - Attack: 100 failed validations from single IP in 1 minute
+     - Without logging: undetectable
+
+  2. **Key compromise:**
+     - If JWT_SECRET leaks, attackers can forge tokens
+     - Legitimate tokens fail validation (signed with old secret)
+     - Without logging: looks like normal token expiry
+
+  3. **Algorithm substitution:**
+     - Attacker sends token with `alg: 'none'` or `alg: 'RS256'`
+     - Code correctly rejects (line 50: `algorithms: ['HS256']`)
+     - But no log entry to detect pattern
+
+  4. **Clock skew:**
+     - Server clock skips forward (NTP issue)
+     - All tokens become "expired"
+     - Without logging: mysterious 401 errors everywhere
+
+Recommendation:
+  Add strategic logging to distinguish failure types:
+
+  ```
+  import logger from '../utils/logger';
+
+  const payload = verifyToken(token);
+
+  if (!payload) {
+    // Log the failure, but be careful not to log the token itself
+    logger.warn('Token validation failed', {
+      context: 'Authentication',
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+      url: req.method + ' ' + req.path,
+      // Don't log the token itself (security risk)
+      // Don't log full Authorization header (might be captured by other systems)
+    });
+
+    res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    return;
+  }
+  ```
+
+  Then, in your logging system, set up alerts:
+  - Alert if >100 failed validations from single IP in 1 hour
+  - Alert if >50 failed validations globally in 1 minute
+  - Alert if failed validation + user agent = bot/scanner
+
+Priority: MEDIUM (critical for post-incident investigation and anomaly detection)
+
+================================================================================
+FINDING #11: CSRF Token Parsing Lacks Validation
+================================================================================
+File: /Users/mujeeb/foresight/frontend/src/lib/apiClient.ts
+Line: 13-16
+Severity: MEDIUM
+
+Description:
+  CSRF token is extracted from cookie without format validation:
+
+  ```
+  function getCsrfToken(): string | undefined {
+    const match = document.cookie
+      .split('; ')
+      .find((c) => c.startsWith('csrf-token='));
+    return match?.split('=')[1];  // ← No validation
+  }
+  ```
+
+  Backend generates tokens as:
+  ```
+  crypto.randomBytes(32).toString('hex')  // 64 hex characters
+  ```
+
+  But frontend doesn't validate this format. If:
+  1. Attacker injects malformed cookie (via domain hijack, etc.)
+  2. Frontend sends malformed token to backend
+  3. Backend rejects with 403 (correct)
+  4. But frontend can't distinguish between "wrong CSRF" and "malformed CSRF"
+
+Why This Matters:
+  1. **Defense in depth:** Validate at each layer
+  2. **Error diagnostics:** Malformed token tells you cookies are corrupted
+  3. **Security monitoring:** Malformed tokens can indicate attack
+  4. **Less likely:** But if cookies are injectable (CNAME confusion, subdomain attack), malformed tokens help detect it
+
+Real Scenario:
+  1. Attacker registers attacker.foresight.com (subdomain)
+  2. Attacker can set cookies for *.foresight.com (depending on domain flag)
+  3. Attacker sets csrf-token=MALICIOUS_VALUE
+  4. User visits attacker.foresight.com, then app.foresight.com
+  5. App.foresight.com sees csrf-token=MALICIOUS_VALUE (no validation)
+  6. Frontend sends MALICIOUS_VALUE in X-CSRF-Token header
+  7. Backend rejects (MALICIOUS_VALUE !== actual token)
+
+  If frontend validated, step 6 would be:
+  6. Frontend sees MALICIOUS_VALUE is not valid hex, doesn't send it
+  6b. Frontend reports error: "CSRF token is malformed"
+  7. User/developer knows something is wrong with cookies
+
+Also: Cookie Parsing Edge Cases:
+  ```
+  // What if cookie value contains =?
+  document.cookie = 'csrf-token=abc=def=ghi'
+  split('=')[1] → 'abc'  // Wrong! Should be 'abc=def=ghi'
+  ```
+
+  Your code doesn't handle this correctly. Fixed version:
+  ```
+  split('=').slice(1).join('=')  // Correct: 'abc=def=ghi'
+  ```
+
+  But since your backend generates hex-only tokens, this isn't currently an issue.
+
+Recommendation:
+  Validate CSRF token format before sending:
+
+  ```
+  function getCsrfToken(): string | undefined {
+    const match = document.cookie
+      .split('; ')
+      .find((c) => c.startsWith('csrf-token='));
+
+    const token = match?.split('=').slice(1).join('=');
+
+    // Validate format: 64 hex characters
+    if (token && /^[a-f0-9]{64}$/.test(token)) {
+      return token;
+    }
+
+    if (token) {
+      console.warn('[apiClient] CSRF token has invalid format:', {
+        length: token.length,
+        sample: token.substring(0, 10) + '...',
+      });
+    }
+
+    return undefined;
+  }
+  ```
+
+Priority: MEDIUM (adds defense-in-depth, helps with debugging)
+
+================================================================================
+FINDING #12: Window Reload After Login Loses React State
+================================================================================
+File: /Users/mujeeb/foresight/frontend/src/hooks/usePrivyAuth.ts
+Line: 56
+Severity: MEDIUM
+
+Description:
+  After successful backend sync, the hook reloads the page:
+
+  ```
+  if (response.data?.success) {
+    setIsBackendAuthed(true);
+    console.log('[PrivyAuth] Backend session created');
+    window.location.reload();  // ← Hard full-page reload
+  }
+  ```
+
+Why This Is Bad:
+  1. **Loses React state:** Any components with local state are reset
+  2. **Flashing UI:** Page goes blank, then reloads (bad UX)
+  3. **Double analytics:** Page view counted twice
+  4. **Double bundle load:** JavaScript is re-parsed and re-executed
+  5. **Slow:** Hard reload is slower than React re-render
+  6. **Network hit:** All static assets are re-requested (even if cached)
+
+Why Reload Was Added:
+  Probably to "refresh the page after login" thinking. But React already handles this
+  through state updates. When `isBackendAuthed` changes to true, dependent useEffect
+  hooks and components will re-render with the new state.
+
+Better Approach:
+  Remove the reload. Instead:
+  1. Set `isBackendAuthed = true` (already doing)
+  2. Components observe this state and update (useEffect, conditional rendering)
+  3. If user data needs refreshing, invalidate query caches
+
+  ```
+  if (response.data?.success) {
+    setIsBackendAuthed(true);
+    console.log('[PrivyAuth] Backend session created');
+    // Don't reload; let React update
+
+    // If using React Query, invalidate queries
+    // queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+  }
+  ```
+
+Recommendation:
+  Remove `window.location.reload()`. If you need to refresh specific data:
+
+  ```
+  // Use a ref to track when auth completes
+  const authCompletedRef = useRef(false);
+
+  useEffect(() => {
+    if (isBackendAuthed && !authCompletedRef.current) {
+      authCompletedRef.current = true;
+      // Refresh specific queries if needed
+      // But don't reload page
+    }
+  }, [isBackendAuthed]);
+  ```
+
+Priority: MEDIUM (UX and performance issue)
+
+================================================================================
+FINDING #13: Backend Logout Errors Silently Caught
+================================================================================
+File: /Users/mujeeb/foresight/frontend/src/hooks/usePrivyAuth.ts
+Line: 114
+Severity: LOW
+
+Description:
+  Backend logout request errors are silently caught:
+
+  ```
+  const handleLogout = useCallback(async () => {
+    try {
+      await apiClient.post('/api/auth/logout').catch(() => {});  // ← Errors ignored
+      setIsBackendAuthed(false);
+      await logout();
+    } catch (error) {
+      console.error('[PrivyAuth] Logout failed:', error);
+      setIsBackendAuthed(false);
+    }
+  }, [logout]);
+  ```
+
+Why This Is Bad:
+  1. **Silent failure:** If backend logout fails, frontend doesn't know
+  2. **Session not cleared:** Backend session still exists, cookies still valid
+  3. **Security risk:** If user logs out thinking they're logged out, but backend session is still active
+  4. **No user feedback:** User doesn't know logout failed
+
+  Scenario:
+  - Backend is temporarily down
+  - User clicks logout
+  - Backend logout fails (silently caught)
+  - Frontend clears session and Privy
+  - User thinks they're logged out
+  - Attacker with network access can replay old cookies to access session
+  - Session was never invalidated on backend
+
+Recommendation:
+  Either:
+
+  **Option A: Don't catch backend logout errors**
+  ```
+  const handleLogout = useCallback(async () => {
+    try {
+      // Don't catch errors; let user know if logout fails
+      await apiClient.post('/api/auth/logout');
+      setIsBackendAuthed(false);
+      await logout();  // Privy logout
+    } catch (error) {
+      console.error('[PrivyAuth] Backend logout failed:', error);
+      setSyncError('logout_failed');
+      // Don't proceed to Privy logout until backend confirms
+    }
+  }, [logout]);
+  ```
+
+  **Option B: Ensure cookies are cleared even if backend fails**
+  ```
+  const handleLogout = useCallback(async () => {
+    try {
+      await apiClient.post('/api/auth/logout').catch(() => {
+        // Backend logout failed, but still clear cookies locally
+        console.warn('[PrivyAuth] Backend logout failed, clearing cookies anyway');
+      });
+    } finally {
+      // Always clear cookies from DOM, even if backend fails
+      const cookieNames = ['accessToken', 'refreshToken', 'csrf-token', 'sessionId'];
+      cookieNames.forEach(name => {
+        document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+      });
+
+      setIsBackendAuthed(false);
+      await logout();  // Privy logout
+    }
+  }, [logout]);
+  ```
+
+  **Option C (Best): Combine both**
+  ```
+  const handleLogout = useCallback(async () => {
+    try {
+      await apiClient.post('/api/auth/logout');
+    } catch (error) {
+      console.error('[PrivyAuth] Backend logout failed:', error);
+      // Log this as a security event
+      // Still proceed, but alert user
+      setSyncError('logout_backend_failed');
+    } finally {
+      // Always clear local cookies
+      const cookieNames = ['accessToken', 'refreshToken', 'csrf-token', 'sessionId'];
+      cookieNames.forEach(name => {
+        document.cookie = `${name}=; path=/; max-age=0;`;
+      });
+
+      setIsBackendAuthed(false);
+      await logout();  // Privy logout
+    }
+  }, [logout]);
+  ```
+
+Priority: LOW (unlikely to occur in practice, but good security hardening)
+
+================================================================================
+END OF DETAILED FINDINGS
+================================================================================
+
+SUMMARY:
+- 5 CRITICAL issues (must fix before production)
+- 3 HIGH issues (should fix before launch)
+- 4 MEDIUM issues (fix in this sprint)
+- 1 LOW issue (fix soon)
+
+Total remediation time: ~2-3 days for CRITICAL + HIGH fixes
+Testing time: ~1 day for CSRF + refresh token flow testing
+
+See SECURITY_REVIEW_CSRF_AUTH.md for detailed analysis, code recommendations,
+and attack scenarios.
