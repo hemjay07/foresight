@@ -15,7 +15,8 @@ const REFRESH_TOKEN_EXPIRES_IN = '30d';
 // JWT payload interface
 export interface JWTPayload {
   userId: string;
-  walletAddress: string;
+  walletAddress?: string;
+  privyDid?: string;
   role?: string;
   iat?: number;
   exp?: number;

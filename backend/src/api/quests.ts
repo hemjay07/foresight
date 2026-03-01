@@ -15,7 +15,7 @@ import foresightScoreService from '../services/foresightScoreService';
 interface AuthRequest extends Request {
   user?: {
     userId: string;
-    walletAddress: string;
+    walletAddress?: string;
   };
 }
 

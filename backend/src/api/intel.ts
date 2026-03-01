@@ -16,7 +16,7 @@ const router = Router();
 interface AuthRequest extends Request {
   user?: {
     userId: string;
-    walletAddress: string;
+    walletAddress?: string;
   };
 }
 

@@ -18,7 +18,7 @@ import logger from '../utils/logger';
 interface AuthRequest extends Request {
   user?: {
     userId: string;
-    walletAddress: string;
+    walletAddress?: string;
   };
 }
 

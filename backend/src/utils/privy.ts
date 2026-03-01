@@ -110,6 +110,89 @@ export async function getPrivyUserWallet(
   }
 }
 
+export interface PrivyUserInfo {
+  privyDid: string;
+  wallet?: { address: string; chainType: string };
+  email?: string;
+  twitter?: { handle: string; id: string };
+}
+
+/**
+ * Get a Privy user by their DID and extract all linked account info.
+ * Returns wallet, email, and twitter details when available.
+ */
+export async function getPrivyUserInfo(
+  privyUserId: string
+): Promise<PrivyUserInfo | null> {
+  try {
+    const client = getPrivyClient();
+    const user: PrivyUser = await client.getUser(privyUserId);
+
+    const info: PrivyUserInfo = { privyDid: privyUserId };
+
+    if (!user.linkedAccounts || user.linkedAccounts.length === 0) {
+      logger.warn('Privy user has no linked accounts', {
+        context: 'Privy',
+        data: { privyUserId },
+      });
+      return info;
+    }
+
+    // Extract wallet — prefer Solana, fall back to any wallet
+    const wallets = user.linkedAccounts.filter(
+      (account): account is Extract<typeof account, { type: 'wallet' }> =>
+        account.type === 'wallet'
+    );
+    const solanaWallet = wallets.find((w) => w.chainType === 'solana');
+    if (solanaWallet) {
+      info.wallet = { address: solanaWallet.address, chainType: 'solana' };
+    } else if (wallets.length > 0) {
+      info.wallet = {
+        address: wallets[0].address,
+        chainType: wallets[0].chainType || 'unknown',
+      };
+    }
+
+    // Extract email
+    const emailAccount = user.linkedAccounts.find(
+      (account) => account.type === 'email'
+    );
+    if (emailAccount && 'address' in emailAccount) {
+      info.email = (emailAccount as any).address as string;
+    }
+
+    // Extract Twitter
+    const twitterAccount = user.linkedAccounts.find(
+      (account) => account.type === 'twitter_oauth'
+    );
+    if (twitterAccount) {
+      const tw = twitterAccount as any;
+      info.twitter = {
+        handle: tw.username || tw.name || '',
+        id: tw.subject || '',
+      };
+    }
+
+    logger.info('Privy user info extracted', {
+      context: 'Privy',
+      data: {
+        privyUserId,
+        hasWallet: !!info.wallet,
+        hasEmail: !!info.email,
+        hasTwitter: !!info.twitter,
+      },
+    });
+
+    return info;
+  } catch (error) {
+    logger.error('Failed to get Privy user info', error, {
+      context: 'Privy',
+      data: { privyUserId },
+    });
+    return null;
+  }
+}
+
 /**
  * Reset the Privy client (for testing)
  */

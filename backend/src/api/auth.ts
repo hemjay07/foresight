@@ -6,7 +6,7 @@ import {
   createRefreshToken,
   verifyToken,
 } from '../utils/auth';
-import { verifyPrivyToken, getPrivyUserWallet, isPrivyConfigured } from '../utils/privy';
+import { verifyPrivyToken, getPrivyUserInfo, isPrivyConfigured, type PrivyUserInfo } from '../utils/privy';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimiter';
 import { authenticate } from '../middleware/auth';
@@ -26,25 +26,35 @@ interface FindOrCreateResult {
 }
 
 /**
- * Find existing user by wallet address or create a new one.
+ * Find existing user by privy_did (primary), wallet, or email — or create a new one.
+ * Supports wallet, email, and Twitter login via Privy.
  */
 async function findOrCreateUser(
-  walletAddress: string,
+  privyDid: string,
+  info: PrivyUserInfo,
   options: { referralCode?: string; authProvider?: string } = {}
 ): Promise<FindOrCreateResult> {
   const { referralCode, authProvider = 'privy' } = options;
 
-  // Case-insensitive lookup — handles transition from lowercase to original Solana case
-  let user = await db('users')
-    .whereRaw('LOWER(wallet_address) = LOWER(?)', [walletAddress])
-    .first();
+  // Lookup order: privy_did → wallet_address → email
+  let user = await db('users').where({ privy_did: privyDid }).first();
+
+  if (!user && info.wallet) {
+    user = await db('users')
+      .whereRaw('LOWER(wallet_address) = LOWER(?)', [info.wallet.address])
+      .first();
+  }
+
+  if (!user && info.email) {
+    user = await db('users').where({ email: info.email }).first();
+  }
+
   let isNewUser = false;
 
   if (!user) {
     isNewUser = true;
     let referrerId: string | null = null;
 
-    // Validate referral code if provided
     if (referralCode) {
       const referrer = await db('users')
         .where({ referral_code: referralCode })
@@ -54,21 +64,40 @@ async function findOrCreateUser(
       }
     }
 
-    // Check if user should be marked as founding member (first 1000 users)
     const userCount = await db('users').count('* as count').first();
     const totalUsers = parseInt((userCount?.count as string) || '0');
     const isFoundingMember = totalUsers < 1000;
     const foundingMemberNumber = isFoundingMember ? totalUsers + 1 : null;
 
-    // Generate collision-safe referral code
+    // Auto-generate username: @twitterHandle → email prefix → Trader_{uuid}
+    const autoUsername = info.twitter?.handle
+      ? `@${info.twitter.handle}`
+      : info.email
+        ? info.email.split('@')[0]
+        : `Trader_${uuidv4().slice(0, 6)}`;
+
+    // Generate referral code — use wallet fragment, twitter handle, or uuid
     const suffix = uuidv4().slice(0, 4).toUpperCase();
-    const refCode = `FORESIGHT_${walletAddress.slice(2, 10).toUpperCase()}_${suffix}`;
-    const autoUsername = `Trader_${walletAddress.slice(2, 8)}`;
+    const identFragment = info.wallet
+      ? info.wallet.address.slice(0, 8).toUpperCase()
+      : info.twitter?.handle
+        ? info.twitter.handle.slice(0, 8).toUpperCase()
+        : uuidv4().slice(0, 8).toUpperCase();
+    const refCode = `FORESIGHT_${identFragment}_${suffix}`;
+
+    const walletAddress = info.wallet
+      ? info.wallet.chainType === 'solana'
+        ? info.wallet.address
+        : info.wallet.address.toLowerCase()
+      : null;
 
     const [newUser] = await db('users')
       .insert({
         id: uuidv4(),
+        privy_did: privyDid,
         wallet_address: walletAddress,
+        email: info.email || null,
+        twitter_handle: info.twitter?.handle || null,
         username: autoUsername,
         referral_code: refCode,
         referred_by: referrerId,
@@ -84,22 +113,42 @@ async function findOrCreateUser(
 
     user = newUser;
 
-    // Award referrer (async, non-blocking)
     if (referrerId) {
       awardReferrer(referrerId, user.id, isFoundingMember).catch((err) =>
         logger.error('Error awarding referrer:', err, { context: 'Auth API' })
       );
     }
   } else {
-    // Update last seen, auth provider, and fix wallet case if needed
+    // Existing user — update last_seen and backfill any newly linked accounts
     const updates: Record<string, any> = { last_seen_at: db.fn.now() };
+
+    if (!user.privy_did) {
+      updates.privy_did = privyDid;
+    }
     if (user.auth_provider !== authProvider) {
       updates.auth_provider = authProvider;
     }
-    if (user.wallet_address !== walletAddress) {
-      updates.wallet_address = walletAddress; // Fix case to match Privy
+    if (info.wallet && !user.wallet_address) {
+      const addr = info.wallet.chainType === 'solana'
+        ? info.wallet.address
+        : info.wallet.address.toLowerCase();
+      updates.wallet_address = addr;
+    } else if (info.wallet && user.wallet_address !== info.wallet.address) {
+      // Fix case to match Privy
+      updates.wallet_address = info.wallet.chainType === 'solana'
+        ? info.wallet.address
+        : info.wallet.address.toLowerCase();
     }
+    if (info.email && !user.email) {
+      updates.email = info.email;
+    }
+    if (info.twitter?.handle && !user.twitter_handle) {
+      updates.twitter_handle = info.twitter.handle;
+    }
+
     await db('users').where({ id: user.id }).update(updates);
+    // Refresh user object with updates
+    user = { ...user, ...updates };
   }
 
   return { user, isNewUser };
@@ -162,13 +211,15 @@ async function createSessionAndRespond(
   // Create JWT tokens (our own session layer)
   const accessToken = createAccessToken({
     userId: user.id,
-    walletAddress: user.wallet_address,
+    walletAddress: user.wallet_address || undefined,
+    privyDid: user.privy_did || undefined,
     role: user.role,
   });
 
   const refreshToken = createRefreshToken({
     userId: user.id,
-    walletAddress: user.wallet_address,
+    walletAddress: user.wallet_address || undefined,
+    privyDid: user.privy_did || undefined,
     role: user.role,
   });
 
@@ -187,8 +238,8 @@ async function createSessionAndRespond(
     created_at: db.fn.now(),
   });
 
-  // Create Tapestry profile on signup (async, non-blocking)
-  if (isNewUser) {
+  // Create Tapestry profile on signup (async, non-blocking) — requires wallet
+  if (isNewUser && user.wallet_address) {
     tapestryService.findOrCreateProfile(user.wallet_address, user.username)
       .then(async (profile) => {
         if (profile) {
@@ -235,7 +286,9 @@ async function createSessionAndRespond(
     refreshToken,
     user: {
       id: user.id,
-      walletAddress: user.wallet_address,
+      walletAddress: user.wallet_address || null,
+      email: user.email || null,
+      twitterHandle: user.twitter_handle || null,
       username: user.username,
       avatarUrl: user.avatar_url,
       ctMasteryScore: user.ct_mastery_score,
@@ -287,29 +340,30 @@ router.post(
       throw new AppError('Invalid or expired Privy token', 401);
     }
 
-    const walletInfo = await getPrivyUserWallet(claims.userId);
-    if (!walletInfo) {
+    const userInfo = await getPrivyUserInfo(claims.userId);
+    if (!userInfo) {
       throw new AppError(
-        'No wallet found for this Privy account. Please connect a wallet first.',
+        'Could not retrieve Privy account information. Please try again.',
         400
       );
     }
 
-    // Keep original case for Solana (base58 is case-sensitive)
-    const walletAddress = walletInfo.chainType === 'solana'
-      ? walletInfo.address
-      : walletInfo.address.toLowerCase();
-
-    logger.info(`Privy auth successful for wallet ${walletAddress}`, {
+    logger.info(`Privy auth successful`, {
       context: 'Auth API',
-      data: { privyUserId: claims.userId, chainType: walletInfo.chainType },
+      data: {
+        privyUserId: claims.userId,
+        hasWallet: !!userInfo.wallet,
+        hasEmail: !!userInfo.email,
+        hasTwitter: !!userInfo.twitter,
+      },
     });
 
     // Find/create user and create session
-    const { user, isNewUser } = await findOrCreateUser(walletAddress, {
-      referralCode,
-      authProvider: 'privy',
-    });
+    const { user, isNewUser } = await findOrCreateUser(
+      userInfo.privyDid,
+      userInfo,
+      { referralCode, authProvider: 'privy' }
+    );
 
     await createSessionAndRespond(user, isNewUser, req, res);
   })
@@ -391,7 +445,8 @@ router.get(
 
     sendSuccess(res, {
       id: user.id,
-      walletAddress: user.wallet_address,
+      walletAddress: user.wallet_address || null,
+      email: user.email || null,
       username: user.username,
       twitterHandle: user.twitter_handle,
       avatarUrl: user.avatar_url,
