@@ -1,0 +1,9 @@
+Legend: production dependency, optional only, dev only
+
+ct-league@0.1.0 /Users/mujeeb/foresight (PRIVATE)
+
+devDependencies:
+concurrently 8.2.2
+prettier 3.6.2
+puppeteer 24.34.0
+tsx 4.20.6

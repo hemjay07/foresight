@@ -1,0 +1,45 @@
+Legend: production dependency, optional only, dev only
+
+foresight-backend@1.0.0 /Users/mujeeb/foresight/backend
+
+dependencies:
+@privy-io/server-auth 1.32.5
+@solana/web3.js 1.98.4
+axios 1.13.2
+cheerio 1.1.2
+compression 1.8.1
+cors 2.8.5
+cron 4.3.4
+dotenv 16.6.1
+express 4.21.2
+express-rate-limit 8.2.1
+express-validator 7.3.0
+helmet 7.2.0
+jsonwebtoken 9.0.2
+knex 3.1.0
+morgan 1.10.1
+node-cron 3.0.3
+pg 8.16.3
+socialfi 0.1.14
+socket.io 4.8.1
+uuid 13.0.0
+
+devDependencies:
+@types/compression 1.8.1
+@types/cors 2.8.19
+@types/express 4.17.25
+@types/jest 29.5.14
+@types/jsonwebtoken 9.0.10
+@types/morgan 1.9.10
+@types/node 20.19.25
+@types/node-cron 3.0.11
+@types/pg 8.15.6
+@types/supertest 6.0.3
+@types/uuid 11.0.0
+@vitest/coverage-v8 4.0.16
+jest 29.7.0
+supertest 7.1.4
+ts-jest 29.4.5
+tsx 4.20.6
+typescript 5.9.3
+vitest 4.0.16
