@@ -22,10 +22,15 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = NODE_ENV === 'production';
 
 // FINDING-007: Cookie options for httpOnly JWT storage
+// Production uses sameSite:'none' because frontend (ct-foresight.xyz) and backend
+// (railway.app) are on different domains — 'lax' blocks cross-origin cookie sending.
+// sameSite:'none' requires secure:true (already enforced in prod).
+const SAME_SITE = IS_PROD ? ('none' as const) : ('lax' as const);
+
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: 'lax' as const,
+  sameSite: SAME_SITE,
   maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT_EXPIRES_IN)
   path: '/',
 };
@@ -33,15 +38,15 @@ const ACCESS_COOKIE_OPTIONS = {
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: 'lax' as const,
+  sameSite: SAME_SITE,
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  path: '/', // httpOnly + sameSite provide security; broad path avoids proxy breakage
+  path: '/',
 };
 
 const CSRF_COOKIE_OPTIONS = {
   httpOnly: false, // Frontend JS must read this
   secure: IS_PROD,
-  sameSite: 'lax' as const,
+  sameSite: SAME_SITE,
   maxAge: 30 * 24 * 60 * 60 * 1000,
   path: '/',
 };
