@@ -126,12 +126,12 @@ export default function ActivityFeedCard() {
         </div>
         <div className="text-center py-4">
           <Users size={28} className="mx-auto mb-2 text-gray-600" />
-          <p className="text-xs text-gray-500">Follow other players to see their activity here</p>
+          <p className="text-xs text-gray-500">No recent activity yet</p>
           <Link
             to="/compete"
             className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white mt-2"
           >
-            Browse Leaderboard <ArrowRight size={12} />
+            Browse Contests <ArrowRight size={12} />
           </Link>
         </div>
       </div>

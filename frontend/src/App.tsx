@@ -52,8 +52,44 @@ const queryClient = new QueryClient();
  * Privy auth bridge — populates AuthContext from Privy state
  */
 function PrivyAuthBridge({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated, user, login } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
+
+  // Clean up stale OAuth params if Privy failed to process them (e.g. previous failed attempt).
+  useEffect(() => {
+    if (!ready || authenticated) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('privy_oauth_code') || params.has('privy_oauth_state')) {
+      params.delete('privy_oauth_code');
+      params.delete('privy_oauth_state');
+      params.delete('privy_oauth_provider');
+      const newSearch = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
+    }
+  }, [ready, authenticated]);
+
+  const { login: privyLogin } = usePrivy();
+
+  const login = useCallback(() => {
+    const path = window.location.pathname + window.location.search + window.location.hash;
+    if (path !== '/') {
+      sessionStorage.setItem('privy_post_login_path', path);
+    }
+    privyLogin();
+  }, [privyLogin]);
   const { syncError, retrySync, isBackendAuthed: backendAuthed, logout: backendLogout } = usePrivyAuth();
+
+  // After OAuth, Privy always redirects to the root (customOAuthRedirectUrl: origin).
+  // Only navigate to the saved path when we're actually at root — this prevents
+  // the effect from firing on normal page reloads for already-authenticated users.
+  useEffect(() => {
+    if (!ready || !authenticated) return;
+    if (window.location.pathname !== '/') return;
+    const saved = sessionStorage.getItem('privy_post_login_path');
+    if (saved) {
+      sessionStorage.removeItem('privy_post_login_path');
+      window.location.replace(saved);
+    }
+  }, [ready, authenticated]);
 
   const { address, email, twitterHandle } = useMemo(() => {
     if (!user) return { address: undefined, email: undefined, twitterHandle: undefined };
@@ -240,6 +276,11 @@ function AppProviders({ children }: { children: React.ReactNode }) {
           walletChainType: 'solana-only',
         },
         loginMethods: ['wallet', 'email', 'twitter'],
+        // Always redirect OAuth back to the origin root.
+        // Without this, Privy defaults to window.location.href — so signing in
+        // from /profile?tab=overview sends that full URL to the OAuth provider,
+        // which fails because only the root origin is in Privy's allowed redirect list.
+        customOAuthRedirectUrl: window.location.origin,
         externalWallets: {
           solana: {
             connectors: solanaConnectors,

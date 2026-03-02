@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import db from '../utils/db';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireAdmin } from '../middleware/auth';
 import { strictLimiter } from '../middleware/rateLimiter';
 import foresightScoreService from '../services/foresightScoreService';
 import questService from '../services/questService';
@@ -279,8 +279,14 @@ router.get('/contests/:id/entries', async (req: Request, res: Response) => {
     res.json({
       entries: entries.map(e => ({
         id: e.id,
+        userId: e.user_id,
         walletAddress: e.wallet_address,
-        username: e.username || `${e.wallet_address.slice(0, 6)}...${e.wallet_address.slice(-4)}`,
+        // Show username if available; for walletless users fall back to a clean display
+        username: e.username || (
+          e.wallet_address?.startsWith('user:')
+            ? `Player #${String(e.user_id).slice(-4)}`
+            : `${e.wallet_address.slice(0, 6)}...${e.wallet_address.slice(-4)}`
+        ),
         teamIds: e.team_ids,
         teamSize: e.team_ids?.length || 0,
         captainId: e.captain_id,
@@ -440,12 +446,10 @@ router.post('/contests/:id/enter-free', authenticate, async (req: Request, res: 
     const { teamIds, captainId } = req.body;
     const userId = req.user!.userId;
     const walletAddress = req.user!.walletAddress;
+    // Free contests don't require a wallet — use userId as fallback key
+    const entryKey = walletAddress ? walletAddress.toLowerCase() : `user:${userId}`;
 
     logger.debug('enter-free request', { data: { id, teamSize: teamIds?.length } });
-
-    if (!walletAddress) {
-      return res.status(400).json({ error: 'No wallet connected' });
-    }
 
     const contest = await db('prized_contests')
       .leftJoin('contest_types', 'prized_contests.contest_type_id', 'contest_types.id')
@@ -486,24 +490,10 @@ router.post('/contests/:id/enter-free', authenticate, async (req: Request, res: 
       }
     }
 
-    // Check entry limit for free leagues (1 per wallet per week)
-    const weekStart = getWeekStart(new Date());
-    const existingLimit = await db('free_league_limits')
-      .where('wallet_address', walletAddress.toLowerCase())
-      .where('week_start', weekStart)
-      .first();
-
-    if (existingLimit && existingLimit.entries_used >= 1) {
-      return res.status(400).json({
-        error: 'You have already entered a free league this week',
-        nextFreeEntry: getNextWeekStart(weekStart)
-      });
-    }
-
     // Check if already entered this contest
     const existingEntry = await db('free_league_entries')
       .where('contest_id', id)
-      .where('wallet_address', walletAddress.toLowerCase())
+      .where('wallet_address', entryKey)
       .first();
 
     if (existingEntry) {
@@ -520,27 +510,13 @@ router.post('/contests/:id/enter-free', authenticate, async (req: Request, res: 
       .insert({
         contest_id: id,
         user_id: userId,
-        wallet_address: walletAddress.toLowerCase(),
+        wallet_address: entryKey,
         team_ids: teamIds,
         captain_id: contest.has_captain ? captainId : null,
         created_at: new Date(),
         updated_at: new Date(),
       })
       .returning('*');
-
-    // Update/create entry limit
-    if (existingLimit) {
-      await db('free_league_limits')
-        .where('id', existingLimit.id)
-        .update({ entries_used: existingLimit.entries_used + 1 });
-    } else {
-      await db('free_league_limits').insert({
-        wallet_address: walletAddress.toLowerCase(),
-        week_start: weekStart,
-        entries_used: 1,
-        created_at: new Date(),
-      });
-    }
 
     // Update contest player count
     await db('prized_contests')
@@ -614,16 +590,17 @@ router.post('/contests/:id/enter-free', authenticate, async (req: Request, res: 
 router.get('/contests/:id/transfer-status', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = req.user!.userId;
     const walletAddress = req.user!.walletAddress;
-    if (!walletAddress) return res.status(400).json({ success: false, error: 'No wallet connected' });
+    const entryKey = walletAddress ? walletAddress.toLowerCase() : `user:${userId}`;
 
-    const user = await db('users').where('wallet_address', walletAddress.toLowerCase()).first();
+    const user = await db('users').where('id', userId).first();
     const xpData = getXPLevel(user?.xp || 0);
     const maxTransfers = xpData.levelInfo.maxTransfers;
 
     const entry = await db('free_league_entries')
       .where('contest_id', id)
-      .where('wallet_address', walletAddress.toLowerCase())
+      .where('wallet_address', entryKey)
       .first();
 
     const transfersUsed = entry?.update_count || 0;
@@ -653,13 +630,11 @@ router.put('/contests/:id/update-free-team', authenticate, async (req: Request, 
   try {
     const { id } = req.params;
     const { teamIds, captainId } = req.body;
+    const userId = req.user!.userId;
     const walletAddress = req.user!.walletAddress;
+    const entryKey = walletAddress ? walletAddress.toLowerCase() : `user:${userId}`;
 
     logger.debug('update-free-team request', { data: { id, teamSize: teamIds?.length } });
-
-    if (!walletAddress) {
-      return res.status(400).json({ error: 'No wallet connected' });
-    }
 
     const contest = await db('prized_contests').where('id', id).first();
     if (!contest) {
@@ -676,7 +651,7 @@ router.put('/contests/:id/update-free-team', authenticate, async (req: Request, 
 
     const entry = await db('free_league_entries')
       .where('contest_id', id)
-      .where('wallet_address', walletAddress.toLowerCase())
+      .where('wallet_address', entryKey)
       .first();
 
     if (!entry) {
@@ -684,7 +659,7 @@ router.put('/contests/:id/update-free-team', authenticate, async (req: Request, 
     }
 
     // ── Transfer limit check ───────────────────────────────────────────────
-    const user = await db('users').where('wallet_address', walletAddress.toLowerCase()).first();
+    const user = await db('users').where('id', userId).first();
     const xpData = getXPLevel(user?.xp || 0);
     const maxTransfers = xpData.levelInfo.maxTransfers;
     const transfersUsed = entry.update_count || 0;
@@ -842,6 +817,40 @@ router.post('/contests/:id/enter-test', authenticate, async (req: Request, res: 
 // ============ USER ENTRY ENDPOINTS ============
 
 /**
+ * GET /api/v2/user/has-open-entry
+ * Returns whether the user has entered any currently open contest.
+ * Used by the engagement banner to avoid showing "join a contest" when they already have.
+ */
+router.get('/user/has-open-entry', authenticate, async (req: Request, res: Response) => {
+  try {
+    const walletAddress = req.user!.walletAddress;
+    if (!walletAddress) {
+      return res.json({ hasEntry: false });
+    }
+
+    const openContests = await db('prized_contests')
+      .whereIn('status', ['open', 'locked', 'active'])
+      .select('id', 'is_free');
+
+    for (const contest of openContests) {
+      const table = contest.is_free ? 'free_league_entries' : 'prized_entries';
+      const entry = await db(table)
+        .where('contest_id', contest.id)
+        .where('wallet_address', walletAddress.toLowerCase())
+        .first();
+      if (entry) {
+        return res.json({ hasEntry: true });
+      }
+    }
+
+    return res.json({ hasEntry: false });
+  } catch (error) {
+    logger.error('Error checking user open entries:', error);
+    return res.json({ hasEntry: false }); // fail open — don't block the banner silently
+  }
+});
+
+/**
  * GET /api/v2/contests/:id/my-entry
  * Get current user's entry in a contest
  */
@@ -855,10 +864,7 @@ router.get('/contests/:id/my-entry', authenticate, async (req: Request, res: Res
     const { id } = req.params;
     const userId = req.user!.userId;
     const walletAddress = req.user!.walletAddress;
-
-    if (!walletAddress) {
-      return res.json({ entered: false, entry: null });
-    }
+    const entryKey = walletAddress ? walletAddress.toLowerCase() : `user:${userId}`;
 
     const contest = await db('prized_contests').where('id', id).first();
     if (!contest) {
@@ -870,7 +876,7 @@ router.get('/contests/:id/my-entry', authenticate, async (req: Request, res: Res
 
     const entry = await db(entriesTable)
       .where('contest_id', id)
-      .where('wallet_address', walletAddress.toLowerCase())
+      .where('wallet_address', entryKey)
       .first();
 
     if (!entry) {
@@ -1139,8 +1145,12 @@ router.post('/contests/:id/claim-prize', authenticate, strictLimiter, async (req
     const userId = req.user!.userId;
     const walletAddress = req.user!.walletAddress;
 
+    // Wallet is required to receive the SOL prize
     if (!walletAddress) {
-      return res.status(400).json({ error: 'No wallet connected' });
+      return res.status(400).json({
+        error: 'A Solana wallet is required to claim prizes. Connect one in your Privy settings.',
+        code: 'NO_WALLET',
+      });
     }
 
     // Load the contest
@@ -1157,21 +1167,24 @@ router.post('/contests/:id/claim-prize', authenticate, strictLimiter, async (req
     const entriesTable = contest.is_free ? 'free_league_entries' : 'prized_entries';
     const prizeColumn = contest.is_free ? 'prize_won' : 'prize_amount';
 
+    // Look up entry by user_id first (handles users who entered without a wallet),
+    // then fall back to wallet_address (handles paid contest entries).
+    const entryLookup = contest.is_free
+      ? db(entriesTable).where('contest_id', id).where('user_id', userId)
+      : db(entriesTable).where('contest_id', id).where('wallet_address', walletAddress.toLowerCase());
+
     // FINDING-002: Use atomic UPDATE ... WHERE claimed=false RETURNING *
     // This eliminates the TOCTOU race condition by combining check + update
-    const [entry] = await db(entriesTable)
-      .where('contest_id', id)
-      .where('wallet_address', walletAddress.toLowerCase())
+    const [entry] = await entryLookup
       .where('claimed', false)
-      .update({ claimed: true, updated_at: new Date() })
+      .update({ claimed: true, wallet_address: walletAddress.toLowerCase(), updated_at: new Date() })
       .returning('*');
 
     if (!entry) {
       // Either no entry exists or already claimed — check which
-      const existing = await db(entriesTable)
-        .where('contest_id', id)
-        .where('wallet_address', walletAddress.toLowerCase())
-        .first();
+      const existing = contest.is_free
+        ? await db(entriesTable).where('contest_id', id).where('user_id', userId).first()
+        : await db(entriesTable).where('contest_id', id).where('wallet_address', walletAddress.toLowerCase()).first();
 
       if (!existing) {
         return res.status(404).json({ error: 'No entry found for this contest' });
@@ -1284,15 +1297,8 @@ router.post('/contests/:id/claim-prize', authenticate, strictLimiter, async (req
  * POST /api/v2/admin/contests
  * Create a new contest
  */
-router.post('/admin/contests', authenticate, async (req: Request, res: Response) => {
+router.post('/admin/contests', authenticate, requireAdmin, async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
-    const user = await db('users').where('id', userId).first();
-
-    if (!user?.is_admin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
     const {
       contestTypeCode,
       contractContestId,

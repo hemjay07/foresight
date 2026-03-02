@@ -115,18 +115,30 @@ export default function Draft() {
   const hasCaptain = captainId !== null;
   const canSubmit = isTeamComplete && hasCaptain && remainingBudget >= 0;
 
-  // Time until lock
+  // Live countdown tick when < 1 hour to lock
+  const [draftTick, setDraftTick] = useState(0);
+  useEffect(() => {
+    if (!contest?.lockTime) return;
+    const diff = new Date(contest.lockTime).getTime() - Date.now();
+    if (diff <= 0 || diff > 3600000) return;
+    const interval = setInterval(() => setDraftTick(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contest?.lockTime]);
+
+  // Time until lock — shows seconds when < 5 min remaining
   const timeUntilLock = useMemo(() => {
     if (!contest?.lockTime) return null;
-    const lockDate = new Date(contest.lockTime);
-    const now = new Date();
-    const diff = lockDate.getTime() - now.getTime();
+    const diff = new Date(contest.lockTime).getTime() - Date.now();
     if (diff <= 0) return 'LOCKED';
-
     const hours = Math.floor(diff / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-    return `${hours}h ${mins}m`;
-  }, [contest?.lockTime]);
+    const mins  = Math.floor((diff % 3600000) / 60000);
+    const secs  = Math.floor((diff % 60000) / 1000);
+    if (hours > 0) return `${hours}h ${mins}m`;
+    if (mins >= 5) return `${mins}m`;
+    return `${mins}m ${secs}s`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contest?.lockTime, draftTick]);
 
   // Fetch user info for the share card footer
   useEffect(() => {
@@ -280,28 +292,26 @@ export default function Draft() {
     showToast('Team cleared', 'info');
   };
 
-  // Auto-fill team with optimal picks within budget
+  // Auto-fill team with random picks within budget
   const handleAutoFill = () => {
-    // Strategy: Pick best value players (highest points per dollar) within budget
-    // Prioritize diversity across tiers for a balanced team
-
+    // Shuffle available influencers so every autofill produces a different team
     const available = influencers
       .filter((i) => !selectedPicks.some((p) => p.id === i.id))
-      .map((i) => ({
-        ...i,
-        valueScore: (i.total_points || 0) / i.price, // Points per dollar
-      }))
-      .sort((a, b) => b.valueScore - a.valueScore);
+      .map((i) => ({ ...i }));
+
+    // Fisher-Yates shuffle
+    for (let i = available.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [available[i], available[j]] = [available[j], available[i]];
+    }
 
     let currentBudget = remainingBudget;
     let currentPicks = [...selectedPicks];
-    const slotsNeeded = teamSize - currentPicks.length;
 
-    // Greedy algorithm: pick best value that fits budget
+    // Pick random players that fit the remaining budget
     for (const inf of available) {
       if (currentPicks.length >= teamSize) break;
 
-      // Check if we can afford this pick and still fill remaining slots
       const remainingSlots = teamSize - currentPicks.length - 1;
       const minCostForRemaining = remainingSlots * 15; // C-tier minimum
 
@@ -548,10 +558,14 @@ export default function Draft() {
           {/* Timer */}
           {timeUntilLock && (
             <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-              timeUntilLock === 'LOCKED' ? 'bg-red-500/20 text-red-400' : 'bg-gold-500/20 text-gold-400'
+              timeUntilLock === 'LOCKED'
+                ? 'bg-red-500/20 text-red-400'
+                : timeUntilLock.includes('s')
+                  ? 'bg-amber-500/20 text-amber-400 animate-pulse'
+                  : 'bg-gold-500/20 text-gold-400'
             }`}>
               <Timer size={18} weight="fill" />
-              <span className="font-medium">
+              <span className="font-medium font-mono tabular-nums">
                 {timeUntilLock === 'LOCKED' ? 'Contest Locked' : `Locks in ${timeUntilLock}`}
               </span>
             </div>

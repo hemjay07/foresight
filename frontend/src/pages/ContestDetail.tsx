@@ -45,6 +45,7 @@ interface Contest {
 
 interface Entry {
   id: number;
+  userId?: string;
   rank: number | null;
   walletAddress: string;
   username: string;
@@ -252,19 +253,28 @@ export default function ContestDetail() {
     setLoading(true);
     try {
       // Fetch contest details, entries, and influencers in parallel
-      const [contestRes, entriesRes, influencersRes] = await Promise.all([
+      // Use allSettled so one failure doesn't kill the whole page
+      const [contestResult, entriesResult, influencersResult] = await Promise.allSettled([
         apiClient.get(`/api/v2/contests/${id}`),
         apiClient.get(`/api/v2/contests/${id}/entries`),
         apiClient.get(`/api/league/influencers`),
       ]);
 
-      setContest(contestRes.data.contest);
-      setEntries(entriesRes.data.entries || []);
-      setInfluencers(influencersRes.data.influencers || []);
-      setPrizeRules(contestRes.data.prizeRules || []);
+      if (contestResult.status === 'fulfilled') {
+        setContest(contestResult.value.data.contest);
+        setPrizeRules(contestResult.value.data.prizeRules || []);
+      } else {
+        console.error('Failed to load contest:', contestResult.reason);
+      }
+      if (entriesResult.status === 'fulfilled') {
+        setEntries(entriesResult.value.data.entries || []);
+      }
+      if (influencersResult.status === 'fulfilled') {
+        setInfluencers(influencersResult.value.data.influencers || []);
+      }
 
-      // Fetch user's entry if connected
-      if (hasSession() && address) {
+      // Fetch user's own entry if they have a session (wallet optional)
+      if (hasSession()) {
         try {
           const myEntryRes = await apiClient.get(`/api/v2/contests/${id}/my-entry`);
           if (myEntryRes.data.entered) {
@@ -716,7 +726,8 @@ export default function ContestDetail() {
 
                 {/* Entries */}
                 {entries.map((entry, index) => {
-                  const isMe = address && entry.walletAddress.toLowerCase() === address.toLowerCase();
+                  // Match by entry id (works for wallet and walletless users)
+                  const isMe = myEntry ? entry.id === myEntry.id : (address && entry.walletAddress.toLowerCase() === address.toLowerCase());
                   const isWinner = entry.prizeAmount && parseFloat(String(entry.prizeAmount)) > 0;
                   const isFinalized = contest?.status === 'finalized';
                   return (

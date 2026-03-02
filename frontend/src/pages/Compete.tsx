@@ -164,6 +164,7 @@ export default function Compete() {
   const [selectedContestId, setSelectedContestId] = useState<number | null>(null);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
   const [prizeRules, setPrizeRules] = useState<{ rank: number; percentage: number; label: string }[]>([]);
+  const [, setTimeTick] = useState(0); // forces re-render for live countdowns
 
   // Fetch live SOL price
   useEffect(() => {
@@ -172,6 +173,17 @@ export default function Compete() {
       .then(d => { if (d?.solana?.usd) setSolPrice(d.solana.usd); })
       .catch(() => {});
   }, []);
+
+  // Live countdown tick — updates every second when any contest has < 1 hour remaining
+  useEffect(() => {
+    const hasUrgentContest = contests.some(c => {
+      const diff = new Date(c.lockTime).getTime() - Date.now();
+      return diff > 0 && diff < 3600000;
+    });
+    if (!hasUrgentContest) return;
+    const interval = setInterval(() => setTimeTick(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [contests]);
 
   // Update URL when tabs change
   useEffect(() => {
@@ -393,13 +405,28 @@ export default function Compete() {
 
   const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  const getTimeRemaining = (lockTime: string) => {
+  const getTimeRemaining = (lockTime: string): { label: string; urgent: boolean } => {
     const diff = new Date(lockTime).getTime() - Date.now();
-    if (diff <= 0) return 'Locked';
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    if (days > 0) return `${days}d ${hours}h`;
-    return `${hours}h`;
+    if (diff <= 0) return { label: 'Locked', urgent: false };
+    const days  = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins  = Math.floor((diff % 3600000) / 60000);
+    const secs  = Math.floor((diff % 60000) / 1000);
+    if (days > 0)   return { label: `${days}d ${hours}h`, urgent: false };
+    if (hours > 0)  return { label: `${hours}h ${mins}m`, urgent: false };
+    if (mins >= 5)  return { label: `${mins}m`, urgent: true };
+    return { label: `${mins}m ${secs}s`, urgent: true };
+  };
+
+  const getResultsCountdown = (endTime: string): { label: string; urgent: boolean } => {
+    const diff = new Date(endTime).getTime() - Date.now();
+    if (diff <= 0) return { label: 'Scoring now', urgent: false };
+    const hours = Math.floor(diff / 3600000);
+    const mins  = Math.floor((diff % 3600000) / 60000);
+    const secs  = Math.floor((diff % 60000) / 1000);
+    if (hours > 0)  return { label: `${hours}h ${mins}m`, urgent: false };
+    if (mins >= 1)  return { label: `${mins}m ${secs}s`, urgent: true };
+    return { label: `${secs}s`, urgent: true };
   };
 
   const formatEndDate = (dateStr: string) => {
@@ -1091,7 +1118,15 @@ export default function Compete() {
                                 <span className="text-gray-700">·</span>
                                 <span className="font-mono tabular-nums">{contest.playerCount} in</span>
                                 <span className="text-gray-700">·</span>
-                                <span className="font-mono tabular-nums">{getTimeRemaining(contest.lockTime)}</span>
+                                {(() => {
+                                  const isContestLocked = contest.status === 'locked' || new Date(contest.lockTime) <= new Date();
+                                  if (isContestLocked && contest.endTime) {
+                                    const r = getResultsCountdown(contest.endTime);
+                                    return <span className={`font-mono tabular-nums ${r.urgent ? 'text-amber-400' : 'text-gray-400'}`}>results in {r.label}</span>;
+                                  }
+                                  const t = getTimeRemaining(contest.lockTime);
+                                  return <span className={`font-mono tabular-nums ${t.urgent ? 'text-amber-400' : ''}`}>{t.label}</span>;
+                                })()}
                               </div>
                             </div>
                             {hasEntered && (
@@ -1272,11 +1307,19 @@ export default function Compete() {
                             <div className="text-base font-bold font-mono tabular-nums text-white mt-0.5">{selectedContest.playerCount}</div>
                           </div>
                           <div className="p-3 rounded-lg bg-gray-800/40">
-                            <span className="text-[10px] text-gray-500 uppercase tracking-wider">{isFinished ? 'Ended' : 'Closes In'}</span>
-                            <div className="text-base font-bold font-mono tabular-nums text-white mt-0.5">
+                            <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                              {isFinished ? 'Ended' : isLocked ? 'Results In' : 'Closes In'}
+                            </span>
+                            <div className="text-base font-bold font-mono tabular-nums mt-0.5">
                               {isFinished
-                                ? (selectedContest.endTime ? formatEndDate(selectedContest.endTime) : 'Ended')
-                                : getTimeRemaining(selectedContest.lockTime)}
+                                ? <span className="text-white">{selectedContest.endTime ? formatEndDate(selectedContest.endTime) : 'Ended'}</span>
+                                : isLocked
+                                  ? (() => { const r = getResultsCountdown(selectedContest.endTime || ''); return (
+                                      <span className={r.urgent ? 'text-amber-400' : 'text-emerald-400'}>{r.label}</span>
+                                    ); })()
+                                  : (() => { const t = getTimeRemaining(selectedContest.lockTime); return (
+                                      <span className={t.urgent ? 'text-amber-400' : 'text-white'}>{t.label}</span>
+                                    ); })()}
                             </div>
                           </div>
                         </div>

@@ -48,13 +48,10 @@ export function usePrivyAuth() {
       }
 
       // Send Privy token to our backend for verification
-      console.log('[PrivyAuth] Syncing with backend...');
       const response = await apiClient.post('/api/auth/verify', { privyToken });
 
       if (response.data?.success) {
         setIsBackendAuthed(true);
-        console.log('[PrivyAuth] Backend session created');
-        window.location.reload();
       } else {
         console.error('[PrivyAuth] Unexpected response:', response.data);
         setSyncError('Backend returned unexpected response. Contact support.');

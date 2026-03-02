@@ -348,47 +348,59 @@ router.get(
       activity = await tapestryService.getActivityFeed(user.username, page);
     }
 
-    // Fallback: build activity from local DB (user_follows + contest entries)
+    // Fallback: build activity from local DB
     if (activity.length === 0) {
       const following = await db('user_follows')
         .where({ follower_user_id: userId })
         .select('following_username');
 
-      if (following.length > 0) {
-        const usernames = following.map((f: any) => f.following_username).filter(Boolean);
-        // Get recent contest entries from users we follow
-        const recentEntries = await db('free_league_entries as e')
-          .join('users as u', 'e.user_id', 'u.id')
-          .whereIn('u.username', usernames)
-          .orderBy('e.created_at', 'desc')
-          .limit(10)
-          .select('u.username', 'u.tapestry_user_id', 'e.created_at', 'e.contest_id');
+      const followingUsernames = following.map((f: any) => f.following_username).filter(Boolean);
 
-        activity = recentEntries.map((entry: any) => ({
-          type: 'content_create',
-          timestamp: entry.created_at,
-          actor: { id: entry.tapestry_user_id || entry.username, username: entry.username },
-        }));
+      // Use followed users if any; otherwise show global recent activity (discovery mode for new users)
+      const isDiscovery = followingUsernames.length === 0;
 
-        // Also include recent follows from our DB
-        const recentFollows = await db('user_follows as f')
-          .join('users as u', 'f.follower_user_id', 'u.id')
-          .whereIn('u.username', usernames)
-          .orderBy('f.created_at', 'desc')
-          .limit(5)
-          .select('u.username', 'u.tapestry_user_id', 'f.created_at', 'f.following_username');
+      // Recent contest entries (from followed users or everyone)
+      let entriesQuery = db('free_league_entries as e')
+        .join('users as u', 'e.user_id', 'u.id')
+        .orderBy('e.created_at', 'desc')
+        .limit(10)
+        .select('u.username', 'u.tapestry_user_id', 'e.created_at', 'e.contest_id');
 
-        const followActivity = recentFollows.map((f: any) => ({
-          type: 'follow',
-          timestamp: f.created_at,
-          actor: { id: f.tapestry_user_id || f.username, username: f.username },
-          target: { id: f.following_username, username: f.following_username },
-        }));
-
-        activity = [...activity, ...followActivity]
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 10);
+      if (!isDiscovery) {
+        entriesQuery = entriesQuery.whereIn('u.username', followingUsernames);
       }
+
+      const recentEntries = await entriesQuery;
+
+      activity = recentEntries.map((entry: any) => ({
+        type: 'content_create',
+        timestamp: entry.created_at,
+        actor: { id: entry.tapestry_user_id || entry.username, username: entry.username },
+      }));
+
+      // Recent follows (from followed users or everyone)
+      let followsQuery = db('user_follows as f')
+        .join('users as u', 'f.follower_user_id', 'u.id')
+        .orderBy('f.created_at', 'desc')
+        .limit(5)
+        .select('u.username', 'u.tapestry_user_id', 'f.created_at', 'f.following_username');
+
+      if (!isDiscovery) {
+        followsQuery = followsQuery.whereIn('u.username', followingUsernames);
+      }
+
+      const recentFollows = await followsQuery;
+
+      const followActivity = recentFollows.map((f: any) => ({
+        type: 'follow',
+        timestamp: f.created_at,
+        actor: { id: f.tapestry_user_id || f.username, username: f.username },
+        target: { id: f.following_username, username: f.following_username },
+      }));
+
+      activity = [...activity, ...followActivity]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 10);
     }
 
     sendSuccess(res, { activity });
