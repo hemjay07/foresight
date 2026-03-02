@@ -117,12 +117,11 @@ export default function EngagementBanner() {
         });
       }
 
-      // 3. If user is connected but hasn't created a team
+      // 3. If user is connected but hasn't entered any open contest
       if (address && hasSession()) {
         try {
-          const teamRes = await apiClient.get(`/api/league/team/me`);
-
-          if (!teamRes.data.team) {
+          const entryRes = await apiClient.get(`/api/v2/user/has-open-entry`);
+          if (!entryRes.data.hasEntry) {
             messages.push({
               id: `noteam-${contest.id}`,
               type: 'warning',
@@ -133,15 +132,7 @@ export default function EngagementBanner() {
             });
           }
         } catch (e) {
-          // User might not have a team or not authenticated
-          messages.push({
-            id: `noteam-${contest.id}`,
-            type: 'warning',
-            icon: <Trophy size={20} weight="fill" />,
-            message: 'Join this week\'s contest!',
-            action: { label: 'Draft Now', link: '/compete?tab=contests' },
-            dismissible: true
-          });
+          // Silent fail — don't show banner on error
         }
       }
 

@@ -174,13 +174,18 @@ export default function Compete() {
       .catch(() => {});
   }, []);
 
-  // Live countdown tick — updates every second when any contest has < 1 hour remaining
+  // Live countdown tick — updates every second when any contest has an active countdown
   useEffect(() => {
-    const hasUrgentContest = contests.some(c => {
-      const diff = new Date(c.lockTime).getTime() - Date.now();
-      return diff > 0 && diff < 3600000;
+    const hasActiveCountdown = contests.some(c => {
+      const lockDiff = new Date(c.lockTime).getTime() - Date.now();
+      if (lockDiff > 0 && lockDiff < 3600000) return true; // closes in < 1hr
+      if (c.endTime) {
+        const endDiff = new Date(c.endTime).getTime() - Date.now();
+        if (endDiff > 0 && endDiff < 3600000) return true; // results in < 1hr (locked contest)
+      }
+      return false;
     });
-    if (!hasUrgentContest) return;
+    if (!hasActiveCountdown) return;
     const interval = setInterval(() => setTimeTick(t => t + 1), 1000);
     return () => clearInterval(interval);
   }, [contests]);
