@@ -15,9 +15,15 @@ declare global {
  * Reads JWT from httpOnly cookie (preferred) or Authorization header (fallback).
  */
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
+  const cookieKeys = Object.keys(req.cookies || {});
+  const hasAccessToken = !!req.cookies?.accessToken;
+  const hasAuthHeader = !!req.headers.authorization;
+  console.log(`[AUTH-DEBUG] authenticate() path=${req.path} cookieKeys=[${cookieKeys.join(',')}] hasAccessToken=${hasAccessToken} hasAuthHeader=${hasAuthHeader}`);
+
   const token = req.cookies?.accessToken || extractTokenFromHeader(req.headers.authorization);
 
   if (!token) {
+    console.log(`[AUTH-DEBUG] authenticate() REJECTED - no token. Origin=${req.headers.origin} Referer=${req.headers.referer}`);
     res.status(401).json({ success: false, error: 'No token provided' });
     return;
   }

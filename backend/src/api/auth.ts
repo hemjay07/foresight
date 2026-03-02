@@ -323,12 +323,16 @@ async function createSessionAndRespond(
   }
 
   // FINDING-007: Set httpOnly cookies instead of sending tokens in body
+  console.log('[AUTH-DEBUG] Setting cookies. IS_PROD=', IS_PROD, 'SAME_SITE=', SAME_SITE);
+  console.log('[AUTH-DEBUG] ACCESS_COOKIE_OPTIONS=', JSON.stringify(ACCESS_COOKIE_OPTIONS));
+  console.log('[AUTH-DEBUG] Request origin=', res.req?.headers?.origin, 'host=', res.req?.headers?.host);
   res.cookie('accessToken', accessToken, ACCESS_COOKIE_OPTIONS);
   res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
 
   // FINDING-021: Set CSRF token (readable by frontend JS)
   const csrfToken = generateCsrfToken();
   res.cookie('csrf-token', csrfToken, CSRF_COOKIE_OPTIONS);
+  console.log('[AUTH-DEBUG] Cookies set: accessToken, refreshToken, csrf-token');
 
   sendSuccess(res, {
     csrfToken,
@@ -368,6 +372,7 @@ router.post(
   authLimiter,
   asyncHandler(async (req: Request, res: Response) => {
     const { privyToken, referralCode } = req.body;
+    console.log('[AUTH-DEBUG] POST /verify hit. origin=', req.headers.origin, 'hasPrivyToken=', !!privyToken, 'cookies=', Object.keys(req.cookies || {}));
 
     if (!privyToken) {
       throw new AppError(

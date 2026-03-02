@@ -26,41 +26,55 @@ export function usePrivyAuth() {
     hasAttemptedAuth.current = true;
     setSyncError(null);
 
+    console.log('[AUTH-DEBUG] syncWithBackend START');
+
     try {
       // Get Privy access token
       const privyToken = await getAccessToken();
       if (!privyToken) {
-        console.error('[PrivyAuth] No access token available');
+        console.error('[AUTH-DEBUG] No Privy access token available');
         setSyncError('No Privy access token. Try disconnecting and reconnecting.');
         hasAttemptedAuth.current = false;
         return;
       }
+      console.log('[AUTH-DEBUG] Got Privy token, length:', privyToken.length);
 
       // Check if we already have a valid backend session (cookie-based)
+      console.log('[AUTH-DEBUG] Checking /api/auth/me...');
+      console.log('[AUTH-DEBUG] document.cookie before /me:', document.cookie || '(empty)');
       try {
         const meResponse = await apiClient.get('/api/auth/me');
+        console.log('[AUTH-DEBUG] /me returned 200, already authed');
         if (meResponse.status === 200) {
           setIsBackendAuthed(true);
           return;
         }
-      } catch {
+      } catch (meErr: any) {
+        console.log('[AUTH-DEBUG] /me failed:', meErr?.response?.status, meErr?.response?.data?.error || meErr?.message);
         // Token expired or invalid — continue to re-auth
       }
 
       // Send Privy token to our backend for verification
+      console.log('[AUTH-DEBUG] Calling /api/auth/verify...');
       const response = await apiClient.post('/api/auth/verify', { privyToken });
+      console.log('[AUTH-DEBUG] /verify response status:', response.status);
+      console.log('[AUTH-DEBUG] /verify response data:', JSON.stringify(response.data));
+      console.log('[AUTH-DEBUG] /verify response headers:', JSON.stringify(Object.fromEntries(Object.entries(response.headers))));
+      console.log('[AUTH-DEBUG] document.cookie AFTER /verify:', document.cookie || '(empty)');
 
       if (response.data?.success) {
+        console.log('[AUTH-DEBUG] Backend auth SUCCESS, isBackendAuthed = true');
         setIsBackendAuthed(true);
       } else {
-        console.error('[PrivyAuth] Unexpected response:', response.data);
+        console.error('[AUTH-DEBUG] /verify returned success=false:', response.data);
         setSyncError('Backend returned unexpected response. Contact support.');
         hasAttemptedAuth.current = false;
       }
     } catch (error: any) {
       const status = error?.response?.status;
       const msg = error?.response?.data?.error || error?.message || 'Unknown error';
-      console.error('[PrivyAuth] Backend sync failed:', status, msg);
+      console.error('[AUTH-DEBUG] Backend sync FAILED:', status, msg);
+      console.error('[AUTH-DEBUG] Full error:', error?.response?.data);
       if (status === 429) {
         setSyncError('rate_limited');
       } else {
