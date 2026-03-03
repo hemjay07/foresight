@@ -30,7 +30,7 @@ const Privacy = () => {
           </p>
           <ul className="list-disc list-inside space-y-2 ml-4 mt-2">
             <li>Provide and maintain the Platform</li>
-            <li>Track your fantasy league performance</li>
+            <li>Track your contest performance</li>
             <li>Improve user experience and features</li>
             <li>Comply with legal obligations</li>
           </ul>

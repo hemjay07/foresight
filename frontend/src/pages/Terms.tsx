@@ -4,7 +4,7 @@ import SEO from '../components/SEO';
 const Terms = () => {
   return (
     <LegalPageLayout title="Terms of Service">
-      <SEO title="Terms of Service" description="Foresight Terms of Service — rules and conditions for using the CT Fantasy League platform." path="/terms" />
+      <SEO title="Terms of Service" description="Foresight Terms of Service — rules and conditions for using the CT influence competition platform." path="/terms" />
       <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
         Terms of Service
       </h1>

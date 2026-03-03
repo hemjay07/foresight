@@ -14,7 +14,7 @@ const Imprint = () => {
           <h2 className="text-2xl font-semibold text-white mb-3">Platform Information</h2>
           <div className="space-y-2">
             <p>
-              <strong className="text-white">Platform Name:</strong> Foresight - CT Fantasy League
+              <strong className="text-white">Platform Name:</strong> Foresight - CT Influence Competition
             </p>
             <p>
               <strong className="text-white">Platform Type:</strong> Decentralized Web Application (dApp)

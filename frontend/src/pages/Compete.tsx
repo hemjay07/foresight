@@ -452,8 +452,8 @@ export default function Compete() {
     <div className="max-w-6xl mx-auto">
       <SEO
         title="Compete — Contests & Rankings"
-        description="Join fantasy contests, draft CT influencers, and climb the Foresight leaderboard. Weekly competitions with SOL prizes."
-        keywords="crypto fantasy contest, CT leaderboard, fantasy sports competition, solana prizes, crypto twitter rankings"
+        description="Join contests, draft CT influencers, and climb the Foresight leaderboard. Weekly competitions with SOL prizes."
+        keywords="crypto CT contest, CT leaderboard, solana competition, solana prizes, crypto twitter rankings"
         path="/compete"
       />
       {/* Row 1: Title + Main Tabs + Contest Filter (when on contests tab) */}

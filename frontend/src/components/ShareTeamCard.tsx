@@ -83,7 +83,7 @@ export default function ShareTeamCard({
     const captain = picks.find((p) => p.isCaptain || p.id === captainId);
     const others = picks.filter((p) => !(p.isCaptain || p.id === captainId));
 
-    let tweet = `\u{1F3C6} Just locked in my CT Fantasy squad on @ForesightCT!\n\n`;
+    let tweet = `\u{1F3C6} Just locked in my squad on @ForesightCT!\n\n`;
     if (captain) {
       const h = captain.handle || captain.twitter_handle || captain.name;
       tweet += `\u{1F451} Captain: @${h}\n`;
@@ -93,7 +93,7 @@ export default function ShareTeamCard({
       tweet += `\u{26A1} @${h}\n`;
     });
     tweet += `\nDraft your team and beat me \u{1F440}\u{1F447}\n`;
-    tweet += `#Foresight #CTFantasy #Solana`;
+    tweet += `#Foresight #CTDraft #Solana`;
     return tweet;
   };
 

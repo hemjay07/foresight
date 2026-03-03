@@ -21,7 +21,7 @@ const Footer = () => {
               Foresight
             </h3>
             <p className="text-gray-400 text-sm mb-4">
-              The premier CT Fantasy League. Build your squad, compete, and climb the ranks.
+              The CT influence competition. Draft, score, win on Solana.
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3">

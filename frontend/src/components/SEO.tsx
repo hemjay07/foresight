@@ -9,8 +9,8 @@ interface SEOProps {
 
 const SITE_NAME = 'Foresight';
 const BASE_URL = 'https://ct-foresight.xyz';
-const DEFAULT_TITLE = 'Foresight — Fantasy Sports for Crypto Twitter';
-const DEFAULT_DESC = 'Draft top CT influencers, score points from their real engagement, and compete for SOL prizes on Solana. Free to play.';
+const DEFAULT_TITLE = 'Foresight — Back CT Calls. Get Paid.';
+const DEFAULT_DESC = 'Draft top CT influencers, score their real engagement, and compete for SOL prizes on Solana. Free to play.';
 
 export default function SEO({ title, description, keywords, path = '' }: SEOProps) {
   const fullTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;

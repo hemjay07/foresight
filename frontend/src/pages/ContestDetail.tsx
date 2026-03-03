@@ -1175,7 +1175,7 @@ export default function ContestDetail() {
                     onClick={() => {
                       const prizeUsd = (parseFloat(String(myEntry.prizeAmount)) * solPrice).toFixed(2);
                       const prizeSol = parseFloat(String(myEntry.prizeAmount)).toFixed(3);
-                      const tweet = `Just won $${prizeUsd} (${prizeSol} SOL) on @ForesightCT! 🏆\n\nFantasy sports for Crypto Twitter — pick your CT influencer team and compete for real SOL.\n\nFree to play 👇`;
+                      const tweet = `Just won $${prizeUsd} (${prizeSol} SOL) on @ForesightCT! 🏆\n\nDraft CT influencers, score real engagement, compete for SOL.\n\nFree to play 👇`;
                       window.open(`https://x.com/intent/post?text=${encodeURIComponent(tweet)}`, '_blank');
                     }}
                     className="flex-1 py-3 rounded-xl bg-white hover:bg-gray-100 text-gray-950 font-bold transition-colors flex items-center justify-center gap-2"

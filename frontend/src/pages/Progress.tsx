@@ -329,7 +329,7 @@ export default function Progress() {
       <SEO
         title="Progress — Quests & XP"
         description="Complete quests, earn XP, and level up in Foresight. Track your daily and weekly challenges for bonus rewards."
-        keywords="crypto fantasy quests, foresight XP, fantasy sports rewards, crypto gaming progress"
+        keywords="crypto quests, foresight XP, CT competition rewards, crypto gaming progress"
         path="/progress"
       />
       {/* Header */}

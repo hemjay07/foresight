@@ -41,7 +41,7 @@ export default function WelcomeModal({ onClose, freeLeagueContestId }: WelcomeMo
     // Step 1: Welcome
     {
       title: "Welcome to Foresight",
-      subtitle: "The fantasy league for Crypto Twitter",
+      subtitle: "Back CT calls. Get paid.",
       content: (
         <div className="space-y-6">
           <div className="text-center">

@@ -1,5 +1,5 @@
 /**
- * Shared Rarity/Tier Definitions for CT Fantasy League
+ * Shared Rarity/Tier Definitions for CT Influence Competition
  * Consistent tier labels, gradients, and styling across all pages
  */
 

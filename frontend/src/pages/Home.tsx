@@ -271,8 +271,8 @@ function LandingPage({
         </div>
 
         <h1 className="text-4xl font-bold text-white mb-3 leading-tight tracking-tight">
-          Fantasy league for{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Crypto Twitter</span>
+          Back CT calls.{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Get paid.</span>
         </h1>
         <p className="text-sm text-gray-400 mb-0 leading-relaxed">
           Pick 5 CT influencers. Score their weekly engagement. Compete for SOL.
@@ -307,8 +307,8 @@ function LandingPage({
             </div>
 
             <h1 className="text-5xl xl:text-6xl font-bold text-white leading-[1.05] tracking-tight mb-5">
-              Fantasy league<br />for{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Crypto Twitter</span>
+              Back CT calls.<br />{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Get paid.</span>
             </h1>
             <p className="text-lg text-gray-400 leading-relaxed max-w-sm mb-0">
               Pick 5 CT influencers. Score their weekly engagement. Compete for SOL prizes.

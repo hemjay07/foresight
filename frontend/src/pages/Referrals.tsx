@@ -102,8 +102,8 @@ export default function Referrals() {
 
     const shareUrl = `${window.location.origin}?ref=${data.referralCode}`;
     const text = data.isFoundingMember
-      ? `I'm Founding Member #${data.foundingMemberNumber} of @ForesightCT! 👑\n\nJoin the CT Fantasy revolution. Draft influencers, earn points, build your position.\n\n Early supporters will be rewarded 💰`
-      : `Just invited ${data.activeReferralCount} players to @ForesightCT! 🎮\n\nCT Fantasy is heating up. Get in early.\n\nJoin me:`;
+      ? `I'm Founding Member #${data.foundingMemberNumber} of @ForesightCT! 👑\n\nDraft CT influencers, score real engagement, compete for SOL.\n\nEarly supporters will be rewarded 💰`
+      : `Just invited ${data.activeReferralCount} players to @ForesightCT! 🎮\n\nDraft CT influencers. Score real engagement. Win SOL.\n\nJoin me:`;
 
     const twitterUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
     window.open(twitterUrl, '_blank');

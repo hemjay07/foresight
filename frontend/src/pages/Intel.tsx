@@ -446,7 +446,7 @@ export default function Intel() {
     <div className="min-h-screen bg-gray-950">
       <SEO
         title="Intel — CT Research Feed"
-        description="Real-time Crypto Twitter intelligence. Track influencer activity, engagement metrics, and rising stars to inform your fantasy draft picks."
+        description="Real-time Crypto Twitter intelligence. Track influencer activity, engagement metrics, and rising stars to inform your draft picks."
         keywords="crypto twitter feed, CT influencer tracker, crypto influencer analytics, twitter engagement metrics, crypto research tool"
         path="/feed"
       />

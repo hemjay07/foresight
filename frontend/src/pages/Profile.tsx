@@ -441,9 +441,9 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto">
       <SEO
-        title="Profile — Your Fantasy Stats"
-        description="View your Foresight fantasy stats, contest history, team formations, and achievements. Track your Foresight Score and climb the rankings."
-        keywords="fantasy sports profile, crypto fantasy stats, foresight score, CT fantasy achievements"
+        title="Profile — Your Stats"
+        description="View your Foresight stats, contest history, team formations, and achievements. Track your Foresight Score and climb the rankings."
+        keywords="CT influence profile, crypto competition stats, foresight score, CT achievements"
         path="/profile"
       />
       {/* ── Profile Header (compact, no card wrapper) ── */}
