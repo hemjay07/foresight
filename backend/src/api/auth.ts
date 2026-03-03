@@ -336,7 +336,6 @@ async function createSessionAndRespond(
 
   sendSuccess(res, {
     csrfToken,
-    accessToken, // CDN strips Set-Cookie headers; fallback for Bearer token auth
     user: {
       id: user.id,
       walletAddress: user.wallet_address || null,

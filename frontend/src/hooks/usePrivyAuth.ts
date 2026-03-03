@@ -64,12 +64,6 @@ export function usePrivyAuth() {
 
       if (response.data?.success) {
         console.log('[AUTH-DEBUG] Backend auth SUCCESS, isBackendAuthed = true');
-        // Store token in sessionStorage — CDN strips Set-Cookie headers so we
-        // can't rely on httpOnly cookies reaching the browser in production.
-        const token = response.data?.data?.accessToken;
-        if (token) {
-          sessionStorage.setItem('accessToken', token);
-        }
         setIsBackendAuthed(true);
       } else {
         console.error('[AUTH-DEBUG] /verify returned success=false:', response.data);
@@ -111,7 +105,6 @@ export function usePrivyAuth() {
 
     // User disconnected
     if (!authenticated && lastUserId.current) {
-      sessionStorage.removeItem('accessToken');
       setIsBackendAuthed(false);
       lastUserId.current = undefined;
       hasAttemptedAuth.current = false;
@@ -136,7 +129,6 @@ export function usePrivyAuth() {
   const handleLogout = useCallback(async () => {
     try {
       await apiClient.post('/api/auth/logout').catch(() => {});
-      sessionStorage.removeItem('accessToken');
       setIsBackendAuthed(false);
       await logout();
     } catch (error) {
