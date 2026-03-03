@@ -1,7 +1,6 @@
 import { type ReactNode, useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  House,
   User,
   Trophy,
   Newspaper,
@@ -56,13 +55,8 @@ export default function Layout({ children }: LayoutProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // 4-item navigation: Home / Compete / Feed / Profile
+  // 3-item navigation: Compete / Feed / Profile (logo handles Home)
   const navItems: NavItem[] = [
-    {
-      path: '/',
-      label: 'Home',
-      icon: House,
-    },
     {
       path: '/compete',
       label: 'Compete',
