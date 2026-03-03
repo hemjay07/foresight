@@ -49,6 +49,8 @@ export function usePrivyAuth() {
       const response = await apiClient.post('/api/auth/verify', { privyToken });
 
       if (response.data?.success) {
+        const at = response.data?.data?.accessToken;
+        if (at) sessionStorage.setItem('accessToken', at);
         setIsBackendAuthed(true);
       } else {
         setSyncError('Backend returned unexpected response. Contact support.');
@@ -86,6 +88,7 @@ export function usePrivyAuth() {
 
     // User disconnected
     if (!authenticated && lastUserId.current) {
+      sessionStorage.removeItem('accessToken');
       setIsBackendAuthed(false);
       lastUserId.current = undefined;
       hasAttemptedAuth.current = false;
@@ -110,6 +113,7 @@ export function usePrivyAuth() {
   const handleLogout = useCallback(async () => {
     try {
       await apiClient.post('/api/auth/logout').catch(() => {});
+      sessionStorage.removeItem('accessToken');
       setIsBackendAuthed(false);
       await logout();
     } catch (error) {
