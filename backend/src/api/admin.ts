@@ -580,13 +580,13 @@ export async function ensureDemoContest(): Promise<{ created: boolean; contest: 
 
 /**
  * @route GET /api/admin/ensure-contest
- * @desc Public endpoint — creates demo contest if none exists. Safe to call from browser.
+ * @desc During launch week, redirects to seedLaunchContest instead of old demo.
  */
 router.get('/ensure-contest', async (_req: Request, res: Response) => {
   try {
-    const result = await ensureDemoContest();
+    const result = await seedLaunchContest();
     sendSuccess(res, {
-      message: result.created ? 'Demo contest created' : 'Demo contest already active',
+      message: result.created ? 'Launch contest created' : 'Launch contest already active',
       contest: { id: result.contest.id, status: result.contest.status },
     });
   } catch (error: any) {
@@ -596,24 +596,17 @@ router.get('/ensure-contest', async (_req: Request, res: Response) => {
 
 /**
  * @route POST /api/admin/seed-demo-contest
- * @desc Create the FREE_LEAGUE demo contest if one doesn't exist.
- *       No auth required so it can be called from the frontend.
- *       Optionally protected by ADMIN_KEY env var (?key= query param).
+ * @desc During launch week, creates "The Call" instead of the old demo contest.
  */
 router.post('/seed-demo-contest', async (req: Request, res: Response) => {
   try {
-    const adminKey = process.env.ADMIN_KEY;
-    const providedKey = req.query.key as string | undefined;
-    if (adminKey && providedKey !== adminKey) {
-      return sendError(res, 'Unauthorized', 401);
-    }
-    const result = await ensureDemoContest();
+    const result = await seedLaunchContest();
     sendSuccess(res, {
-      message: result.created ? 'Demo contest created' : 'Demo contest already active',
+      message: result.created ? 'Launch contest created' : 'Launch contest already active',
       contest: { id: result.contest.id, status: result.contest.status },
     });
   } catch (error: any) {
-    sendError(res, 'Failed to seed demo contest', 500, error.message);
+    sendError(res, 'Failed to seed contest', 500, error.message);
   }
 });
 
