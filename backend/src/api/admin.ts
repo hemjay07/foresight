@@ -508,74 +508,11 @@ router.post('/trigger-contest-finalization', authenticate, requireAdmin, async (
 });
 
 /**
- * Shared logic: ensure FREE_LEAGUE contest type + demo contest exist.
- * Returns { created: boolean, contest: object }
+ * Startup contest seeder — delegates to seedLaunchContest during launch week.
+ * Old demo contest logic removed to prevent "CT Draft — Free League" from respawning.
  */
 export async function ensureDemoContest(): Promise<{ created: boolean; contest: Record<string, unknown> }> {
-  // 1. Ensure FREE_LEAGUE contest type exists
-  let contestType = await db('contest_types').where('code', 'FREE_LEAGUE').first();
-  if (!contestType) {
-    await db('contest_types').insert({
-      code: 'FREE_LEAGUE',
-      name: 'Free League',
-      description: 'Practice mode - no entry fee, real prizes funded by platform',
-      entry_fee: 0,
-      team_size: 5,
-      has_captain: true,
-      duration_hours: 168,
-      rake_percent: 0,
-      min_players: 10,
-      max_players: 0,
-      winners_percent: 10,
-      is_free: true,
-      display_order: 1,
-    });
-    contestType = await db('contest_types').where('code', 'FREE_LEAGUE').first();
-  }
-
-  // 2. Return early if active contest already exists
-  const activeContest = await db('prized_contests')
-    .where('name', '🎯 CT Draft — Free League')
-    .whereIn('status', ['open', 'locked', 'scoring'])
-    .first();
-
-  if (activeContest) {
-    return { created: false, contest: activeContest };
-  }
-
-  // 3. Compute lock_time (next Monday 12:00 UTC) and end_time
-  const now = new Date();
-  const day = now.getUTCDay();
-  const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7 || 7;
-  const lockTime = new Date(now);
-  lockTime.setUTCDate(now.getUTCDate() + daysUntilMonday);
-  lockTime.setUTCHours(12, 0, 0, 0);
-  const endTime = new Date(lockTime.getTime() + 7 * 24 * 60 * 60 * 1000 - 1000);
-
-  const [contest] = await db('prized_contests').insert({
-    contest_type_id: contestType.id,
-    contract_contest_id: null,
-    contract_address: null,
-    name: '🎯 CT Draft — Free League',
-    description: 'Draft 5 CT influencers and compete for prizes. Free to enter!',
-    entry_fee: '0',
-    team_size: contestType.team_size || 5,
-    has_captain: contestType.has_captain ?? true,
-    is_free: true,
-    rake_percent: '0',
-    min_players: contestType.min_players || 2,
-    max_players: contestType.max_players || 0,
-    lock_time: lockTime,
-    end_time: endTime,
-    status: 'open',
-    prize_pool: '0.05',
-    distributable_pool: '0.05',
-    player_count: 0,
-    created_at: new Date(),
-    updated_at: new Date(),
-  }).returning('*');
-
-  return { created: true, contest };
+  return seedLaunchContest();
 }
 
 /**
