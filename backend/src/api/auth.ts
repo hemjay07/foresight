@@ -22,14 +22,15 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = NODE_ENV === 'production';
 
 // FINDING-007: Cookie options for httpOnly JWT storage
-// Cookies are set with sameSite:'none' for cross-origin (Railway backend).
-// When api.ct-foresight.xyz is verified, switch to sameSite:'lax' + domain.
-const SAME_SITE = IS_PROD ? ('none' as const) : ('lax' as const);
+// api.ct-foresight.xyz → ct-foresight.xyz share parent domain .ct-foresight.xyz
+// so SameSite=Lax works and cookies flow without cross-origin hacks.
+const COOKIE_DOMAIN = IS_PROD ? '.ct-foresight.xyz' : undefined;
 
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: SAME_SITE,
+  sameSite: 'lax' as const,
+  domain: COOKIE_DOMAIN,
   maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT_EXPIRES_IN)
   path: '/',
 };
@@ -37,7 +38,8 @@ const ACCESS_COOKIE_OPTIONS = {
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: IS_PROD,
-  sameSite: SAME_SITE,
+  sameSite: 'lax' as const,
+  domain: COOKIE_DOMAIN,
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   path: '/',
 };
@@ -45,7 +47,8 @@ const REFRESH_COOKIE_OPTIONS = {
 const CSRF_COOKIE_OPTIONS = {
   httpOnly: false, // Frontend JS must read this
   secure: IS_PROD,
-  sameSite: SAME_SITE,
+  sameSite: 'lax' as const,
+  domain: COOKIE_DOMAIN,
   maxAge: 30 * 24 * 60 * 60 * 1000,
   path: '/',
 };
