@@ -713,4 +713,44 @@ router.post('/seed-launch-contest', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * @route POST /api/admin/cleanup-contests
+ * @desc Cancel all active contests EXCEPT "The Call".
+ *       For launch week — only the hero contest should be visible.
+ */
+router.post('/cleanup-contests', async (req: Request, res: Response) => {
+  try {
+    const adminKey = process.env.ADMIN_KEY;
+    const providedKey = req.query.key as string | undefined;
+    if (adminKey && providedKey !== adminKey) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const keepName = 'The Call';
+
+    // Find all active contests that aren't "The Call"
+    const toCancel = await db('prized_contests')
+      .whereIn('status', ['open', 'locked', 'scoring'])
+      .whereNot('name', keepName)
+      .select('id', 'name', 'status');
+
+    if (toCancel.length === 0) {
+      return sendSuccess(res, { message: 'No contests to clean up', cancelled: [] });
+    }
+
+    // Cancel them all
+    const ids = toCancel.map((c: { id: number }) => c.id);
+    await db('prized_contests')
+      .whereIn('id', ids)
+      .update({ status: 'cancelled', updated_at: new Date() });
+
+    sendSuccess(res, {
+      message: `Cancelled ${toCancel.length} contest(s), kept "${keepName}"`,
+      cancelled: toCancel.map((c: { id: number; name: string }) => ({ id: c.id, name: c.name })),
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to clean up contests', 500, error.message);
+  }
+});
+
 export default router;

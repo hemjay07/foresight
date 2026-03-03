@@ -156,7 +156,8 @@ export function initializeCronJobs(): void {
     console.log('\n[CRON] Running Contest Management...');
     try {
       await checkContestEndDates();
-      await createUpcomingContests();
+      // Auto-creation disabled during launch — contests are seeded manually
+      // await createUpcomingContests();
     } catch (error) {
       console.error('[CRON] Contest management failed:', error);
     }
@@ -198,27 +199,29 @@ export function initializeCronJobs(): void {
   });
   console.log('✅ Contest Finalization: Every hour (at :30)');
 
-  // 6. Auto-Create Weekly Prized Contests - Sunday at 18:00 UTC
-  cron.schedule('0 18 * * 0', async () => {
-    console.log('\n[CRON] Creating new weekly prized contests...');
-    try {
-      await createWeeklyPrizedContests();
-    } catch (error) {
-      console.error('[CRON] Weekly prized contest creation failed:', error);
-    }
-  });
-  console.log('✅ Weekly Prized Contests Creation: Sunday 18:00 UTC');
+  // 6. Auto-Create Weekly Prized Contests — DISABLED during launch
+  // Contests are manually seeded via /api/admin/seed-launch-contest
+  // Re-enable for Season 1 by uncommenting below
+  // cron.schedule('0 18 * * 0', async () => {
+  //   console.log('\n[CRON] Creating new weekly prized contests...');
+  //   try {
+  //     await createWeeklyPrizedContests();
+  //   } catch (error) {
+  //     console.error('[CRON] Weekly prized contest creation failed:', error);
+  //   }
+  // });
+  console.log('⏸️  Weekly Prized Contests Creation: DISABLED (manual seeding)');
 
-  // 7. Auto-Create Daily Flash Contests - Every day at 00:00 UTC
-  cron.schedule('0 0 * * *', async () => {
-    console.log('\n[CRON] Creating new daily flash contest...');
-    try {
-      await createDailyFlashContest();
-    } catch (error) {
-      console.error('[CRON] Daily flash contest creation failed:', error);
-    }
-  });
-  console.log('✅ Daily Flash Contest Creation: Daily at 00:00 UTC');
+  // 7. Auto-Create Daily Flash Contests — DISABLED during launch
+  // cron.schedule('0 0 * * *', async () => {
+  //   console.log('\n[CRON] Creating new daily flash contest...');
+  //   try {
+  //     await createDailyFlashContest();
+  //   } catch (error) {
+  //     console.error('[CRON] Daily flash contest creation failed:', error);
+  //   }
+  // });
+  console.log('⏸️  Daily Flash Contest Creation: DISABLED (manual seeding)');
 
   // 8. Influencer Metrics Update - Daily at 4 AM UTC
   cron.schedule('0 4 * * *', async () => {
