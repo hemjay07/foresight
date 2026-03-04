@@ -122,7 +122,7 @@ export default function Settings() {
       const profileData = profileResponse.data?.data || profileResponse.data;
       setProfile(profileData);
       setUsernameInput(profileData.username || '');
-      setAvatarUrlInput(profileData.avatarUrl || '');
+      // avatarUrl is read directly from profile state, no separate input needed
 
       try {
         const teamResponse = await apiClient.get('/api/league/team/me');
@@ -294,7 +294,7 @@ export default function Settings() {
               Avatar
             </label>
             <div className="flex items-center gap-4 mb-3">
-              <div className="w-20 h-20 rounded-full border-2 border-gold-500 shadow-soft-lg overflow-hidden bg-gray-800">
+              <div className="w-20 h-20 rounded-full shadow-soft-lg overflow-hidden bg-gray-800">
                 {profile?.avatarUrl ? (
                   <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
