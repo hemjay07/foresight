@@ -527,37 +527,59 @@ export default function Compete() {
       {/* Rankings Tab */}
       {mainTab === 'rankings' && (
         <div className="space-y-3">
-          {/* Row 2: Sub-tab selector + timeframe + search — all on one line */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Sub-tabs */}
-            <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-0.5">
-              {[
-                { id: 'fs' as RankingsSubTab, label: 'FS Score', icon: Sparkle },
-                { id: 'fantasy' as RankingsSubTab, label: 'Draft', icon: Trophy },
-                { id: 'xp' as RankingsSubTab, label: 'XP', icon: Crown },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = rankingsSubTab === tab.id;
-                return (
+          {/* Row 2: Sub-tab selector + timeframe + search */}
+          <div className="space-y-2">
+            {/* Sub-tabs + Search on same row */}
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-0.5">
+                {[
+                  { id: 'fs' as RankingsSubTab, label: 'FS Score', icon: Sparkle },
+                  { id: 'fantasy' as RankingsSubTab, label: 'Draft', icon: Trophy },
+                  { id: 'xp' as RankingsSubTab, label: 'XP', icon: Crown },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = rankingsSubTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setRankingsSubTab(tab.id)}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                        isActive
+                          ? 'bg-gray-700 text-white'
+                          : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      <Icon size={13} weight={isActive ? 'fill' : 'regular'} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search — hidden on mobile, shown on desktop */}
+              <div className="relative ml-auto hidden sm:block">
+                <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search players..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-7 pr-6 py-1.5 text-xs bg-gray-800/50 border border-gray-700/50 rounded-lg text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-600 w-36 focus:w-44 transition-all"
+                />
+                {searchQuery && (
                   <button
-                    key={tab.id}
-                    onClick={() => setRankingsSubTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                      isActive
-                        ? 'bg-gray-700 text-white'
-                        : 'text-gray-500 hover:text-gray-300'
-                    }`}
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                   >
-                    <Icon size={13} weight={isActive ? 'fill' : 'regular'} />
-                    {tab.label}
+                    ×
                   </button>
-                );
-              })}
+                )}
+              </div>
             </div>
 
-            {/* Timeframe — only for FS tab */}
+            {/* Timeframe — own row, scrollable on mobile */}
             {rankingsSubTab === 'fs' && (
-              <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-0.5">
+              <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
                 {[
                   { id: 'all_time' as FsTimeframe, label: 'All-Time' },
                   { id: 'friends' as FsTimeframe, label: 'Friends' },
@@ -568,10 +590,10 @@ export default function Compete() {
                   <button
                     key={tf.id}
                     onClick={() => setFsTimeframe(tf.id)}
-                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                    className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
                       fsTimeframe === tf.id
                         ? 'bg-gold-500 text-gray-950'
-                        : 'text-gray-500 hover:text-gray-300'
+                        : 'bg-gray-800/50 text-gray-500 hover:text-gray-300'
                     }`}
                   >
                     {tf.label}
@@ -579,26 +601,6 @@ export default function Compete() {
                 ))}
               </div>
             )}
-
-            {/* Search */}
-            <div className="relative ml-auto">
-              <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search players..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-7 pr-6 py-1.5 text-xs bg-gray-800/50 border border-gray-700/50 rounded-lg text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-600 w-36 focus:w-44 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  ×
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Loading */}
@@ -612,10 +614,10 @@ export default function Compete() {
           {/* FS Leaderboard */}
           {!loading && rankingsSubTab === 'fs' && (
             <div className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden">
-              <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkle size={20} weight="fill" className="text-gold-400" />
-                  <span className="font-semibold text-white">
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-800 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Sparkle size={16} weight="fill" className="text-gold-400 sm:!w-5 sm:!h-5" />
+                  <span className="text-sm sm:text-base font-semibold text-white">
                     {fsTimeframe === 'all_time' && 'All-Time Leaders'}
                     {fsTimeframe === 'season' && 'Season Leaders'}
                     {fsTimeframe === 'weekly' && 'Weekly Leaders'}
@@ -623,13 +625,13 @@ export default function Compete() {
                     {fsTimeframe === 'friends' && 'Friends Leaderboard'}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xs sm:text-sm text-gray-500">
                     {fsTimeframe === 'friends'
                       ? `${filteredFsLeaders.length} friend${filteredFsLeaders.length !== 1 ? 's' : ''}`
                       : `${fsTotal.toLocaleString()} players`}
                   </span>
-                  <span className="flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-400">
+                  <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono font-semibold text-emerald-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     LIVE
                   </span>
@@ -638,8 +640,8 @@ export default function Compete() {
 
               {/* ── Podium — Top 3 Heroes ── */}
               {showPodium && (
-                <div className="px-4 pt-5 pb-4 border-b border-gray-800">
-                  <div className="grid grid-cols-3 gap-3 items-end">
+                <div className="px-3 sm:px-4 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-800">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 items-end">
                     {[filteredFsLeaders[1], filteredFsLeaders[0], filteredFsLeaders[2]].map((entry, i) => {
                       const rank = [2, 1, 3][i];
                       const isCenter = i === 1;
@@ -650,27 +652,27 @@ export default function Compete() {
                         ? { ring: 'ring-gray-400/40', score: 'text-gray-300', border: 'border-gray-700' }
                         : { ring: 'ring-emerald-400/40', score: 'text-emerald-400', border: 'border-gray-700' };
                       return (
-                        <div key={entry.userId} className={`bg-gray-800/50 border ${accent.border} rounded-xl ${isCenter ? 'p-5' : 'p-4 pt-6'} text-center`}>
+                        <div key={entry.userId} className={`bg-gray-800/50 border ${accent.border} rounded-xl ${isCenter ? 'p-2.5 sm:p-5' : 'p-2 pt-3 sm:p-4 sm:pt-6'} text-center`}>
                           {isCenter ? (
-                            <Crown size={20} weight="fill" className="text-gold-400 mx-auto mb-2" />
+                            <Crown size={16} weight="fill" className="text-gold-400 mx-auto mb-1 sm:mb-2 sm:!w-5 sm:!h-5" />
                           ) : (
-                            <Medal size={14} weight="fill" className={`mx-auto mb-1.5 ${rank === 2 ? 'text-gray-300' : 'text-emerald-400'}`} />
+                            <Medal size={12} weight="fill" className={`mx-auto mb-1 sm:mb-1.5 sm:!w-3.5 sm:!h-3.5 ${rank === 2 ? 'text-gray-300' : 'text-emerald-400'}`} />
                           )}
-                          <div className={`mx-auto ${isCenter ? 'w-14 h-14' : 'w-11 h-11'} rounded-full bg-gray-800 flex items-center justify-center overflow-hidden ring-2 ${accent.ring} mb-2`}>
+                          <div className={`mx-auto ${isCenter ? 'w-10 h-10 sm:w-14 sm:h-14' : 'w-8 h-8 sm:w-11 sm:h-11'} rounded-full bg-gray-800 flex items-center justify-center overflow-hidden ring-2 ${accent.ring} mb-1 sm:mb-2`}>
                             {entry.avatarUrl ? (
                               <img src={entry.avatarUrl} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <Users size={isCenter ? 22 : 16} weight="fill" className="text-gray-500" />
+                              <Users size={isCenter ? 18 : 14} weight="fill" className="text-gray-500" />
                             )}
                           </div>
-                          <div className="text-sm font-semibold text-white truncate">{entry.username || 'Anonymous'}</div>
-                          <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold ${tierCfg.bg} ${tierCfg.color} rounded uppercase tracking-wide mt-1`}>
+                          <div className="text-[11px] sm:text-sm font-semibold text-white truncate">{entry.username || 'Anonymous'}</div>
+                          <span className={`inline-block px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold ${tierCfg.bg} ${tierCfg.color} rounded uppercase tracking-wide mt-0.5 sm:mt-1`}>
                             {entry.tier}
                           </span>
-                          <div className={`${isCenter ? 'text-2xl' : 'text-lg'} font-mono font-black tabular-nums ${accent.score} mt-2 leading-none`}>
+                          <div className={`${isCenter ? 'text-base sm:text-2xl' : 'text-sm sm:text-lg'} font-mono font-black tabular-nums ${accent.score} mt-1 sm:mt-2 leading-none`}>
                             {entry.score.toLocaleString()}
                           </div>
-                          <div className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5">FS</div>
+                          <div className="text-[9px] sm:text-[10px] text-gray-600 uppercase tracking-widest mt-0.5">FS</div>
                         </div>
                       );
                     })}
@@ -680,13 +682,13 @@ export default function Compete() {
 
               {/* Your Position — Stats Bar */}
               {userPosition && rankingsSubTab === 'fs' && !searchQuery && (
-                <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-4 bg-gold-500/5">
-                  <div className="w-8 h-8 rounded-full bg-gold-500/10 flex items-center justify-center ring-1 ring-gold-500/30 shrink-0">
-                    <Users size={14} weight="fill" className="text-gold-400" />
+                <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-800 flex items-center gap-3 sm:gap-4 bg-gold-500/5">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gold-500/10 flex items-center justify-center ring-1 ring-gold-500/30 shrink-0">
+                    <Users size={12} weight="fill" className="text-gold-400 sm:!w-3.5 sm:!h-3.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider">Your Position</span>
-                    <div className="flex items-center gap-3">
+                    <span className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider">Your Position</span>
+                    <div className="flex items-center gap-2 sm:gap-3">
                       <span className="text-sm font-bold font-mono tabular-nums text-gold-400">#{userPosition.rank}</span>
                       <span className="text-[11px] text-gray-500">Top {100 - userPosition.percentile}%</span>
                     </div>
@@ -704,17 +706,17 @@ export default function Compete() {
                   return (
                     <div key={entry.userId}>
                       <div
-                        className={`group px-4 py-3 cursor-pointer transition-colors duration-150 ${isExpanded ? 'bg-gray-800/40' : 'hover:bg-gray-800/20'}`}
+                        className={`group px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors duration-150 ${isExpanded ? 'bg-gray-800/40' : 'hover:bg-gray-800/20'}`}
                         onClick={() => setExpandedPlayerId(isExpanded ? null : entry.userId)}
                       >
                         <div className="flex items-center gap-2 sm:gap-3">
                           {/* Rank */}
-                          <div className="w-8 text-center shrink-0">
+                          <div className="w-6 sm:w-8 text-center shrink-0">
                             <span className={`text-[11px] font-mono ${getRankStyle(rank)}`}>#{rank}</span>
                           </div>
 
                           {/* Avatar */}
-                          <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
                             {entry.avatarUrl ? (
                               <img src={entry.avatarUrl} alt="" className="w-full h-full object-cover" />
                             ) : (

@@ -258,7 +258,7 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-gray-950">
       <SEO title="Settings" description="Manage your Foresight profile, linked accounts, and preferences." path="/settings" />
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white mb-1">Settings</h1>
@@ -516,26 +516,26 @@ export default function Settings() {
         )}
 
         {/* Danger Zone */}
-        <div className="card p-6 rounded-xl border border-red-900/30">
-          <div className="flex items-center gap-2.5 mb-4 pb-4 border-b border-red-900/30">
-            <Warning size={28} weight="bold" className="text-red-400" />
-            <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
+        <div className="card p-4 sm:p-6 rounded-xl border border-red-900/30">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-red-900/30">
+            <Warning size={22} weight="bold" className="text-red-400" />
+            <h2 className="text-base sm:text-lg font-semibold text-white">Danger Zone</h2>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-semibold text-white mb-0.5">
                 Sign Out
               </h3>
-              <p className="text-gray-400 text-sm">
-                You will be logged out and need to reconnect to access your account
+              <p className="text-gray-400 text-xs sm:text-sm">
+                Log out and disconnect your account
               </p>
             </div>
             <button
               onClick={handleDisconnect}
-              className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 border-2 border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 font-bold flex items-center gap-2 transition-all"
+              className="shrink-0 px-3 sm:px-6 py-2 sm:py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all"
             >
-              <SignOut size={20} weight="bold" />
+              <SignOut size={16} weight="bold" />
               Sign Out
             </button>
           </div>

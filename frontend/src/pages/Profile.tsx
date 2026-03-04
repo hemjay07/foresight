@@ -382,46 +382,43 @@ export default function Profile() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
         {/* Hero */}
-        <div className="text-center py-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-gold">
-            <Users size={32} className="text-gray-950" />
+        <div className="text-center py-4 sm:py-8">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-gold">
+            <Users size={24} className="text-gray-950 sm:!w-8 sm:!h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Your Profile</h1>
-          <p className="text-gray-400 max-w-md mx-auto">Track your stats, manage your teams, and view your progress</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">Your Profile</h1>
+          <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">Track your stats, manage your teams, and view your progress</p>
         </div>
 
-        {/* Preview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-gold-500/20 flex items-center justify-center mx-auto mb-3">
-              <Trophy size={24} weight="fill" className="text-gold-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1">Your Teams</h3>
-            <p className="text-sm text-gray-500">View and edit your drafted teams</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-gray-700/60 flex items-center justify-center mx-auto mb-3">
-              <ChartBar size={24} weight="fill" className="text-gray-300" />
-            </div>
-            <h3 className="font-semibold text-white mb-1">Stats & XP</h3>
-            <p className="text-sm text-gray-500">Track your performance over time</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-gold-500/20 flex items-center justify-center mx-auto mb-3">
-              <Target size={24} weight="fill" className="text-gold-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1">Daily Quests</h3>
-            <p className="text-sm text-gray-500">Complete tasks to earn rewards</p>
-          </div>
+        {/* Preview Cards — horizontal on mobile, grid on desktop */}
+        <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4 mb-6 sm:mb-8">
+          {[
+            { icon: Trophy, color: 'text-gold-400', bg: 'bg-gold-500/20', title: 'Your Teams', desc: 'View and edit your drafted teams' },
+            { icon: ChartBar, color: 'text-gray-300', bg: 'bg-gray-700/60', title: 'Stats & XP', desc: 'Track your performance over time' },
+            { icon: Target, color: 'text-gold-400', bg: 'bg-gold-500/20', title: 'Daily Quests', desc: 'Complete tasks to earn rewards' },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 sm:p-5 flex items-center gap-3 sm:flex-col sm:text-center">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg ${card.bg} flex items-center justify-center shrink-0 sm:mx-auto sm:mb-1`}>
+                  <Icon size={20} weight="fill" className={card.color} />
+                </div>
+                <div className="sm:space-y-1">
+                  <h3 className="font-semibold text-white text-sm sm:text-base">{card.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">{card.desc}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* CTA */}
-        <div className="bg-gradient-to-r from-gold-500/10 to-amber-500/10 border border-gold-500/30 rounded-xl p-6 text-center">
-          <h3 className="text-lg font-bold text-white mb-2">Ready to get started?</h3>
-          <p className="text-gray-400 mb-4">Sign in to access your profile</p>
-          <div className="text-sm text-gray-500">Use the "Sign In" button above</div>
+        <div className="bg-gradient-to-r from-gold-500/10 to-amber-500/10 border border-gold-500/30 rounded-xl p-4 sm:p-6 text-center">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1 sm:mb-2">Ready to get started?</h3>
+          <p className="text-sm text-gray-400 mb-3 sm:mb-4">Sign in to access your profile</p>
+          <div className="text-xs sm:text-sm text-gray-500">Use the "Sign In" button above</div>
         </div>
       </div>
     );
@@ -439,32 +436,32 @@ export default function Profile() {
   const xpInfo = getXPLevel(stats.xp);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
       <SEO
         title="Profile — Your Stats"
         description="View your Foresight stats, contest history, team formations, and achievements. Track your Foresight Score and climb the rankings."
         keywords="CT influence profile, crypto competition stats, foresight score, CT achievements"
         path="/profile"
       />
-      {/* ── Profile Header (compact, no card wrapper) ── */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
+      {/* ── Profile Header ── */}
+      <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
         {/* Avatar with gold ring */}
-        <div className="w-14 h-14 rounded-full border-2 border-gold-500/40 bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center shrink-0">
-          <Users size={28} weight="fill" className="text-gray-950" />
+        <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-gold-500/40 bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center shrink-0">
+          <Users size={22} weight="fill" className="text-gray-950 sm:!w-7 sm:!h-7" />
         </div>
 
         {/* Name + wallet + level */}
         <div className="flex-1 min-w-0">
           {!isEditingUsername ? (
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white truncate">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-base sm:text-lg font-bold text-white truncate">
                 {username || 'Anonymous'}
               </h1>
               <button
                 onClick={() => { setTempUsername(username); setIsEditingUsername(true); }}
                 className="p-1 hover:bg-gray-800 rounded-lg transition-all text-gray-500 hover:text-gold-400"
               >
-                <PencilSimple size={16} />
+                <PencilSimple size={14} />
               </button>
             </div>
           ) : (
@@ -474,36 +471,36 @@ export default function Profile() {
                 value={tempUsername}
                 onChange={(e) => setTempUsername(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSaveUsername()}
-                className="text-lg font-bold text-white bg-gray-800 border border-gold-500 rounded-lg px-3 py-1 focus:outline-none"
+                className="text-base font-bold text-white bg-gray-800 border border-gold-500 rounded-lg px-2 py-1 focus:outline-none w-full max-w-[160px]"
                 placeholder="Username"
                 maxLength={20}
                 autoFocus
               />
               <button onClick={handleSaveUsername} className="p-1.5 bg-green-600 hover:bg-green-700 rounded-lg text-white">
-                <Check size={16} />
+                <Check size={14} />
               </button>
               <button onClick={() => setIsEditingUsername(false)} className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white">
-                <X size={16} />
+                <X size={14} />
               </button>
             </div>
           )}
 
           <button
             onClick={copyAddress}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors mt-0.5"
+            className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors mt-0.5"
           >
             <span className="font-mono">{address ? formatAddress(address) : ''}</span>
-            {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+            {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
           </button>
 
           {/* Level + streak pills */}
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gold-500/10 border border-gold-500/20 rounded text-[10px] uppercase tracking-wider text-gold-400 font-semibold">
+          <div className="flex items-center gap-2 mt-1">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gold-500/10 border border-gold-500/20 rounded text-[10px] uppercase tracking-wider text-gold-400 font-semibold">
               <Star size={10} weight="fill" />
               {xpInfo.level}
             </span>
             {stats.voteStreak > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded text-[10px] uppercase tracking-wider text-orange-400 font-semibold">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded text-[10px] uppercase tracking-wider text-orange-400 font-semibold">
                 <Fire size={10} weight="fill" />
                 {stats.voteStreak} streak
               </span>
@@ -511,21 +508,21 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Actions — right side */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Actions — compact on mobile */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <ShareProfileButton variant="secondary" />
           <Link
             to="/settings"
-            className="flex items-center gap-2 px-3 py-2 border border-gray-700 hover:bg-gray-800 rounded-lg text-gray-300 text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-700 hover:bg-gray-800 rounded-lg text-gray-300 text-xs sm:text-sm font-medium transition-colors"
           >
-            <Gear size={16} />
-            Settings
+            <Gear size={14} />
+            <span className="hidden sm:inline">Settings</span>
           </Link>
         </div>
       </div>
 
-      {/* ── Tab Bar (matches Compete page style) ── */}
-      <div className="flex gap-2 mb-6">
+      {/* ── Tab Bar ── */}
+      <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -533,16 +530,16 @@ export default function Profile() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all ${
                 isActive
                   ? 'bg-gold-500/10 text-gold-400 border border-gold-500/30'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-transparent'
               }`}
             >
-              <Icon size={18} weight={isActive ? 'fill' : 'regular'} />
+              <Icon size={16} weight={isActive ? 'fill' : 'regular'} />
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+                <span className={`px-1.5 py-0.5 text-[10px] sm:text-xs rounded-full ${
                   isActive ? 'bg-gold-500/20 text-gold-400' : 'bg-gray-700 text-gray-300'
                 }`}>
                   {tab.count}
@@ -558,47 +555,32 @@ export default function Profile() {
           FS Score → Career Stats → Level/Perks → Quests → Tapestry
           ══════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
 
           {/* A. Foresight Score */}
           <ForesightScoreDisplay variant="full" />
 
-          {/* B. Career Stats — 2×3 grid */}
+          {/* B. Career Stats — 3×2 grid, compact on mobile */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-3">Career Stats</div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-gray-700 transition-colors">
-                <Crown size={16} className="text-gold-400 mx-auto mb-2" />
-                <div className="font-mono text-xl text-white">{formatXP(stats.xp)}</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">Total XP</div>
-              </div>
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-gray-700 transition-colors">
-                <Trophy size={16} className="text-emerald-400 mx-auto mb-2" />
-                <div className="font-mono text-xl text-emerald-400">{stats.totalWins}</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">Wins</div>
-              </div>
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-gray-700 transition-colors">
-                <Fire size={16} className="text-orange-400 mx-auto mb-2" />
-                <div className="font-mono text-xl text-orange-400">{stats.voteStreak}</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">Day Streak</div>
-              </div>
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-gray-700 transition-colors">
-                <Target size={16} className="text-gold-400 mx-auto mb-2" />
-                <div className="font-mono text-xl text-white">{stats.contestsEntered}</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">Contests</div>
-              </div>
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-gray-700 transition-colors">
-                <Medal size={16} className="text-gold-400 mx-auto mb-2" />
-                <div className="font-mono text-xl text-gold-400">
-                  {stats.bestRank ? `#${stats.bestRank}` : '-'}
-                </div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">Best Rank</div>
-              </div>
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 text-center hover:border-gray-700 transition-colors">
-                <Star size={16} className="text-gold-400 mx-auto mb-2" />
-                <div className="font-mono text-xl text-white">{xpInfo.level}</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">Level</div>
-              </div>
+            <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2 sm:mb-3">Career Stats</div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {[
+                { icon: Crown, color: 'text-gold-400', value: formatXP(stats.xp), label: 'Total XP', valueColor: 'text-white' },
+                { icon: Trophy, color: 'text-emerald-400', value: stats.totalWins, label: 'Wins', valueColor: 'text-emerald-400' },
+                { icon: Fire, color: 'text-orange-400', value: stats.voteStreak, label: 'Streak', valueColor: 'text-orange-400' },
+                { icon: Target, color: 'text-gold-400', value: stats.contestsEntered, label: 'Contests', valueColor: 'text-white' },
+                { icon: Medal, color: 'text-gold-400', value: stats.bestRank ? `#${stats.bestRank}` : '-', label: 'Best Rank', valueColor: 'text-gold-400' },
+                { icon: Star, color: 'text-gold-400', value: xpInfo.level, label: 'Level', valueColor: 'text-white' },
+              ].map((stat) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={stat.label} className="bg-gray-900/50 border border-gray-800 rounded-xl p-2.5 sm:p-4 text-center hover:border-gray-700 transition-colors">
+                    <Icon size={14} className={`${stat.color} mx-auto mb-1 sm:mb-2`} />
+                    <div className={`font-mono text-base sm:text-xl ${stat.valueColor}`}>{stat.value}</div>
+                    <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500 mt-0.5">{stat.label}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -798,15 +780,15 @@ export default function Profile() {
                 />
               </div>
             ) : (
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-10 text-center">
-                <Trophy size={40} className="mx-auto mb-3 text-gray-600" />
-                <h3 className="text-lg font-bold text-white mb-2">No Team Yet</h3>
-                <p className="text-gray-400 text-sm mb-5">Draft your first team of 5 CT influencers</p>
+              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 sm:p-10 text-center">
+                <Trophy size={32} className="mx-auto mb-2 sm:mb-3 text-gray-600" />
+                <h3 className="text-base sm:text-lg font-bold text-white mb-1 sm:mb-2">No Team Yet</h3>
+                <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-5">Draft your first team of 5 CT influencers</p>
                 <Link
                   to="/compete?tab=contests"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold-500 hover:bg-gold-600 rounded-lg text-gray-950 font-medium transition-colors text-sm"
+                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gold-500 hover:bg-gold-600 rounded-lg text-gray-950 font-medium transition-colors text-xs sm:text-sm"
                 >
-                  <Crown size={18} />
+                  <Crown size={16} />
                   Browse Contests
                 </Link>
               </div>
@@ -851,13 +833,13 @@ export default function Profile() {
                 <p className="text-gray-500 text-sm">Loading history...</p>
               </div>
             ) : history.length === 0 ? (
-              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-10 text-center">
-                <Trophy size={36} className="mx-auto mb-3 text-gray-600" />
-                <h3 className="font-semibold text-white mb-1">No contests yet</h3>
-                <p className="text-gray-500 text-sm mb-4">Enter a contest to start building your career history</p>
+              <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 sm:p-10 text-center">
+                <Trophy size={28} className="mx-auto mb-2 sm:mb-3 text-gray-600" />
+                <h3 className="text-sm sm:text-base font-semibold text-white mb-1">No contests yet</h3>
+                <p className="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4">Enter a contest to start building your career history</p>
                 <Link
                   to="/compete?tab=contests"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold-500 hover:bg-gold-600 rounded-lg text-gray-950 font-medium transition-colors text-sm"
+                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gold-500 hover:bg-gold-600 rounded-lg text-gray-950 font-medium transition-colors text-xs sm:text-sm"
                 >
                   <Crown size={16} />
                   Browse Contests

@@ -207,46 +207,43 @@ export default function Progress() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
         {/* Hero */}
-        <div className="text-center py-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-gold">
-            <Lightning size={32} weight="fill" className="text-gray-950" />
+        <div className="text-center py-4 sm:py-8">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-gold">
+            <Lightning size={24} weight="fill" className="text-gray-950 sm:!w-8 sm:!h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Your Foresight Score</h1>
-          <p className="text-gray-400 max-w-md mx-auto">Track your progress, complete quests, and climb the rankings</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 sm:mb-2">Your Foresight Score</h1>
+          <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">Track your progress, complete quests, and climb the rankings</p>
         </div>
 
         {/* Preview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-gold-500/20 flex items-center justify-center mx-auto mb-3">
-              <Sparkle size={24} weight="fill" className="text-gold-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1">Foresight Score</h3>
-            <p className="text-sm text-gray-500">Earn FS through gameplay and quests</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-gold-500/15 flex items-center justify-center mx-auto mb-3">
-              <Target size={24} weight="fill" className="text-gold-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1">Daily Quests</h3>
-            <p className="text-sm text-gray-500">Complete challenges for bonus rewards</p>
-          </div>
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 text-center">
-            <div className="w-12 h-12 rounded-lg bg-gold-500/20 flex items-center justify-center mx-auto mb-3">
-              <Trophy size={24} weight="fill" className="text-gold-400" />
-            </div>
-            <h3 className="font-semibold text-white mb-1">Tier Rewards</h3>
-            <p className="text-sm text-gray-500">Unlock perks as you level up</p>
-          </div>
+        <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4 mb-6 sm:mb-8">
+          {[
+            { icon: Sparkle, title: 'Foresight Score', desc: 'Earn FS through gameplay and quests' },
+            { icon: Target, title: 'Daily Quests', desc: 'Complete challenges for bonus rewards' },
+            { icon: Trophy, title: 'Tier Rewards', desc: 'Unlock perks as you level up' },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 sm:p-5 flex items-center gap-3 sm:flex-col sm:text-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gold-500/20 flex items-center justify-center shrink-0 sm:mx-auto sm:mb-1">
+                  <Icon size={20} weight="fill" className="text-gold-400" />
+                </div>
+                <div className="sm:space-y-1">
+                  <h3 className="font-semibold text-white text-sm sm:text-base">{card.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">{card.desc}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* CTA */}
-        <div className="bg-gradient-to-r from-gold-500/10 to-amber-500/10 border border-gold-500/30 rounded-xl p-6 text-center">
-          <h3 className="text-lg font-bold text-white mb-2">Ready to start earning?</h3>
-          <p className="text-gray-400 mb-4">Sign in to begin tracking your progress</p>
-          <div className="text-sm text-gray-500">Use the "Sign In" button above</div>
+        <div className="bg-gradient-to-r from-gold-500/10 to-amber-500/10 border border-gold-500/30 rounded-xl p-4 sm:p-6 text-center">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1 sm:mb-2">Ready to start earning?</h3>
+          <p className="text-sm text-gray-400 mb-3 sm:mb-4">Sign in to begin tracking your progress</p>
+          <div className="text-xs sm:text-sm text-gray-500">Use the "Sign In" button above</div>
         </div>
       </div>
     );
@@ -325,7 +322,7 @@ export default function Progress() {
   const hasQuests = Object.values(quests).some(arr => arr && arr.length > 0);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
       <SEO
         title="Progress — Quests & XP"
         description="Complete quests, earn XP, and level up in Foresight. Track your daily and weekly challenges for bonus rewards."
@@ -333,29 +330,29 @@ export default function Progress() {
         path="/progress"
       />
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center">
-            <Lightning size={22} weight="fill" className="text-white" />
+      <div className="mb-4 sm:mb-6">
+        <div className="flex items-center gap-2.5 sm:gap-3 mb-1">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center">
+            <Lightning size={20} weight="fill" className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Progress</h1>
-            <p className="text-sm text-gray-400">Your Foresight Score & Quests</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Progress</h1>
+            <p className="text-xs sm:text-sm text-gray-400">Your Foresight Score & Quests</p>
           </div>
         </div>
       </div>
 
       {/* FS Hero Card */}
       {fsData && (
-        <div className={`bg-gradient-to-br ${tierConfig.gradient} rounded-2xl p-[1px] mb-6`}>
-          <div className="bg-gray-900 rounded-2xl p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-xl ${tierConfig.bg} flex items-center justify-center`}>
-                  <CurrentTierIcon size={32} weight="fill" className={tierConfig.color} />
+        <div className={`bg-gradient-to-br ${tierConfig.gradient} rounded-2xl p-[1px] mb-4 sm:mb-6`}>
+          <div className="bg-gray-900 rounded-2xl p-4 sm:p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl ${tierConfig.bg} flex items-center justify-center shrink-0`}>
+                  <CurrentTierIcon size={24} weight="fill" className={`${tierConfig.color} sm:!w-8 sm:!h-8`} />
                 </div>
                 <div>
-                  <div className="text-sm text-gray-400 mb-1 flex items-center gap-2">
+                  <div className="text-xs sm:text-sm text-gray-400 mb-0.5 sm:mb-1 flex items-center gap-2">
                     Foresight Score
                     <FoundingMemberBadge
                       isFoundingMember={fsData.isFoundingMember}
@@ -364,13 +361,13 @@ export default function Progress() {
                       variant="minimal"
                     />
                   </div>
-                  <div className="text-4xl font-mono font-bold tabular-nums text-white leading-none">{(fsData.totalScore ?? 0).toLocaleString()}<span className="text-base font-sans font-normal text-gray-400 ml-1.5">FS</span></div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-widest ${tierConfig.bg} ${tierConfig.color}`}>
+                  <div className="text-3xl sm:text-4xl font-mono font-bold tabular-nums text-white leading-none">{(fsData.totalScore ?? 0).toLocaleString()}<span className="text-sm sm:text-base font-sans font-normal text-gray-400 ml-1">FS</span></div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest ${tierConfig.bg} ${tierConfig.color}`}>
                       {fsData.tier || 'bronze'}
                     </span>
                     {(fsData.effectiveMultiplier ?? 1) > 1 && (
-                      <span className="text-xs font-mono font-bold text-neon-500">{fsData.effectiveMultiplier.toFixed(2)}x boost</span>
+                      <span className="text-[11px] sm:text-xs font-mono font-bold text-neon-500">{fsData.effectiveMultiplier.toFixed(2)}x boost</span>
                     )}
                     <TierGuide
                       currentTier={fsData.tier}
@@ -382,18 +379,18 @@ export default function Progress() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 rounded-xl bg-gray-800/50">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">This Week</div>
-                  <div className="text-lg font-mono font-bold text-neon-500 tabular-nums">+{(fsData.weekScore ?? 0).toLocaleString()}</div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="text-center p-2 sm:p-3 rounded-xl bg-gray-800/50">
+                  <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide mb-0.5 sm:mb-1">This Week</div>
+                  <div className="text-sm sm:text-lg font-mono font-bold text-neon-500 tabular-nums">+{(fsData.weekScore ?? 0).toLocaleString()}</div>
                 </div>
-                <div className="text-center p-3 rounded-xl bg-gray-800/50">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">All-Time</div>
-                  <div className="text-lg font-mono font-bold text-gold-400 tabular-nums">{fsData.allTimeRank ? `#${fsData.allTimeRank}` : '—'}</div>
+                <div className="text-center p-2 sm:p-3 rounded-xl bg-gray-800/50">
+                  <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide mb-0.5 sm:mb-1">All-Time</div>
+                  <div className="text-sm sm:text-lg font-mono font-bold text-gold-400 tabular-nums">{fsData.allTimeRank ? `#${fsData.allTimeRank}` : '—'}</div>
                 </div>
-                <div className="text-center p-3 rounded-xl bg-gray-800/50">
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">Season</div>
-                  <div className="text-lg font-mono font-bold text-white tabular-nums">
+                <div className="text-center p-2 sm:p-3 rounded-xl bg-gray-800/50">
+                  <div className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wide mb-0.5 sm:mb-1">Season</div>
+                  <div className="text-sm sm:text-lg font-mono font-bold text-white tabular-nums">
                     {(fsData.seasonScore ?? 0).toLocaleString()}
                   </div>
                 </div>
@@ -401,12 +398,12 @@ export default function Progress() {
             </div>
 
             {fsData.tierProgress?.nextTier && (
-              <div className="mt-6 pt-6 border-t border-gray-800">
-                <div className="flex items-center justify-between text-sm mb-2">
+              <div className="mt-4 pt-4 sm:mt-6 sm:pt-6 border-t border-gray-800">
+                <div className="flex items-center justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
                   <span className="text-gray-400">Progress to {fsData.tierProgress.nextTier}</span>
                   <span className={`font-mono font-bold tabular-nums ${tierConfig.color}`}>{(fsData.tierProgress.fsToNextTier ?? 0).toLocaleString()} FS to go</span>
                 </div>
-                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-1.5 sm:h-2 bg-gray-800 rounded-full overflow-hidden">
                   <div className={`h-full bg-gradient-to-r ${tierConfig.gradient} rounded-full`} style={{ width: `${getTierProgress()}%` }} />
                 </div>
               </div>
@@ -438,14 +435,14 @@ export default function Progress() {
         </div>
       )}
 
-      {/* Ready to Claim Section - Prominent action area */}
+      {/* Ready to Claim Section */}
       {claimableCount > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Gift size={20} className="text-neon-500" />
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <Gift size={18} className="text-neon-500" />
               Ready to Claim
-              <span className="px-2 py-0.5 rounded-full bg-neon-500/20 text-neon-500 text-xs font-bold font-mono">
+              <span className="px-1.5 py-0.5 rounded-full bg-neon-500/20 text-neon-500 text-[11px] sm:text-xs font-bold font-mono">
                 {claimableCount}
               </span>
             </h2>
@@ -453,16 +450,16 @@ export default function Progress() {
               <button
                 onClick={claimAllRewards}
                 disabled={claimingAll}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-500/20 hover:bg-neon-500/30 border border-neon-500/40 text-neon-500 font-semibold transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-neon-500/20 hover:bg-neon-500/30 border border-neon-500/40 text-neon-500 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
               >
                 {claimingAll ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Claiming...
                   </>
                 ) : (
                   <>
-                    <Sparkle size={16} weight="fill" />
+                    <Sparkle size={14} weight="fill" />
                     Claim All
                   </>
                 )}
@@ -475,26 +472,26 @@ export default function Progress() {
               return (
                 <div
                   key={`claim-${quest.id}`}
-                  className="bg-neon-500/5 border border-neon-500/30 rounded-xl p-4 flex items-center gap-4 shadow-glow-neon"
+                  className="bg-neon-500/5 border border-neon-500/30 rounded-xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-neon-500/15 flex items-center justify-center shrink-0">
-                    <QuestIcon size={24} weight="fill" className="text-neon-500" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-neon-500/15 flex items-center justify-center shrink-0">
+                    <QuestIcon size={20} weight="fill" className="text-neon-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white">{quest.name}</h3>
-                    <p className="text-sm text-gray-400">{quest.description}</p>
+                    <h3 className="text-sm sm:text-base font-semibold text-white">{quest.name}</h3>
+                    <p className="text-xs sm:text-sm text-gray-400 truncate">{quest.description}</p>
                   </div>
                   <button
                     onClick={() => claimReward(quest.id)}
                     disabled={claiming === quest.id}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neon-500/20 hover:bg-neon-500/30 border border-neon-500/40 text-neon-500 font-bold font-mono transition-all disabled:opacity-50"
+                    className="shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-neon-500/20 hover:bg-neon-500/30 border border-neon-500/40 text-neon-500 text-xs sm:text-sm font-bold font-mono transition-all disabled:opacity-50"
                   >
                     {claiming === quest.id ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
-                        <Gift size={18} weight="fill" />
-                        Claim +<span className="tabular-nums">{quest.fsReward}</span> FS
+                        <Gift size={16} weight="fill" />
+                        <span className="hidden sm:inline">Claim</span> +<span className="tabular-nums">{quest.fsReward}</span> FS
                       </>
                     )}
                   </button>
@@ -630,10 +627,10 @@ export default function Progress() {
         <CaretRight size={20} className="text-gray-600 group-hover:text-white transition-colors" />
       </Link>
 
-      {/* Founding Members Wall */}
-      <div className="mt-6">
+      {/* TODO: Re-enable Founding Members Wall when real data is available */}
+      {/* <div className="mt-6">
         <FoundingMembersWall variant="compact" limit={50} showCTA={true} />
-      </div>
+      </div> */}
     </div>
   );
 }
