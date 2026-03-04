@@ -440,7 +440,7 @@ export default function ContestDetail() {
         </button>
 
         {/* ═══ MOBILE Contest Header ═══ */}
-        <div className="sm:hidden space-y-3 mb-4">
+        <div className="sm:hidden space-y-3 mb-4 opacity-0 animate-[fadeInUp_0.4s_ease-out_forwards]">
           {/* Title + status + timer */}
           <div>
             <div className="flex items-center gap-1.5 mb-1">
@@ -564,7 +564,7 @@ export default function ContestDetail() {
         </div>
 
         {/* ═══ DESKTOP Contest Header ═══ */}
-        <div className="hidden sm:block rounded-2xl border border-gray-800 bg-gray-900 p-6 mb-6">
+        <div className="hidden sm:block rounded-2xl border border-gray-800 bg-gray-900 p-6 mb-6 opacity-0 animate-[fadeInUp_0.4s_ease-out_forwards]">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className={`p-4 rounded-xl bg-gradient-to-br ${config.gradient}`}>
@@ -656,29 +656,29 @@ export default function ContestDetail() {
 
           {/* Stats Grid — desktop */}
           <div className="grid grid-cols-5 gap-3">
-            <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="bg-black/20 rounded-xl p-3 text-center opacity-0 animate-[fadeInUp_0.3s_ease-out_0.1s_forwards]">
               <Coins size={20} className={`mx-auto mb-1.5 ${config.color}`} />
               <p className="text-base font-mono font-bold text-gold-400 tabular-nums">{contest.prizePoolFormatted}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Prize Pool</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="bg-black/20 rounded-xl p-3 text-center opacity-0 animate-[fadeInUp_0.3s_ease-out_0.15s_forwards]">
               <Users size={20} className={`mx-auto mb-1.5 ${config.color}`} />
               <p className="text-base font-mono font-bold text-white tabular-nums">{contest.playerCount}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Entries</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="bg-black/20 rounded-xl p-3 text-center opacity-0 animate-[fadeInUp_0.3s_ease-out_0.2s_forwards]">
               <Wallet size={20} className={`mx-auto mb-1.5 ${config.color}`} />
               <p className={`text-base font-mono font-bold tabular-nums ${contest.isFree ? 'text-emerald-400' : 'text-white'}`}>
                 {contest.isFree ? 'FREE' : contest.entryFeeFormatted}
               </p>
               <p className="text-[10px] text-gray-500 mt-0.5">Entry</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="bg-black/20 rounded-xl p-3 text-center opacity-0 animate-[fadeInUp_0.3s_ease-out_0.25s_forwards]">
               <Star size={20} className={`mx-auto mb-1.5 ${config.color}`} />
               <p className="text-base font-mono font-bold text-white tabular-nums">{contest.teamSize}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Team Size</p>
             </div>
-            <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="bg-black/20 rounded-xl p-3 text-center opacity-0 animate-[fadeInUp_0.3s_ease-out_0.3s_forwards]">
               <Crown size={20} className={`mx-auto mb-1.5 ${config.color}`} />
               <p className="text-base font-bold text-white">{contest.hasCaptain ? 'Yes' : 'No'}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Captain</p>
@@ -724,7 +724,7 @@ export default function ContestDetail() {
         </div>
 
         {/* Entry Status / CTA — desktop only (mobile has it inline above) */}
-        <div className="hidden sm:block">
+        <div className="hidden sm:block opacity-0 animate-[fadeInUp_0.3s_ease-out_0.2s_forwards]">
         {myEntry ? (
           <div className={`${
             contest.status === 'finalized'
@@ -845,7 +845,8 @@ export default function ContestDetail() {
                   return (
                     <div
                       key={entry.id}
-                      className={`grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors ${
+                      style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
+                      className={`grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors opacity-0 animate-[fadeIn_0.3s_ease-out_forwards] ${
                         isMe
                           ? 'bg-gold-500/10'
                           : isFinalized && isWinner

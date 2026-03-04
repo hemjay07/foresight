@@ -458,7 +458,7 @@ export default function Compete() {
         path="/compete"
       />
       {/* Row 1: Title + Main Tabs */}
-      <div className="flex items-center justify-between mb-3 gap-2">
+      <div className="flex items-center justify-between mb-3 gap-2 opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gold-500/15 flex items-center justify-center shrink-0">
             <Trophy size={14} weight="fill" className="text-gold-400 sm:hidden" />
@@ -653,7 +653,7 @@ export default function Compete() {
                         ? { ring: 'ring-gray-400/40', score: 'text-gray-300', border: 'border-gray-700' }
                         : { ring: 'ring-emerald-400/40', score: 'text-emerald-400', border: 'border-gray-700' };
                       return (
-                        <div key={entry.userId} className={`bg-gray-800/50 border ${accent.border} rounded-xl ${isCenter ? 'p-2.5 sm:p-5' : 'p-2 pt-3 sm:p-4 sm:pt-6'} text-center`}>
+                        <div key={entry.userId} className={`bg-gray-800/50 border ${accent.border} rounded-xl ${isCenter ? 'p-2.5 sm:p-5' : 'p-2 pt-3 sm:p-4 sm:pt-6'} text-center opacity-0 animate-[fadeInUp_0.4s_ease-out_forwards]`} style={{ animationDelay: `${[0.15, 0, 0.3][i]}s` }}>
                           {isCenter ? (
                             <Crown size={16} weight="fill" className="text-gold-400 mx-auto mb-1 sm:mb-2 sm:!w-5 sm:!h-5" />
                           ) : (
@@ -684,7 +684,7 @@ export default function Compete() {
 
               {/* Your Position — Stats Bar */}
               {userPosition && rankingsSubTab === 'fs' && !searchQuery && (
-                <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-800 flex items-center gap-3 sm:gap-4 bg-gold-500/5">
+                <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-800 flex items-center gap-3 sm:gap-4 bg-gold-500/5 opacity-0 animate-[fadeIn_0.4s_ease-out_0.3s_forwards]">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gold-500/10 flex items-center justify-center ring-1 ring-gold-500/30 shrink-0">
                     <Users size={12} weight="fill" className="text-gold-400 sm:!w-3.5 sm:!h-3.5" />
                   </div>
@@ -1025,7 +1025,7 @@ export default function Compete() {
                         if (window.innerWidth < 1024) handleEnterContest(freeContest);
                       }
                     }}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-left hover:bg-emerald-500/15 transition-colors"
+                    className="w-full flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-left hover:bg-emerald-500/15 transition-colors opacity-0 animate-[fadeInUp_0.4s_ease-out_0.1s_forwards] hover:shadow-[0_0_16px_rgba(16,185,129,0.15)]"
                   >
                     <Gift size={18} weight="fill" className="text-emerald-400 shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -1198,7 +1198,7 @@ export default function Compete() {
                   const isSignature = selectedContest.isSignatureLeague;
 
                   return (
-                    <div className="sticky top-4 rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
+                    <div key={selectedContest.id} className="sticky top-4 rounded-xl border border-gray-800 bg-gray-900 overflow-hidden opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]">
                       {/* Header */}
                       <div className="p-6 border-b border-gray-800/60">
                         <div className="flex items-start gap-3 mb-4">
@@ -1269,13 +1269,13 @@ export default function Compete() {
 
                         {/* Stats grid */}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3 rounded-lg bg-gray-800/40">
+                          <div className="p-3 rounded-lg bg-gray-800/40 opacity-0 animate-[fadeInUp_0.3s_ease-out_0.1s_forwards]">
                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">Entry Fee</span>
                             <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${selectedContest.isFree ? 'text-emerald-400' : 'text-white'}`}>
                               {selectedContest.isFree ? 'FREE' : selectedContest.entryFeeFormatted}
                             </div>
                           </div>
-                          <div className="p-3 rounded-lg bg-gray-800/40">
+                          <div className="p-3 rounded-lg bg-gray-800/40 opacity-0 animate-[fadeInUp_0.3s_ease-out_0.15s_forwards]">
                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">Prize Pool</span>
                             <div className="text-base font-bold font-mono tabular-nums text-gold-400 mt-0.5">
                               {selectedContest.prizePoolFormatted}
@@ -1284,11 +1284,11 @@ export default function Compete() {
                               <span className="text-[10px] text-gray-600 font-mono">≈ ${(selectedContest.prizePool * solPrice).toFixed(2)}</span>
                             )}
                           </div>
-                          <div className="p-3 rounded-lg bg-gray-800/40">
+                          <div className="p-3 rounded-lg bg-gray-800/40 opacity-0 animate-[fadeInUp_0.3s_ease-out_0.2s_forwards]">
                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">Players</span>
                             <div className="text-base font-bold font-mono tabular-nums text-white mt-0.5">{selectedContest.playerCount}</div>
                           </div>
-                          <div className="p-3 rounded-lg bg-gray-800/40">
+                          <div className="p-3 rounded-lg bg-gray-800/40 opacity-0 animate-[fadeInUp_0.3s_ease-out_0.25s_forwards]">
                             <span className="text-[10px] text-gray-500 uppercase tracking-wider">
                               {isFinished ? 'Ended' : isLocked ? 'Results In' : 'Closes In'}
                             </span>
