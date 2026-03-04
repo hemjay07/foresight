@@ -29,13 +29,13 @@ This document provides a comprehensive go-to-market strategy for Foresight's ini
 
 ### 1.2 — Prize Pool Structure: $100 Split
 
-**Recommendation: 50/30/20 for top 3.**
+**Recommendation: 100/75/50 for top 3.**
 
 ```
-Total: $100 (free entry, all prize pool splits)
-├─ 1st Place: $50 (50%)
-├─ 2nd Place: $30 (30%)
-└─ 3rd Place: $20 (20%)
+Total: $225 (free entry, all prize pool splits)
+├─ 1st Place: $100 (44%)
+├─ 2nd Place: $75 (33%)
+└─ 3rd Place: $50 (22%)
 ```
 
 **Why this split:**
@@ -106,7 +106,7 @@ Launchpad Monday. Be top 3, pocket $50.
 "🚀 LIVE: Foresight is OPEN
 
 Draft your 5 CT influencers. Captain gets 2.0x multiplier.
-$100 in prizes: $50/$30/$20 for top 3.
+$225 in prizes: $100/$75/$50 for top 3.
 
 Scoring resets weekly. No NFTs. Fully on-chain.
 
@@ -128,7 +128,7 @@ First 50 players get 5x XP bonus referral rewards 👀"
 | **Day -3, 5pm UTC** | Meme reply to @Solana, @delluminati, etc. | Community insertion | "When you're drafting CT influencers instead of picking coins" [meme] |
 | **Day -2, 10am UTC** | How-to video (30s Loom) | Demo, reduce friction | "30s draft walkthrough — from signup to team in 2 minutes" |
 | **Day -2, 3pm UTC** | FantasyTop comparison thread | Positioning against competition | "3 reasons we killed FantasyTop:" |
-| **Day -1, 8am UTC** | Countdown + "launch prep" | Scarcity, FOMO | "24 hours. $100 prize pool. Devnet. First 500 players." |
+| **Day -1, 8am UTC** | Countdown + "launch prep" | Scarcity, FOMO | "24 hours. $225 prize pool. Devnet. First 500 players." |
 | **Day -1, 2pm UTC** | Quote-tweet @ForesightCT announcement | Echo chamber / engagement | Retweet yourself with new angle |
 | **Day 0, 7am UTC** | LAUNCH post (with video clip of prize claim) | Max visibility, proof | "🚀 LIVE: Foresight Open. Draft, play, win." |
 | **Day 0, 12pm UTC** | Screenshot of leaderboard (top 3 live) | Social proof | "12 hours in. Top 3 shaping up." |
@@ -864,7 +864,7 @@ Who's drafting first?"
 
 Foresight has no NFTs.
 No cards to buy.
-Just you, 62 real CTs, and $100 in prizes.
+Just you, 62 real CTs, and $225 in prizes.
 
 Monday. Be ready."
 ```
@@ -874,7 +874,7 @@ Monday. Be ready."
 "🚀 LIVE: Foresight is OPEN
 
 Draft your 5 CT influencers. Captain gets 2.0x.
-$100 in prizes: $50/$30/$20.
+$225 in prizes: $100/$75/$50.
 
 No NFTs. No bots. Fully on-chain.
 

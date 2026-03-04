@@ -551,10 +551,10 @@ router.post('/seed-demo-contest', async (req: Request, res: Response) => {
 
 /**
  * Create the single hero launch contest:
- * "Season 0" — FREE, 72h, 500 cap, $100 USD prize pool ($50/$30/$20)
+ * "Season 0" — FREE, 72h, 500 cap, $225 USD prize pool ($100/$75/$50)
  *
  * Prizes are paid out-of-band (real USD/SOL on mainnet). The prize_pool
- * field stores 100 as a display value; the description makes it clear.
+ * field stores 225 as a display value; the description makes it clear.
  */
 async function seedLaunchContest(): Promise<{ created: boolean; contest: Record<string, unknown> }> {
   // Ensure FREE_LEAGUE type exists
@@ -600,7 +600,7 @@ async function seedLaunchContest(): Promise<{ created: boolean; contest: Record<
     contract_contest_id: null,
     contract_address: null,
     name: contestName,
-    description: 'Draft 5 CT influencers. Captain gets 2x. $100 in prizes: $50 / $30 / $20 to top 3. Free entry. Welcome to Season 0.',
+    description: 'Draft 5 CT influencers. Captain gets 2x. $225 in prizes: $100 / $75 / $50 to top 3. Free entry. Welcome to Season 0.',
     entry_fee: '0',
     team_size: 5,
     has_captain: true,
@@ -611,8 +611,8 @@ async function seedLaunchContest(): Promise<{ created: boolean; contest: Record<
     lock_time: lockTime,
     end_time: endTime,
     status: 'open',
-    prize_pool: '100',
-    distributable_pool: '100',
+    prize_pool: '225',
+    distributable_pool: '225',
     player_count: 0,
     created_at: now,
     updated_at: now,
