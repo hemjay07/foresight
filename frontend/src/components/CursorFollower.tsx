@@ -83,10 +83,16 @@ export default function CursorFollower() {
     const sat1 = sat1Ref.current!;
     const sat2 = sat2Ref.current!;
 
-    // Hide native cursor globally
-    document.documentElement.style.cursor = 'none';
+    // Hide native cursor — but exclude iframes and third-party modals (Privy, etc.)
     const cursorStyle = document.createElement('style');
-    cursorStyle.textContent = '*, *::before, *::after { cursor: none !important; }';
+    cursorStyle.textContent = `
+      html, body, body *:not(iframe):not([id*="privy"]):not([class*="privy"]):not([data-privy]) {
+        cursor: none !important;
+      }
+      iframe, [id*="privy"], [class*="privy"], [data-privy], [id*="privy"] * {
+        cursor: auto !important;
+      }
+    `;
     document.head.appendChild(cursorStyle);
 
     function show() {
@@ -282,7 +288,6 @@ export default function CursorFollower() {
       document.removeEventListener('mouseenter', show);
       document.removeEventListener('mousedown', onMouseDown);
       observer.disconnect();
-      document.documentElement.style.cursor = '';
       cursorStyle.remove();
       // Clean up particles
       particles.current.forEach(p => p.el.remove());
