@@ -3,6 +3,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Log which database we're connecting to (mask credentials)
+const env = process.env.NODE_ENV || 'development';
+const rawUrl = process.env.DATABASE_URL;
+if (rawUrl) {
+  const masked = rawUrl.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:***@');
+  console.log(`[DB] env=${env} → ${masked}`);
+} else {
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '5432';
+  const name = process.env.DB_NAME || 'foresight';
+  console.log(`[DB] env=${env} → ${host}:${port}/${name}`);
+}
+
 // Create Knex instance
 // FINDING-011: Enforce SSL for production database connections
 const connectionConfig = process.env.DATABASE_URL || {

@@ -644,6 +644,87 @@ router.post('/seed-launch-contest', async (req: Request, res: Response) => {
 });
 
 /**
+ * @route POST /api/admin/refresh-influencers
+ * @desc Fetch latest Twitter data for all active influencers.
+ *       Protected by ADMIN_KEY. Long-running — responds immediately, runs in background.
+ */
+router.post('/refresh-influencers', async (req: Request, res: Response) => {
+  try {
+    const adminKey = process.env.ADMIN_KEY;
+    const providedKey = req.query.key as string | undefined;
+    if (adminKey && providedKey !== adminKey) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    if (!twitterApiIoService.isConfigured()) {
+      return sendError(res, 'TwitterAPI.io not configured', 400);
+    }
+
+    // Respond immediately, run refresh in background
+    const influencers = await db('influencers')
+      .where('is_active', true)
+      .orderByRaw("CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 4 END")
+      .select('id', 'display_name', 'twitter_handle', 'tier');
+
+    sendSuccess(res, {
+      message: `Refreshing ${influencers.length} influencers in background`,
+      count: influencers.length,
+    });
+
+    // Run refresh in background (after response sent)
+    let success = 0, failed = 0;
+    for (const inf of influencers) {
+      try {
+        const { profile, tweets } = await twitterApiIoService.getInfluencerData(inf.twitter_handle, {
+          influencerId: inf.id,
+        });
+
+        if (!profile.success || !profile.data) {
+          console.log(`[refresh] ❌ @${inf.twitter_handle}: ${profile.error}`);
+          failed++;
+          continue;
+        }
+
+        const tweetData = tweets.data || [];
+        const tweetsAnalyzed = tweetData.length;
+        let totalLikes = 0, totalRTs = 0;
+        for (const t of tweetData) {
+          totalLikes += t.likes || 0;
+          totalRTs += t.retweets || 0;
+        }
+
+        const avgLikesPerTweet = tweetsAnalyzed > 0 ? totalLikes / tweetsAnalyzed : 0;
+        const engagementRate = profile.data.followers > 0
+          ? ((totalLikes + totalRTs) / (profile.data.followers * Math.max(1, tweetsAnalyzed))) * 100
+          : 0;
+
+        const activityScore = Math.min(35, tweetsAnalyzed * 1.5);
+        const engagementScore = Math.min(60, Math.sqrt(avgLikesPerTweet) * 1.5);
+        const totalScore = Math.round(activityScore + engagementScore);
+
+        await db('influencers').where('id', inf.id).update({
+          follower_count: profile.data.followers,
+          engagement_rate: Math.round(engagementRate * 100) / 100,
+          daily_tweets: Math.round(tweetsAnalyzed / 7),
+          total_points: totalScore,
+          form_score: Math.min(100, totalScore + 30),
+          updated_at: new Date(),
+        });
+
+        console.log(`[refresh] ✅ @${inf.twitter_handle}: ${profile.data.followers.toLocaleString()} followers | Score: ${totalScore}`);
+        success++;
+      } catch (err) {
+        console.log(`[refresh] ❌ @${inf.twitter_handle}: ${(err as Error).message}`);
+        failed++;
+      }
+    }
+    console.log(`[refresh] Complete: ${success} success, ${failed} failed`);
+  } catch (error: any) {
+    sendError(res, 'Failed to start influencer refresh', 500, error.message);
+  }
+});
+
+/**
  * @route POST /api/admin/cleanup-contests
  * @desc Cancel all active contests EXCEPT "Season 0".
  *       For launch week — only the hero contest should be visible.

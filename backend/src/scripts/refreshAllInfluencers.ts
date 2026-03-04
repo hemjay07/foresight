@@ -1,8 +1,15 @@
-import knex from "knex";
-import config from "../../knexfile";
-import * as twitterApi from "../services/twitterApiIoService";
+/**
+ * Refresh All Influencers
+ * Fetches latest Twitter data for all active influencers and updates the database.
+ *
+ * Connects to whichever database DATABASE_URL points to (local or production).
+ *
+ * Usage:
+ *   NODE_OPTIONS='--import tsx' npx tsx src/scripts/refreshAllInfluencers.ts
+ */
 
-const db = knex(config.development);
+import db, { closeConnection } from "../utils/db";
+import * as twitterApi from "../services/twitterApiIoService";
 
 async function refreshAllInfluencers() {
   console.log("\n=== REFRESHING ALL INFLUENCERS ===\n");
@@ -19,7 +26,7 @@ async function refreshAllInfluencers() {
     .orderByRaw("CASE tier WHEN 'S' THEN 1 WHEN 'A' THEN 2 WHEN 'B' THEN 3 ELSE 4 END")
     .select("id", "display_name", "twitter_handle", "tier");
 
-  console.log(`\nFound ${influencers.length} active influencers\n`);
+  console.log(`Found ${influencers.length} active influencers\n`);
 
   let success = 0,
     failed = 0;
@@ -116,7 +123,7 @@ async function refreshAllInfluencers() {
     }
   }
 
-  await db.destroy();
+  await closeConnection();
 }
 
 refreshAllInfluencers().catch((e) => {
