@@ -533,7 +533,7 @@ router.get('/ensure-contest', async (_req: Request, res: Response) => {
 
 /**
  * @route POST /api/admin/seed-demo-contest
- * @desc During launch week, creates "The Call" instead of the old demo contest.
+ * @desc During launch week, creates "Season 0" instead of the old demo contest.
  */
 router.post('/seed-demo-contest', async (req: Request, res: Response) => {
   try {
@@ -551,7 +551,7 @@ router.post('/seed-demo-contest', async (req: Request, res: Response) => {
 
 /**
  * Create the single hero launch contest:
- * "The Call" — FREE, 72h, 500 cap, $100 USD prize pool ($50/$30/$20)
+ * "Season 0" — FREE, 72h, 500 cap, $100 USD prize pool ($50/$30/$20)
  *
  * Prizes are paid out-of-band (real USD/SOL on mainnet). The prize_pool
  * field stores 100 as a display value; the description makes it clear.
@@ -578,7 +578,7 @@ async function seedLaunchContest(): Promise<{ created: boolean; contest: Record<
     freeType = await db('contest_types').where('code', 'FREE_LEAGUE').first();
   }
 
-  const contestName = 'The Call';
+  const contestName = 'Season 0';
 
   // Idempotent — skip if already active
   const existing = await db('prized_contests')
@@ -600,7 +600,7 @@ async function seedLaunchContest(): Promise<{ created: boolean; contest: Record<
     contract_contest_id: null,
     contract_address: null,
     name: contestName,
-    description: 'Draft 5 CT influencers. Captain gets 2x. $100 in prizes: $50 / $30 / $20 to top 3. Free entry. This is your call.',
+    description: 'Draft 5 CT influencers. Captain gets 2x. $100 in prizes: $50 / $30 / $20 to top 3. Free entry. Welcome to Season 0.',
     entry_fee: '0',
     team_size: 5,
     has_captain: true,
@@ -635,7 +635,7 @@ router.post('/seed-launch-contest', async (req: Request, res: Response) => {
     }
     const result = await seedLaunchContest();
     sendSuccess(res, {
-      message: result.created ? 'Launch contest "The Call" created' : 'Launch contest already active',
+      message: result.created ? 'Launch contest "Season 0" created' : 'Launch contest already active',
       contest: { id: result.contest.id, name: result.contest.name, status: result.contest.status },
     });
   } catch (error: any) {
@@ -645,7 +645,7 @@ router.post('/seed-launch-contest', async (req: Request, res: Response) => {
 
 /**
  * @route POST /api/admin/cleanup-contests
- * @desc Cancel all active contests EXCEPT "The Call".
+ * @desc Cancel all active contests EXCEPT "Season 0".
  *       For launch week — only the hero contest should be visible.
  */
 router.post('/cleanup-contests', async (req: Request, res: Response) => {
@@ -656,9 +656,9 @@ router.post('/cleanup-contests', async (req: Request, res: Response) => {
       return sendError(res, 'Unauthorized', 401);
     }
 
-    const keepName = 'The Call';
+    const keepName = 'Season 0';
 
-    // Find all active contests that aren't "The Call"
+    // Find all active contests that aren't "Season 0"
     const toCancel = await db('prized_contests')
       .whereIn('status', ['open', 'locked', 'scoring'])
       .whereNot('name', keepName)
