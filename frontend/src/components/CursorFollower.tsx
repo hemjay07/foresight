@@ -83,16 +83,11 @@ export default function CursorFollower() {
     const sat1 = sat1Ref.current!;
     const sat2 = sat2Ref.current!;
 
-    // Hide native cursor — but exclude iframes and third-party modals (Privy, etc.)
+    // Hide native cursor only inside our app root.
+    // Third-party portals (Privy modal, etc.) render outside #root
+    // and keep the native cursor automatically.
     const cursorStyle = document.createElement('style');
-    cursorStyle.textContent = `
-      html, body, body *:not(iframe):not([id*="privy"]):not([class*="privy"]):not([data-privy]) {
-        cursor: none !important;
-      }
-      iframe, [id*="privy"], [class*="privy"], [data-privy], [id*="privy"] * {
-        cursor: auto !important;
-      }
-    `;
+    cursorStyle.textContent = '#root, #root * { cursor: none !important; }';
     document.head.appendChild(cursorStyle);
 
     function show() {
