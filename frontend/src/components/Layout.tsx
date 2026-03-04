@@ -13,6 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import Footer from './Footer';
 import EngagementBanner from './EngagementBanner';
+import CursorFollower from './CursorFollower';
 import ForesightScoreDisplay from './ForesightScoreDisplay';
 import PageTransition from './PageTransition';
 import { useAuth } from '../hooks/useAuth';
@@ -87,6 +88,7 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="miniapp-container min-h-screen flex flex-col">
+      <CursorFollower />
       {/* Header with Navigation */}
       <header className="sticky top-0 z-30 bg-gray-950/80 backdrop-blur-xl border-b border-gray-700/50 px-4 py-3 mb-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
