@@ -217,8 +217,8 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </header>
 
-      {/* Engagement Banner */}
-      <EngagementBanner />
+      {/* TODO: Re-enable EngagementBanner after launch polish */}
+      {/* <EngagementBanner /> */}
 
       {/* Main Content with smooth page transitions */}
       <main className="flex-1">

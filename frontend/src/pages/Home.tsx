@@ -21,6 +21,7 @@ import {
 import FormationPreview from '../components/FormationPreview';
 import ActivityFeedCard from '../components/ActivityFeedCard';
 import OnboardingFlow from '../components/onboarding/OnboardingFlow';
+import HomepageBackground from '../components/HomepageBackground';
 import SEO from '../components/SEO';
 import { useAuth } from '../hooks/useAuth';
 import { useOnboarding } from '../contexts/OnboardingContext';
@@ -125,7 +126,7 @@ function LeaderboardPreview({ visible }: { visible: boolean }) {
         {LEADERBOARD_DATA.map((row, i) => (
           <div
             key={row.rank}
-            className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-800/30 transition-colors duration-150"
+            className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-800/30 transition-all duration-200 border-l-2 border-transparent hover:border-gold-500/40"
             style={{ transitionDelay: visible ? `${i * 40}ms` : '0ms' }}
           >
             <span className={`text-xs font-mono font-bold w-5 tabular-nums ${
@@ -152,7 +153,7 @@ function LeaderboardPreview({ visible }: { visible: boolean }) {
         ))}
 
         {/* Your spot */}
-        <div className="flex items-center gap-3 px-5 py-2.5 bg-gold-500/5">
+        <div className="flex items-center gap-3 px-5 py-2.5 bg-gold-500/5 animate-breathe-gold">
           <span className="text-xs font-mono w-5 text-gold-400 tabular-nums">?</span>
           <div className="w-7 h-7 rounded-full bg-gold-500/10 border border-dashed border-gold-500/30 flex items-center justify-center shrink-0">
             <Users size={12} className="text-gold-400/60" />
@@ -248,7 +249,8 @@ function LandingPage({
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="relative max-w-6xl mx-auto">
+      <HomepageBackground />
       <SEO path="/" />
 
       {/* ═══════════════════════ MOBILE HERO ════════════════════════════ */}
@@ -270,7 +272,7 @@ function LandingPage({
 
         <h1 className="text-4xl font-bold text-white mb-3 leading-tight tracking-tight">
           Back CT calls.{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Get paid.</span>
+          <span className="animate-gold-shimmer">Get paid.</span>
         </h1>
         <p className="text-sm text-gray-400 mb-0 leading-relaxed">
           Pick 5 CT influencers. Score their weekly engagement. Compete for SOL.
@@ -306,7 +308,7 @@ function LandingPage({
 
             <h1 className="text-5xl xl:text-6xl font-bold text-white leading-[1.05] tracking-tight mb-5">
               Back CT calls.<br />{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-amber-500">Get paid.</span>
+              <span className="animate-gold-shimmer">Get paid.</span>
             </h1>
             <p className="text-lg text-gray-400 leading-relaxed max-w-sm mb-0">
               Pick 5 CT influencers. Score their weekly engagement. Compete for SOL prizes.
@@ -334,13 +336,13 @@ function LandingPage({
             <span className="hidden sm:inline">Draft 5 picks</span>
             <span className="sm:hidden">Draft</span>
           </span>
-          <span className="text-gray-700">→</span>
+          <span className="text-gray-700 animate-arrow-pulse">→</span>
           <span className="flex items-center gap-1.5">
             <ChartLineUp size={12} className="text-gray-400" weight="bold" />
             <span className="hidden sm:inline">Score daily</span>
             <span className="sm:hidden">Score</span>
           </span>
-          <span className="text-gray-700">→</span>
+          <span className="text-gray-700 animate-arrow-pulse" style={{ animationDelay: '1s' }}>→</span>
           <span className="flex items-center gap-1.5">
             <Trophy size={12} className="text-gold-400" weight="fill" />
             <span className="hidden sm:inline">Win SOL weekly</span>
