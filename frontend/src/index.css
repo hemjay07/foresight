@@ -33,6 +33,13 @@
     user-select: none;
   }
 
+  /* Hide native cursor inside app — custom Flux Tracer replaces it.
+     Scoped to #root so third-party portals (Privy) keep native cursor. */
+  #root,
+  #root * {
+    cursor: none !important;
+  }
+
   /* Keep inputs and textareas selectable */
   input, textarea, [contenteditable="true"] {
     -webkit-user-select: text;

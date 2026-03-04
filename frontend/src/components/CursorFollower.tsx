@@ -83,12 +83,7 @@ export default function CursorFollower() {
     const sat1 = sat1Ref.current!;
     const sat2 = sat2Ref.current!;
 
-    // Hide native cursor only inside our app root.
-    // Third-party portals (Privy modal, etc.) render outside #root
-    // and keep the native cursor automatically.
-    const cursorStyle = document.createElement('style');
-    cursorStyle.textContent = '#root, #root * { cursor: none !important; }';
-    document.head.appendChild(cursorStyle);
+    // cursor:none is handled by index.css (#root, #root *)
 
     function show() {
       if (!visible.current) {
@@ -283,7 +278,6 @@ export default function CursorFollower() {
       document.removeEventListener('mouseenter', show);
       document.removeEventListener('mousedown', onMouseDown);
       observer.disconnect();
-      cursorStyle.remove();
       // Clean up particles
       particles.current.forEach(p => p.el.remove());
       particles.current = [];
