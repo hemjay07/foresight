@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pnpm install && pnpm run db:migrate"
+buildCommand = "pnpm install"
 
 [deploy]
 startCommand = "pnpm start"
