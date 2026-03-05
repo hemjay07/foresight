@@ -662,6 +662,8 @@ router.get('/influencers', async (req: Request, res: Response) => {
         'influencers.tier',
         'influencers.price',
         'influencers.follower_count',
+        'influencers.avg_likes',
+        'influencers.avg_retweets',
         db.raw('COALESCE(influencer_metrics.daily_tweets, 0) as daily_tweets'),
         db.raw('COALESCE(influencer_metrics.engagement_rate, 0) as engagement_rate'),
         db.raw(`

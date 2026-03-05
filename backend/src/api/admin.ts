@@ -694,6 +694,7 @@ router.post('/refresh-influencers', async (req: Request, res: Response) => {
         }
 
         const avgLikesPerTweet = tweetsAnalyzed > 0 ? totalLikes / tweetsAnalyzed : 0;
+        const avgRTsPerTweet = tweetsAnalyzed > 0 ? totalRTs / tweetsAnalyzed : 0;
         const engagementRate = profile.data.followers > 0
           ? ((totalLikes + totalRTs) / (profile.data.followers * Math.max(1, tweetsAnalyzed))) * 100
           : 0;
@@ -706,6 +707,8 @@ router.post('/refresh-influencers', async (req: Request, res: Response) => {
           follower_count: profile.data.followers,
           engagement_rate: Math.round(engagementRate * 100) / 100,
           daily_tweets: Math.round(tweetsAnalyzed / 7),
+          avg_likes: Math.round(avgLikesPerTweet),
+          avg_retweets: Math.round(avgRTsPerTweet),
           total_points: totalScore,
           form_score: Math.min(100, totalScore + 30),
           updated_at: new Date(),
