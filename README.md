@@ -14,16 +14,9 @@ Weekly contests run Monday 00:00 to Sunday 23:59 UTC. Free leagues and paid entr
 
 ## How scoring works
 
-Every influencer gets scored on 4 factors:
+Influencers are scored on multiple dimensions of their real Twitter activity — tweeting frequency, engagement quality, audience growth, and viral moments. The exact formula is proprietary to prevent gaming.
 
-- **Activity** (0-35 pts): How much they tweet
-- **Engagement** (0-60 pts): Likes, retweets, replies they get
-- **Growth** (0-40 pts): Follower changes
-- **Viral** (0-25 pts): Breakout tweets that go way beyond their normal reach
-
-Plus spotlight bonuses (+12/+8/+4) for the top 3 influencers each scoring period.
-
-Captains get a 2x multiplier on all points. Choosing the right captain is usually the difference between winning and losing.
+Each influencer gets an **FS Rating (0-100)** that reflects their overall scoring potential. Captains get a 2x multiplier on all points. Choosing the right captain is usually the difference between winning and losing.
 
 ## Tapestry Protocol integration
 
