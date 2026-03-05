@@ -142,7 +142,7 @@ interface WatchlistItem {
 }
 
 export default function Profile() {
-  const { address, isConnected, isBackendAuthed } = useAuth();
+  const { address, isConnected, isBackendAuthed, avatarUrl } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -446,8 +446,14 @@ export default function Profile() {
       {/* ── Profile Header ── */}
       <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
         {/* Avatar with gold ring */}
-        <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-gold-500/40 bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center shrink-0">
-          <Users size={22} weight="fill" className="text-gray-950 sm:!w-7 sm:!h-7" />
+        <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-gold-500/40 overflow-hidden shrink-0 bg-[#1A1A24]">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gold-500 to-amber-600 flex items-center justify-center">
+              <Users size={22} weight="fill" className="text-gray-950 sm:!w-7 sm:!h-7" />
+            </div>
+          )}
         </div>
 
         {/* Name + wallet + level */}
