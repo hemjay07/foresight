@@ -32,6 +32,8 @@ interface Influencer {
   tier: string;
   price: number;
   follower_count?: number;
+  avg_likes?: number;
+  avg_retweets?: number;
   engagement_rate?: number;
   total_points?: number;
   archetype?: string;
@@ -48,6 +50,8 @@ interface InfluencerApiResponse {
   tier: string;
   price: string | number;
   follower_count?: number;
+  avg_likes?: number;
+  avg_retweets?: number;
   engagement_rate?: string | number;
   total_points?: string | number;
   archetype?: string;
@@ -199,6 +203,8 @@ export default function Draft() {
         tier: i.tier,
         price: typeof i.price === 'string' ? parseFloat(i.price) : i.price,
         follower_count: i.follower_count,
+        avg_likes: i.avg_likes || 0,
+        avg_retweets: i.avg_retweets || 0,
         engagement_rate: typeof i.engagement_rate === 'string' ? parseFloat(i.engagement_rate || '0') : (i.engagement_rate || 0),
         total_points: typeof i.total_points === 'string' ? parseInt(i.total_points || '0') : (i.total_points || 0),
         archetype: i.archetype,
