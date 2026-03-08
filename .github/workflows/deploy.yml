@@ -16,8 +16,9 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Copy lockfile for Railway
-        run: cp pnpm-lock.yaml backend/pnpm-lock.yaml
+      - name: Generate npm lockfile for Railway
+        working-directory: backend
+        run: npm install --package-lock-only --legacy-peer-deps
 
       - name: Deploy to Railway
         working-directory: backend
