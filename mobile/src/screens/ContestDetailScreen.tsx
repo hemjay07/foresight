@@ -144,6 +144,15 @@ export default function ContestDetailScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showMyTeam, setShowMyTeam] = useState(false);
+  const [showBanner, setShowBanner] = useState(justEntered);
+
+  // Auto-dismiss success banner after 5s
+  useEffect(() => {
+    if (showBanner) {
+      const t = setTimeout(() => setShowBanner(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [showBanner]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -279,7 +288,7 @@ export default function ContestDetailScreen() {
             />
 
             {/* Success banner after entering */}
-            {justEntered && (
+            {showBanner && (
               <View style={styles.successBanner}>
                 <MaterialCommunityIcons name="check-circle" size={18} color={colors.success} />
                 <Text style={styles.successBannerText}>You're in! Good luck.</Text>

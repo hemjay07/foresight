@@ -15,7 +15,7 @@ import { colors } from '../constants/colors';
 import { useAuth } from '../providers/AuthProvider';
 import { useCTFeed, useHighlights } from '../hooks/useFeed';
 import { useTrackActivity } from '../hooks/useForesightScore';
-import { formatNumber, getAvatarColor } from '../utils/formatting';
+import { formatNumber, getAvatarColor, timeAgo } from '../utils/formatting';
 import { haptics } from '../utils/haptics';
 import type { Tweet } from '../types';
 
@@ -195,6 +195,7 @@ function HighlightCard({ tweet, isTop }: { tweet: Tweet; isTop: boolean }) {
         <Text style={styles.highlightHandle} numberOfLines={1}>
           @{tweet.authorHandle}
         </Text>
+        <Text style={styles.timestamp}>{timeAgo(tweet.createdAt)}</Text>
       </View>
       {/* Text */}
       <Text style={styles.highlightText} numberOfLines={2}>
@@ -223,9 +224,12 @@ function TweetCard({ tweet }: { tweet: Tweet }) {
 
       {/* Content */}
       <View style={styles.tweetContent}>
-        <Text style={styles.tweetHandle} numberOfLines={1}>
-          @{tweet.authorHandle}
-        </Text>
+        <View style={styles.tweetHeaderRow}>
+          <Text style={styles.tweetHandle} numberOfLines={1}>
+            @{tweet.authorHandle}
+          </Text>
+          <Text style={styles.timestamp}>{timeAgo(tweet.createdAt)}</Text>
+        </View>
         <Text style={styles.tweetText} numberOfLines={3}>
           {tweet.text}
         </Text>
@@ -402,11 +406,22 @@ const styles = StyleSheet.create({
   tweetContent: {
     flex: 1,
   },
+  tweetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   tweetHandle: {
     fontSize: 14,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 4,
+    flexShrink: 1,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginLeft: 8,
   },
   tweetText: {
     fontSize: 14,

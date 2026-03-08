@@ -165,7 +165,7 @@ function InfluencerSheetContent({ influencer }: { influencer: Influencer }) {
           <Text style={s.sheetStatLabel}>Followers</Text>
         </View>
         <View style={s.sheetStatItem}>
-          <Text style={s.sheetStatValue}>{(influencer.engagementRate * 100).toFixed(1)}%</Text>
+          <Text style={s.sheetStatValue}>{influencer.engagementRate.toFixed(1)}%</Text>
           <Text style={s.sheetStatLabel}>Engagement</Text>
         </View>
       </View>

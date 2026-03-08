@@ -24,13 +24,14 @@ export function useDailyStatus(enabled = true) {
   });
 }
 
-export function useFSLeaderboard(type: 'all_time' | 'season' | 'weekly' = 'season', limit = 50) {
+export function useFSLeaderboard(type: 'all_time' | 'season' | 'weekly' = 'season', limit = 50, enabled = true) {
   return useQuery({
     queryKey: ['fs-leaderboard', type],
     queryFn: async (): Promise<{ entries: LeaderboardEntry[]; total: number }> => {
       const { data } = await api.get('/api/v2/fs/leaderboard', { params: { type, limit } });
       return data.data;
     },
+    enabled,
   });
 }
 
