@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "nodePackages.pnpm"]
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["pnpm install"]
+cmds = ["npm install --legacy-peer-deps"]
 
 [start]
-cmd = "pnpm db:migrate && pnpm start"
+cmd = "npm run db:migrate && npm run start"

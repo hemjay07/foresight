@@ -1,9 +1,9 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pnpm install"
+buildCommand = "npm install --legacy-peer-deps"
 
 [deploy]
-startCommand = "pnpm start"
+startCommand = "npm run start"
 healthcheckPath = "/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
