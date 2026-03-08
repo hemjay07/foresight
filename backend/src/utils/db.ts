@@ -29,7 +29,7 @@ const connectionConfig = process.env.DATABASE_URL || {
 const db: Knex = knex({
   client: 'postgresql',
   connection: typeof connectionConfig === 'string'
-    ? { connectionString: connectionConfig, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } : false }
+    ? { connectionString: connectionConfig, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false }
     : connectionConfig,
   pool: {
     min: 2,
