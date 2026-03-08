@@ -844,7 +844,11 @@ router.post('/public-seed-scores/:contestId', async (req: Request, res: Response
     const isFree = contest.is_free === true || contest.is_free === 1;
     const table = isFree ? 'free_league_entries' : 'prized_entries';
 
-    const entries = await db(table).where('contest_id', contestId).orderBy('created_at', 'asc');
+    const entries = await db(table)
+      .select(`${table}.*`, 'users.username as display_name')
+      .leftJoin('users', `${table}.user_id`, 'users.id')
+      .where('contest_id', contestId)
+      .orderBy(`${table}.created_at`, 'asc');
     if (entries.length === 0) return sendError(res, 'No entries found', 404);
 
     // Generate realistic scores: top player ~120-160, spread out, some close battles
@@ -861,9 +865,8 @@ router.post('/public-seed-scores/:contestId', async (req: Request, res: Response
       { score: 76.9, breakdown: { activity: 15, engagement: 25, growth: 10, viral: 0 } },
     ];
 
-    // Shuffle entries so DemoTrader gets a good rank (3rd)
-    // Sort: move DemoTrader to index 2 (rank 3), keep others in original order
-    const demoIdx = entries.findIndex((e: any) => e.username === 'DemoTrader');
+    // Move DemoTrader to rank 3 for demo purposes
+    const demoIdx = entries.findIndex((e: any) => e.display_name === 'DemoTrader');
     if (demoIdx > 2) {
       const [demo] = entries.splice(demoIdx, 1);
       entries.splice(2, 0, demo);
@@ -881,7 +884,7 @@ router.post('/public-seed-scores/:contestId', async (req: Request, res: Response
         rank: i + 1,
       });
 
-      seeded.push({ username: entries[i].username || entries[i].wallet_address, score: finalScore, rank: i + 1 });
+      seeded.push({ username: entries[i].display_name || entries[i].wallet_address, score: finalScore, rank: i + 1 });
     }
 
     sendSuccess(res, { message: `Seeded ${entries.length} entries`, entries: seeded });
