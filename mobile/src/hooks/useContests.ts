@@ -80,7 +80,7 @@ export function useContestLeaderboard(contestId: string) {
           userId: e.userId ?? '',
           username: e.username ?? 'Unknown',
           walletAddress: e.walletAddress ?? '',
-          totalScore: e.score ?? 0,
+          totalScore: parseFloat(e.score) || 0,
           prizeAmount: e.prizeAmount ?? 0,
         })),
         prizePool: contest?.prizePool ?? 0,

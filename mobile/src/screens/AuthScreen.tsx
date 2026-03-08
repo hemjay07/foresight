@@ -6,11 +6,10 @@ import {
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Animated, {
-  FadeInDown,
-  FadeIn,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMobileWallet } from '../utils/useMobileWallet';
@@ -27,6 +26,34 @@ type LoginMethod = 'idle' | 'wallet';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+// Layout-safe fade-in (no position:absolute like entering= prop)
+function FadeInView({
+  delay = 0,
+  duration = 300,
+  style,
+  children,
+}: {
+  delay?: number;
+  duration?: number;
+  style?: any;
+  children: React.ReactNode;
+}) {
+  const opacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      opacity.value = withTiming(1, { duration });
+    }, delay);
+    return () => clearTimeout(t);
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
 
 export default function AuthScreen() {
   const { signIn } = useMobileWallet();
@@ -149,25 +176,25 @@ export default function AuthScreen() {
         <View style={styles.dragHandle} />
 
         {/* Ambient glow behind logo */}
-        <Animated.View entering={FadeIn.duration(600)} style={styles.glowContainer}>
+        <FadeInView duration={600} style={styles.glowContainer}>
           <View style={styles.glowOuter} />
           <View style={styles.glowInner} />
-        </Animated.View>
+        </FadeInView>
 
         {/* Logo */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.logoContainer}>
+        <FadeInView delay={100} duration={400} style={styles.logoContainer}>
           <Text style={styles.logoLine}>
             <Text style={styles.logoAccent}>CT</Text>
             <Text style={styles.logoName}> FORESIGHT</Text>
           </Text>
-        </Animated.View>
+        </FadeInView>
 
-        <Animated.Text entering={FadeInDown.delay(200).duration(400)} style={styles.tagline}>
-          Draft. Compete. Win.
-        </Animated.Text>
+        <FadeInView delay={200} duration={400}>
+          <Text style={styles.tagline}>Draft. Compete. Win.</Text>
+        </FadeInView>
 
         {/* Feature pills */}
-        <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.pillRow}>
+        <FadeInView delay={300} duration={400} style={styles.pillRow}>
           <View style={styles.pill}>
             <MaterialCommunityIcons name="shield-sword" size={14} color={colors.brand} />
             <Text style={styles.pillText}>Fantasy CT</Text>
@@ -180,10 +207,10 @@ export default function AuthScreen() {
             <MaterialCommunityIcons name="chart-line" size={14} color={colors.brand} />
             <Text style={styles.pillText}>Track Scores</Text>
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* ── Login Options ─────────────────────── */}
-        <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.options}>
+        <FadeInView delay={400} duration={400} style={styles.options}>
           {/* Wallet Connect */}
           <AnimatedTouchable
             style={[styles.optionButton, buttonAnimStyle]}
@@ -208,13 +235,13 @@ export default function AuthScreen() {
             <MaterialCommunityIcons name="shield-check" size={14} color={colors.textMuted} />
             <Text style={styles.mwaBadgeText}>Powered by Mobile Wallet Adapter</Text>
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Error message */}
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         {/* Skip */}
-        <Animated.View entering={FadeInDown.delay(500).duration(400)}>
+        <FadeInView delay={500} duration={400}>
           <TouchableOpacity
             style={styles.skipButton}
             onPress={handleSkip}
@@ -222,10 +249,10 @@ export default function AuthScreen() {
           >
             <Text style={styles.skipText}>Browse as guest</Text>
           </TouchableOpacity>
-        </Animated.View>
+        </FadeInView>
 
         {/* Try Demo — always available for judges / users without wallet */}
-        <Animated.View entering={FadeInDown.delay(550).duration(400)}>
+        <FadeInView delay={550} duration={400}>
           <TouchableOpacity
             style={styles.demoButton}
             onPress={handleDemoLogin}
@@ -235,14 +262,14 @@ export default function AuthScreen() {
             <MaterialCommunityIcons name="play-circle-outline" size={16} color={colors.cyan} />
             <Text style={styles.demoText}>Try Demo</Text>
           </TouchableOpacity>
-        </Animated.View>
+        </FadeInView>
 
-        <Animated.View entering={FadeInDown.delay(600).duration(400)} style={styles.footer}>
+        <FadeInView delay={600} duration={400} style={styles.footer}>
           <View style={styles.solBadge}>
             <MaterialCommunityIcons name="circle" size={8} color={colors.success} />
             <Text style={styles.footerText}>Solana Mobile</Text>
           </View>
-        </Animated.View>
+        </FadeInView>
       </ScrollView>
     </KeyboardAvoidingView>
   );

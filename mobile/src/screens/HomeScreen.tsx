@@ -9,10 +9,10 @@ import {
   Image,
 } from 'react-native';
 import Animated, {
-  FadeInDown,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -40,6 +40,34 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import { OnboardingTip } from '../components/OnboardingTip';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+// ─── Layout-safe fade-in (no position:absolute like entering= prop) ──
+function FadeInView({
+  delay = 0,
+  duration = 300,
+  style,
+  children,
+}: {
+  delay?: number;
+  duration?: number;
+  style?: any;
+  children: React.ReactNode;
+}) {
+  const opacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      opacity.value = withTiming(1, { duration });
+    }, delay);
+    return () => clearTimeout(t);
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
 
 // ─── HomeScreen ───────────────────────────────────────────────────────
 
@@ -138,7 +166,7 @@ export default function HomeScreen() {
         )}
 
         {/* ── Active Contest Hero ───────────────── */}
-        <Animated.View entering={FadeInDown.delay(0).duration(300)}>
+        <FadeInView delay={0}>
         {contestsLoading ? (
           <View style={styles.heroCard}>
             <Skeleton style={styles.skeletonLine80} />
@@ -164,11 +192,11 @@ export default function HomeScreen() {
             <Text style={styles.emptySubtext}>Check back soon for upcoming contests</Text>
           </View>
         )}
-        </Animated.View>
+        </FadeInView>
 
         {/* ── Guest Sign-In Banner ─────────────── */}
         {!isAuthenticated && (
-          <Animated.View entering={FadeInDown.delay(50).duration(300)}>
+          <FadeInView delay={50}>
           <TouchableOpacity
             style={styles.signInBanner}
             activeOpacity={0.8}
@@ -188,12 +216,12 @@ export default function HomeScreen() {
             </View>
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* ── Featured Influencers ────────────────── */}
         {featuredInfluencers.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.featuredSection}>
+          <FadeInView delay={100} style={styles.featuredSection}>
             <View style={styles.featuredHeader}>
               <Text style={styles.sectionLabel}>Who Will You Draft?</Text>
               <TouchableOpacity
@@ -215,7 +243,7 @@ export default function HomeScreen() {
                 <InfluencerChip key={inf.id} influencer={inf} navigation={navigation} />
               ))}
             </ScrollView>
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* ── Foresight Score ──────────────────── */}
@@ -233,22 +261,22 @@ export default function HomeScreen() {
               <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surface }} />
             </View>
           ) : score ? (
-            <Animated.View entering={FadeInDown.delay(150).duration(300)}>
+            <FadeInView delay={150}>
               <ForesightScoreCard score={score} />
-            </Animated.View>
+            </FadeInView>
           ) : null
         )}
 
         {/* ── Daily Activities ─────────────────── */}
         {isAuthenticated && daily && (
-          <Animated.View entering={FadeInDown.delay(200).duration(300)}>
+          <FadeInView delay={200}>
             <DailyActivitiesRow daily={daily} />
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* ── Quest Alert Banner ───────────────── */}
         {isAuthenticated && questSummary && questSummary.unclaimed > 0 && (
-          <Animated.View entering={FadeInDown.delay(250).duration(300)}>
+          <FadeInView delay={250}>
           <TouchableOpacity
             style={styles.questBanner}
             activeOpacity={0.8}
@@ -263,7 +291,7 @@ export default function HomeScreen() {
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          </Animated.View>
+          </FadeInView>
         )}
       </ScrollView>
     </SafeAreaView>
