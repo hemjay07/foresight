@@ -12,9 +12,9 @@ function getDevApiUrl(): string {
   return 'http://localhost:3001';
 }
 
-export const API_URL = __DEV__
-  ? getDevApiUrl()
-  : 'https://api.ct-foresight.xyz';
+// For hackathon demo APK: always use production URL
+// __DEV__ is false in EAS preview builds, but using fallback for safety
+export const API_URL = 'https://api.ct-foresight.xyz';
 
 export const SOLANA_RPC_URL = __DEV__
   ? 'https://api.devnet.solana.com'

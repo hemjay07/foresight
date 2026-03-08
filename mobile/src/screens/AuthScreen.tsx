@@ -198,7 +198,7 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
-                autoFocus
+                autoFocus={false}
               />
               <TouchableOpacity
                 style={[styles.emailSubmitBtn, (!email.includes('@') || isLoading) && { opacity: 0.5 }]}
@@ -305,47 +305,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: '100%',
-  },
-  socialButtonText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
   comingSoonNote: {
     textAlign: 'center',
     fontSize: 13,
     color: colors.textMuted,
     marginTop: 16,
     marginBottom: 8,
-  },
-
-  // Divider
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 4,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.cardBorder,
-  },
-  dividerText: {
-    color: colors.textMuted,
-    fontSize: 13,
   },
 
   // Email
@@ -428,18 +393,5 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
-  },
-  soonBadge: {
-    backgroundColor: colors.textMuted + '22',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 4,
-  },
-  soonText: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
 });

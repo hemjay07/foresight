@@ -59,11 +59,14 @@ api.interceptors.response.use(
         const refreshToken = await SecureStore.getItemAsync('refreshToken');
         if (!refreshToken) throw new Error('No refresh token');
 
-        const { data } = await axios.post(`${API_URL}/api/auth/mobile-refresh`, { refreshToken });
+        const { data } = await axios.post(`${API_URL}/api/auth/mobile-refresh`, { refreshToken }, { timeout: 10000 });
 
-        const newAccessToken = data.data.accessToken;
+        const newAccessToken = data?.data?.accessToken;
+        if (!newAccessToken) throw new Error('Invalid refresh response');
         await SecureStore.setItemAsync('accessToken', newAccessToken);
-        await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+        if (data.data.refreshToken) {
+          await SecureStore.setItemAsync('refreshToken', data.data.refreshToken);
+        }
 
         isRefreshing = false;
         onTokenRefreshed(newAccessToken);

@@ -43,7 +43,7 @@ export default function SKRScreen() {
           <View style={s.tierRow}>
             <View style={[s.tierDot, { backgroundColor: skr?.tierColor ?? colors.textMuted }]} />
             <Text style={[s.tierName, { color: skr?.tierColor ?? colors.textMuted }]}>
-              {skr?.tierLabel ?? 'Loading...'}
+              {skr?.tierLabel ?? (user?.walletAddress ? 'Loading...' : 'No Wallet')}
             </Text>
             {skr && skr.fsMultiplier > 1 && (
               <View style={s.multiplierBadge}>
@@ -150,7 +150,7 @@ export default function SKRScreen() {
         {/* Earn CTA */}
         <TouchableOpacity
           style={s.earnCta}
-          onPress={() => navigation.goBack()}
+          onPress={() => (navigation as any).navigate('Main', { screen: 'Compete' })}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="trophy-outline" size={20} color={colors.background} />

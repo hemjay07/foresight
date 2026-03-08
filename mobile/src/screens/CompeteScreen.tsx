@@ -368,6 +368,13 @@ export default function CompeteScreen() {
               data={leaderboardData?.entries ?? []}
               keyExtractor={(item) => `${item.rank}-${item.userId}`}
               renderItem={renderLeaderboardItem}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>📊</Text>
+                  <Text style={styles.emptyTitle}>No rankings yet</Text>
+                  <Text style={styles.emptySubtitle}>Enter a contest to appear on the leaderboard</Text>
+                </View>
+              }
               contentContainerStyle={styles.listContent}
               refreshControl={
                 <RefreshControl

@@ -180,7 +180,7 @@ export default function ProfileScreen() {
               </>
             )}
             <Text style={styles.rankRow}>
-              #{formatNumber(fs.allTimeRank)} All-Time  {'\u00B7'}  #{formatNumber(fs.seasonRank)} Season
+              {fs.allTimeRank > 0 ? `#${formatNumber(fs.allTimeRank)}` : 'Unranked'} All-Time  {'\u00B7'}  {fs.seasonRank > 0 ? `#${formatNumber(fs.seasonRank)}` : 'Unranked'} Season
             </Text>
           </View>
         ) : null}
@@ -197,7 +197,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>All-Time Rank</Text>
-            <Text style={styles.statValue}>#{formatNumber(fs?.allTimeRank ?? 0)}</Text>
+            <Text style={styles.statValue}>{(fs?.allTimeRank ?? 0) > 0 ? `#${formatNumber(fs!.allTimeRank)}` : '-'}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Multiplier</Text>
@@ -274,7 +274,7 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="logout" size={20} color={colors.error} />
-            <Text style={[styles.actionText, { color: colors.error }]}>Disconnect Wallet</Text>
+            <Text style={[styles.actionText, { color: colors.error }]}>Sign Out</Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>

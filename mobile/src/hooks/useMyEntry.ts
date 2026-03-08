@@ -8,8 +8,11 @@ export function useMyEntry(contestId: string, isAuthenticated = true) {
       try {
         const { data } = await api.get(`/api/v2/contests/${contestId}/my-entry`);
         return { hasEntry: true, teamName: data.data?.teamName };
-      } catch {
-        return { hasEntry: false };
+      } catch (err: any) {
+        if (err?.response?.status === 404 || err?.response?.status === 401) {
+          return { hasEntry: false };
+        }
+        throw err;
       }
     },
     enabled: !!contestId && isAuthenticated,

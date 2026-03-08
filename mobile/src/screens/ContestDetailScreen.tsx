@@ -308,14 +308,13 @@ export default function ContestDetailScreen() {
             {/* My Team (expandable) */}
             {hasEntered && showMyTeam && (
               <View style={styles.myTeamSection}>
-                <Text style={styles.sectionTitle}>Your Team</Text>
-                <Text style={styles.myTeamHandle}>{myEntry?.teamName ?? 'My Team'}</Text>
-                {(myEntry as any)?.picks?.map((pick: any, i: number) => (
-                  <View key={i} style={styles.myTeamRow}>
-                    <Text style={styles.myTeamHandle}>@{pick.handle ?? pick.name ?? `Pick ${i + 1}`}</Text>
-                    {pick.isCaptain && <Text style={styles.captainLabel}>CPT</Text>}
-                  </View>
-                ))}
+                <View style={styles.myTeamRow}>
+                  <MaterialCommunityIcons name="shield-check" size={16} color={colors.success} />
+                  <Text style={styles.myTeamHandle}>{myEntry?.teamName ?? 'My Team'}</Text>
+                </View>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
+                  Your entry is locked in. Scores update live during the contest.
+                </Text>
               </View>
             )}
 
