@@ -40,11 +40,18 @@ export interface Contest {
   status: string;
   startDate: string;
   endDate: string;
+  lockTime?: string;
   isPrizeLeague: boolean;
   prizePool: number;
+  prizePoolFormatted?: string;
   playerCount: number;
   entryFee?: number;
+  entryFeeFormatted?: string;
   isFree?: boolean;
+  description?: string;
+  teamSize?: number;
+  hasCaptain?: boolean;
+  maxPlayers?: number;
 }
 
 export interface ContestType {

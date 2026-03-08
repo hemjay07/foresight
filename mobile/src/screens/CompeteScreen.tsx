@@ -19,7 +19,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, elevation, textLevels, borders } from '../constants/colors';
+import { colors, elevation, textLevels, borders, RANK_COLORS, brandAlpha, successAlpha } from '../constants/colors';
 import { typography } from '../constants/typography';
 import { spacing, TOUCH_MIN } from '../constants/spacing';
 import { useAuth } from '../providers/AuthProvider';
@@ -31,6 +31,8 @@ import { haptics } from '../utils/haptics';
 import type { Contest, LeaderboardEntry } from '../types';
 import { TIER_CONFIG } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { OnboardingTip } from '../components/OnboardingTip';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,12 +45,6 @@ const LEADERBOARD_CHIPS: { key: LeaderboardType; label: string }[] = [
   { key: 'weekly', label: 'Weekly' },
 ];
 
-const RANK_COLORS: Record<number, string> = {
-  1: '#F59E0B',
-  2: '#A1A1AA',
-  3: '#CD7F32',
-};
-
 // --- ContestCard ---
 
 const ContestCard = React.memo(function ContestCard({
@@ -58,7 +54,7 @@ const ContestCard = React.memo(function ContestCard({
   contest: Contest;
   onPress: () => void;
 }) {
-  const isLive = contest.status === 'active' || contest.status === 'live';
+  const isLive = contest.status === 'active' || contest.status === 'live' || contest.status === 'open';
   const countdown = timeUntil(contest.endDate);
 
   return (
@@ -82,7 +78,7 @@ const ContestCard = React.memo(function ContestCard({
       </View>
 
       <Text style={styles.prizePool}>
-        ◎ {contest.prizePool} SOL
+        {contest.prizePoolFormatted ?? `◎ ${contest.prizePool} SOL`}
       </Text>
 
       <View style={styles.contestCardBottom}>
@@ -121,7 +117,7 @@ const LeaderboardRow = React.memo(function LeaderboardRow({ entry, isCurrentUser
         isTop3 && borderColor
           ? { borderLeftWidth: 3, borderLeftColor: borderColor }
           : null,
-        isCurrentUser && { backgroundColor: 'rgba(245, 158, 11, 0.08)', borderLeftWidth: 3, borderLeftColor: colors.brand },
+        isCurrentUser && { backgroundColor: brandAlpha['8'], borderLeftWidth: 3, borderLeftColor: colors.brand },
       ]}
     >
       <Text
@@ -204,6 +200,7 @@ export default function CompeteScreen() {
   } = useFSLeaderboard(lbType);
 
   const [refreshing, setRefreshing] = useState(false);
+  const competeTip = useOnboarding('compete_hint');
 
   const { width: screenWidth } = useWindowDimensions();
   const tabWidth = (screenWidth - (spacing.lg + spacing.xs) * 2) / 2;
@@ -294,6 +291,17 @@ export default function CompeteScreen() {
           <Animated.View style={[styles.tabUnderline, underlineStyle]} />
         </View>
       </View>
+
+      {competeTip.visible && (
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+          <OnboardingTip
+            icon="trophy"
+            title="Contests & Leaderboards"
+            message="Join contests to draft CT teams and compete for SOL prizes. Check the leaderboard to see how you rank."
+            onDismiss={competeTip.dismiss}
+          />
+        </View>
+      )}
 
       {/* Contests Tab */}
       {activeTab === 'contests' && (
@@ -501,7 +509,7 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: successAlpha['15'],
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 6,
@@ -543,7 +551,7 @@ const styles = StyleSheet.create({
     color: textLevels.secondary,
   },
   freeBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: successAlpha['15'],
     paddingHorizontal: 10,
     paddingVertical: spacing.xs,
     borderRadius: 6,
@@ -554,7 +562,7 @@ const styles = StyleSheet.create({
     color: colors.success,
   },
   feeBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: brandAlpha['15'],
     paddingHorizontal: 10,
     paddingVertical: spacing.xs,
     borderRadius: 6,

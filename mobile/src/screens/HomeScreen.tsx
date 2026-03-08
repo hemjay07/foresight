@@ -8,12 +8,17 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, elevation, textLevels, borders } from '../constants/colors';
+import { colors, elevation, textLevels, borders, brandAlpha, successAlpha, mutedAlpha } from '../constants/colors';
 import { typography } from '../constants/typography';
 import { spacing, TOUCH_MIN } from '../constants/spacing';
 import { useAuth } from '../providers/AuthProvider';
@@ -27,8 +32,12 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import type { Contest, Influencer } from '../types';
 import { TIER_CONFIG } from '../types';
 import { Avatar } from '../components/Avatar';
+import { AnimatedNumber } from '../components/AnimatedNumber';
 import { LiveDot } from '../components/LiveDot';
 import { Skeleton } from '../components/Skeleton';
+import { useSolBalance } from '../hooks/useSolBalance';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { OnboardingTip } from '../components/OnboardingTip';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -46,8 +55,10 @@ export default function HomeScreen() {
   const { data: contests, isLoading: contestsLoading, isError: contestsError, refetch: refetchContests } = useActiveContests();
   const { data: influencerData, isError: influencersError, refetch: refetchInfluencers } = useInfluencers({ sortBy: 'points' });
   const { data: questSummary, refetch: refetchQuests } = useQuestSummary(isAuthenticated);
+  const { data: solBalance } = useSolBalance(isAuthenticated ? user?.walletAddress : undefined);
 
   const [refreshing, setRefreshing] = useState(false);
+  const welcomeTip = useOnboarding('welcome');
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -80,6 +91,12 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.brandMark}>CT FORESIGHT</Text>
             <Text style={styles.greeting}>GM, {displayName}</Text>
+            {solBalance != null && solBalance > 0 && (
+              <View style={styles.solChip}>
+                <MaterialCommunityIcons name="circle" size={6} color={colors.success} />
+                <Text style={styles.solChipText}>◎ {formatSOL(solBalance)}</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={[styles.avatar, { backgroundColor: getAvatarColor(displayName) }]}
@@ -88,7 +105,7 @@ export default function HomeScreen() {
               if (isAuthenticated) {
                 (navigation as any).navigate('Main', { screen: 'Profile' });
               } else {
-                navigation.navigate('Auth' as any);
+                navigation.navigate('Auth');
               }
             }}
             activeOpacity={0.7}
@@ -109,6 +126,15 @@ export default function HomeScreen() {
               Couldn't load some data. Tap to retry.
             </Text>
           </TouchableOpacity>
+        )}
+
+        {welcomeTip.visible && (
+          <OnboardingTip
+            icon="rocket-launch"
+            title="Welcome to CT Foresight"
+            message="Draft teams of CT influencers, earn points from their engagement, and compete for SOL prizes."
+            onDismiss={welcomeTip.dismiss}
+          />
         )}
 
         {/* ── Active Contest Hero ───────────────── */}
@@ -148,7 +174,7 @@ export default function HomeScreen() {
             activeOpacity={0.8}
             onPress={() => {
               haptics.selection();
-              navigation.navigate('Auth' as any);
+              navigation.navigate('Auth');
             }}
           >
             <View style={styles.signInIconWrap}>
@@ -173,7 +199,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 onPress={() => {
                   haptics.selection();
-                  (navigation as any).navigate('Main', { screen: 'Compete' });
+                  navigation.navigate('InfluencerList' as any);
                 }}
                 activeOpacity={0.7}
               >
@@ -245,6 +271,8 @@ export default function HomeScreen() {
 }
 
 // ─── Contest Hero Card (Redesigned) ───────────────────────────────────
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 function ContestHeroCard({
   contest,
   navigation,
@@ -256,13 +284,20 @@ function ContestHeroCard({
   isAuthenticated: boolean;
   influencers: Influencer[];
 }) {
-  const isLive = contest.status === 'active' || contest.status === 'live';
+  const isLive = contest.status === 'active' || contest.status === 'live' || contest.status === 'open';
   const countdown = !isLive ? timeUntil(contest.startDate) : null;
 
+  const heroScale = useSharedValue(1);
+  const heroAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heroScale.value }],
+  }));
+
   return (
-    <TouchableOpacity
-      style={styles.heroCard}
-      activeOpacity={0.9}
+    <AnimatedTouchable
+      style={[styles.heroCard, heroAnimStyle]}
+      activeOpacity={1}
+      onPressIn={() => { heroScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { heroScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
       onPress={() => {
         haptics.selection();
         navigation.navigate('ContestDetail', { contestId: contest.id });
@@ -303,8 +338,9 @@ function ContestHeroCard({
       <View style={styles.prizeBlock}>
         <Text style={styles.prizeLabel}>PRIZE POOL</Text>
         <View style={styles.prizeRow}>
-          <Text style={styles.prizeAmount}>{formatSOL(contest.prizePool)}</Text>
-          <Text style={styles.prizeCurrency}>SOL</Text>
+          <Text style={styles.prizeAmount}>
+            {contest.prizePoolFormatted ?? `${formatSOL(contest.prizePool)} SOL`}
+          </Text>
         </View>
       </View>
 
@@ -346,7 +382,10 @@ function ContestHeroCard({
         onPress={() => {
           haptics.impact();
           if (!isAuthenticated) {
-            navigation.navigate('Auth' as any);
+            navigation.navigate('Auth', {
+              returnTo: 'Draft',
+              returnParams: { contestId: contest.id },
+            });
             return;
           }
           navigation.navigate('Draft', { contestId: contest.id });
@@ -355,7 +394,7 @@ function ContestHeroCard({
         <MaterialCommunityIcons name="shield-sword" size={20} color={colors.black} />
         <Text style={styles.ctaText}>Draft Your Team</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 
@@ -368,7 +407,7 @@ function InfluencerChip({ influencer, navigation }: { influencer: Influencer; na
       activeOpacity={0.7}
       onPress={() => {
         haptics.selection();
-        (navigation as any).navigate('Main', { screen: 'Compete' });
+        navigation.navigate('InfluencerList' as any);
       }}
     >
       <View style={[styles.infChipAvatar, { borderColor: tc.color }]}>
@@ -398,7 +437,7 @@ function ForesightScoreCard({ score }: { score: NonNullable<ReturnType<typeof us
       </View>
 
       <View style={styles.scoreRow}>
-        <Text style={styles.scoreNumber}>{score.totalScore.toLocaleString()}</Text>
+        <AnimatedNumber value={score.totalScore} style={styles.scoreNumber} />
         <View style={[styles.tierBadge, { backgroundColor: tierColor + '22' }]}>
           <View style={[styles.tierDot, { backgroundColor: tierColor }]} />
           <Text style={[styles.tierLabel, { color: tierColor }]}>
@@ -501,6 +540,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: textLevels.primary,
   },
+  solChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: elevation.surface, borderWidth: 1, borderColor: borders.subtle,
+    paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: 6,
+    alignSelf: 'flex-start', marginTop: spacing.xs,
+  },
+  solChipText: { ...typography.mono, fontSize: 11, fontWeight: '600', color: textLevels.secondary },
   avatar: {
     width: TOUCH_MIN,
     height: TOUCH_MIN,
@@ -542,7 +588,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 80,
-    backgroundColor: 'rgba(245, 158, 11, 0.06)',
+    backgroundColor: brandAlpha['6'],
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -550,7 +596,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    backgroundColor: brandAlpha['12'],
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs,
     borderRadius: 6,
@@ -586,10 +632,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusLive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: successAlpha['15'],
   },
   statusUpcoming: {
-    backgroundColor: 'rgba(161, 161, 170, 0.15)',
+    backgroundColor: mutedAlpha['15'],
   },
   liveDot: {
     width: 6,
@@ -606,7 +652,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   freeEntryBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: successAlpha['12'],
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 6,
@@ -721,7 +767,7 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: brandAlpha['10'],
     borderRadius: 10,
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md + 2,
@@ -967,9 +1013,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    backgroundColor: brandAlpha['8'],
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
+    borderColor: brandAlpha['20'],
     borderRadius: 14,
     paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.lg,

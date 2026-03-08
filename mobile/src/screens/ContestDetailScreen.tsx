@@ -6,13 +6,14 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { colors, elevation, textLevels, borders } from '../constants/colors';
+import { colors, elevation, textLevels, borders, RANK_COLORS, successAlpha, brandAlpha } from '../constants/colors';
 import { typography } from '../constants/typography';
 import { spacing, TOUCH_MIN } from '../constants/spacing';
 import { useAuth } from '../providers/AuthProvider';
@@ -27,12 +28,6 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type DetailRouteProp = RouteProp<RootStackParamList, 'ContestDetail'>;
 
-const RANK_COLORS: Record<number, string> = {
-  1: '#F59E0B',
-  2: '#A1A1AA',
-  3: '#CD7F32',
-};
-
 // --- Contest Header Card ---
 
 function ContestHeaderCard({
@@ -42,7 +37,7 @@ function ContestHeaderCard({
   contest: { name: string; status: string; endDate: string; prizePool: number };
   totalEntries: number;
 }) {
-  const isLive = contest.status === 'active' || contest.status === 'live';
+  const isLive = contest.status === 'active' || contest.status === 'live' || contest.status === 'open';
   const countdown = timeUntil(contest.endDate);
 
   return (
@@ -65,7 +60,7 @@ function ContestHeaderCard({
       <View style={styles.statsRow}>
         <View style={styles.statBlock}>
           <Text style={styles.statLabel}>Prize Pool</Text>
-          <Text style={styles.prizeValue}>◎ {contest.prizePool} SOL</Text>
+          <Text style={styles.prizeValue}>{(contest as any).prizePoolFormatted ?? `◎ ${contest.prizePool} SOL`}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
@@ -163,10 +158,23 @@ export default function ContestDetailScreen() {
     setRefreshing(false);
   }, [refetch]);
 
+  const handleShare = async () => {
+    haptics.light();
+    const name = contestMeta.name;
+    const prize = contestMeta.prizePool;
+    try {
+      await Share.share({
+        message: `Join "${name}" on CT Foresight! ◎${prize} SOL prize pool. Draft your CT dream team and compete.\n\nhttps://ct-foresight.xyz/contest/${contestId}`,
+      });
+    } catch {
+      // user cancelled
+    }
+  };
+
   const handleDraft = () => {
     haptics.impact();
     if (!isAuthenticated) {
-      navigation.navigate('Auth' as any);
+      navigation.navigate('Auth', { returnTo: 'Draft', returnParams: { contestId } });
       return;
     }
     if (hasEntered) {
@@ -297,24 +305,33 @@ export default function ContestDetailScreen() {
               </View>
             )}
 
-            {/* Action Button */}
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                hasEntered ? styles.actionButtonSecondary : styles.actionButtonPrimary,
-              ]}
-              onPress={handleDraft}
-              activeOpacity={0.8}
-            >
-              <Text
+            {/* Action Row */}
+            <View style={styles.actionRow}>
+              <TouchableOpacity
                 style={[
-                  styles.actionButtonText,
-                  hasEntered ? styles.actionButtonTextSecondary : styles.actionButtonTextPrimary,
+                  styles.actionButton,
+                  hasEntered ? styles.actionButtonSecondary : styles.actionButtonPrimary,
                 ]}
+                onPress={handleDraft}
+                activeOpacity={0.8}
               >
-                {hasEntered ? `Entered: ${myEntry?.teamName ?? 'My Team'}` : 'Draft Your Team'}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    hasEntered ? styles.actionButtonTextSecondary : styles.actionButtonTextPrimary,
+                  ]}
+                >
+                  {hasEntered ? `Entered: ${myEntry?.teamName ?? 'My Team'}` : 'Draft Your Team'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.shareButton}
+                onPress={handleShare}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="share-variant" size={20} color={textLevels.primary} />
+              </TouchableOpacity>
+            </View>
 
             {/* My Team (expandable) */}
             {hasEntered && showMyTeam && (
@@ -388,7 +405,7 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: successAlpha['15'],
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: 6,
@@ -453,7 +470,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: successAlpha['12'],
     borderRadius: 10,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -464,13 +481,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.success,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
   actionButton: {
+    flex: 1,
     borderRadius: spacing.md,
     minHeight: TOUCH_MIN,
     paddingVertical: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xl,
+  },
+  shareButton: {
+    width: TOUCH_MIN,
+    height: TOUCH_MIN,
+    borderRadius: spacing.md,
+    backgroundColor: elevation.surface,
+    borderWidth: 1,
+    borderColor: borders.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
   actionButtonPrimary: {
     backgroundColor: colors.brand,
@@ -639,7 +672,7 @@ const styles = StyleSheet.create({
     color: colors.brand,
     fontSize: 10,
     fontWeight: '800',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: brandAlpha['15'],
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: spacing.xs,

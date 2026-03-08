@@ -582,6 +582,24 @@ async function seedLaunchContest(): Promise<{ created: boolean; contest: Record<
     .first();
 
   if (existing) {
+    // Auto-extend: if lock_time is within 24h or already passed, push it out 5 more days
+    // This keeps the contest draftable through hackathon demos and relaunches
+    const lockDate = new Date(existing.lock_time);
+    const hoursUntilLock = (lockDate.getTime() - Date.now()) / (1000 * 60 * 60);
+    if (hoursUntilLock < 24) {
+      const now = new Date();
+      const newLockTime = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+      const newEndTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      await db('prized_contests').where('id', existing.id).update({
+        lock_time: newLockTime,
+        end_time: newEndTime,
+        status: 'open',
+        updated_at: now,
+      });
+      logger.info(`Extended Season 0 lock to ${newLockTime.toISOString()}`);
+      const updated = await db('prized_contests').where('id', existing.id).first();
+      return { created: false, contest: updated };
+    }
     return { created: false, contest: existing };
   }
 
@@ -750,6 +768,71 @@ router.post('/cleanup-contests', authenticate, requireAdmin, async (req: Request
     });
   } catch (error: any) {
     sendError(res, 'Failed to clean up contests', 500, error.message);
+  }
+});
+
+// ─── Public Admin Endpoints (ADMIN_KEY auth) ────────────────────────────────
+// Protected by ADMIN_KEY env var — must match ?key= query param or x-admin-key header.
+// Remove after launch week.
+
+function validateAdminKey(req: Request, res: Response): boolean {
+  const adminKey = process.env.ADMIN_KEY;
+  if (!adminKey) {
+    sendError(res, 'ADMIN_KEY not configured on server', 500);
+    return false;
+  }
+  const provided = (req.query.key as string) || req.headers['x-admin-key'] as string;
+  if (!provided || provided !== adminKey) {
+    res.status(403).json({ success: false, error: 'Invalid admin key' });
+    return false;
+  }
+  return true;
+}
+
+router.post('/public-seed', async (req: Request, res: Response) => {
+  if (!validateAdminKey(req, res)) return;
+  try {
+    const result = await seedLaunchContest();
+    sendSuccess(res, {
+      message: result.created ? 'Season 0 created' : 'Season 0 already active',
+      contest: { id: result.contest.id, name: result.contest.name, status: result.contest.status },
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to seed contest', 500, error.message);
+  }
+});
+
+// Extend contest lock/end times (for hackathon demo)
+router.patch('/public-extend/:id', async (req: Request, res: Response) => {
+  if (!validateAdminKey(req, res)) return;
+  try {
+    const { id } = req.params;
+    const { daysToAdd } = req.body as { daysToAdd?: number };
+    const days = daysToAdd ?? 3;
+
+    const contest = await db('prized_contests').where('id', id).first();
+    if (!contest) {
+      return sendError(res, 'Contest not found', 404);
+    }
+
+    const newLockTime = new Date(new Date(contest.lock_time).getTime() + days * 24 * 60 * 60 * 1000);
+    const newEndTime = new Date(new Date(contest.end_time).getTime() + days * 24 * 60 * 60 * 1000);
+
+    await db('prized_contests').where('id', id).update({
+      lock_time: newLockTime,
+      end_time: newEndTime,
+      status: 'open',
+      updated_at: new Date(),
+    });
+
+    sendSuccess(res, {
+      message: `Contest #${id} extended by ${days} days`,
+      lockTime: newLockTime.toISOString(),
+      endTime: newEndTime.toISOString(),
+      status: 'open',
+    });
+  } catch (error: any) {
+    sendError(res, 'Failed to extend contest', 500, error.message);
   }
 });
 
