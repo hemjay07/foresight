@@ -403,12 +403,12 @@ export default function DraftScreen() {
 
   const pickedIds = useMemo(() => new Set(picks.filter(Boolean).map((p) => p!.id)), [picks]);
   const pickCount = useMemo(() => picks.filter(Boolean).length, [picks]);
-  const spent = useMemo(() => picks.reduce((sum, p) => sum + (p?.price ?? 0), 0), [picks]);
+  const spent = useMemo(() => picks.reduce((sum, p) => sum + (Number(p?.price) || 0), 0), [picks]);
   const remaining = BUDGET - spent;
 
   const addInfluencer = useCallback((inf: Influencer) => {
     if (pickedIds.has(inf.id)) return;
-    if (inf.price > remaining) {
+    if (Number(inf.price) > remaining) {
       haptics.error();
       setOverBudgetMsg(`${inf.handle} costs ${inf.price} cr — ${remaining} remaining`);
       shakeAnim.value = withTiming(10, { duration: 50 }, () => {
@@ -502,7 +502,7 @@ export default function DraftScreen() {
       <PickerCard
         influencer={item}
         isPicked={picked}
-        isDisabled={picked || pickCount >= TEAM || item.price > remaining}
+        isDisabled={picked || pickCount >= TEAM || Number(item.price) > remaining}
         onAdd={() => !picked && addInfluencer(item)}
         onLongPress={() => openSheet(item)}
       />
