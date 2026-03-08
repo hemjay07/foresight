@@ -1,0 +1,21 @@
+export const colors = {
+  background: '#09090B',
+  card: '#18181B',
+  cardBorder: '#27272A',
+  surface: '#27272A',
+  brand: '#F59E0B',
+  brandDark: '#D97706',
+  cyan: '#06B6D4',
+  success: '#10B981',
+  error: '#F43F5E',
+  text: '#FAFAFA',
+  textSecondary: '#A1A1AA',
+  textMuted: '#71717A',
+  white: '#FFFFFF',
+  black: '#000000',
+  // Tier colors
+  tierS: '#F59E0B',
+  tierA: '#06B6D4',
+  tierB: '#10B981',
+  tierC: '#71717A',
+};

@@ -1,0 +1,31 @@
+{
+  "cli": {
+    "version": ">= 3.12.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "local"
+      },
+      "distribution": "internal",
+      "env": {
+        "YARN_IGNORE_ENGINES": "true"
+      }
+    },
+    "dapp-store": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal"
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
