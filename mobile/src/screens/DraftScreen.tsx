@@ -355,6 +355,8 @@ export default function DraftScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teamName, setTeamName] = useState('');
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+  const isMounted = useRef(true);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
   const [sheetInfluencer, setSheetInfluencer] = useState<Influencer | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [overBudgetMsg, setOverBudgetMsg] = useState('');
@@ -452,7 +454,9 @@ export default function DraftScreen() {
       setShowConfetti(true);
       setPicks(Array(TEAM).fill(null));
       setTimeout(() => {
-        (navigation as any).navigate('ContestDetail', { contestId, justEntered: true });
+        if (isMounted.current) {
+          (navigation as any).navigate('ContestDetail', { contestId, justEntered: true });
+        }
       }, 1800);
     } catch (err: any) {
       haptics.error();

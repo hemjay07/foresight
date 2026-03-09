@@ -82,7 +82,8 @@ export default function AuthScreen() {
   const handlePostAuth = useCallback(() => {
     const returnTo = route.params?.returnTo;
     const returnParams = route.params?.returnParams;
-    if (returnTo && returnTo !== 'Auth') {
+    const validRoutes: string[] = ['Main', 'ContestDetail', 'Draft', 'InfluencerList', 'SKR'];
+    if (returnTo && returnTo !== 'Auth' && validRoutes.includes(returnTo)) {
       navigation.replace(returnTo as any, returnParams);
     } else if (navigation.canGoBack()) {
       navigation.goBack();
